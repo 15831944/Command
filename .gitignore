@@ -1,0 +1,14 @@
+CommandTest/Debug/
+CommandTest/Release/
+*.VC.opendb
+*.svd
+*.userprefs
+*.csproj
+*.pidb
+*.suo
+*.user
+*.unityproj
+*.booproj
+Release/
+Debug/
+ipch/
