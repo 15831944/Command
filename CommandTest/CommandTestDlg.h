@@ -18,32 +18,40 @@ public:
 	enum { IDD = IDD_COMMANDTEST_DIALOG };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支援
-
+    virtual BOOL OnInitDialog();
+    afx_msg void OnPaint();
+    afx_msg HCURSOR OnQueryDragIcon();
+    DECLARE_MESSAGE_MAP()
 
 // 程式碼實作
 protected:
 	HICON m_hIcon;
     COrder a;
-	// 產生的訊息對應函式
-	virtual BOOL OnInitDialog();
-	afx_msg void OnPaint();
-	afx_msg HCURSOR OnQueryDragIcon();
-	DECLARE_MESSAGE_MAP()
+    CListCtrl m_CommandList;
+    CString StrBuff;
+    BOOL Insert;
+    UINT InsertNum;
 public:
     afx_msg void OnBnClickedStart();
     afx_msg void OnTimer(UINT_PTR nIDEvent);
-    void ListRefresh(BOOL ScrollBarRefresh);
     afx_msg void OnBnClickedPause();
     afx_msg void OnBnClickedStop();
     afx_msg void OnBnClickedOk();
-    afx_msg void OnBnClickedBtncommand27();
+    afx_msg void OnBnClickedBtnhome();
+    afx_msg void OnInsert();
+    afx_msg void OnDelete();
+    afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
+    void ListRefresh(BOOL ScrollBarRefresh);
+
+
+
     afx_msg void OnBnClickedBtncommand1();
     afx_msg void OnBnClickedBtncommand2();
-    afx_msg void OnBnClickedBtnhome();
     afx_msg void OnBnClickedBtncommand3();
     afx_msg void OnBnClickedBtncommand4();
+    afx_msg void OnBnClickedBtncommand4_2();
     afx_msg void OnBnClickedBtncommand5();
     afx_msg void OnBnClickedBtncommand6();
     afx_msg void OnBnClickedBtncommand7();
@@ -59,6 +67,7 @@ public:
     afx_msg void OnBnClickedBtncommand17();
     afx_msg void OnBnClickedBtncommand18();
     afx_msg void OnBnClickedBtncommand19();
+    afx_msg void OnBnClickedBtncommand19_2();
     afx_msg void OnBnClickedBtncommand20();
     afx_msg void OnBnClickedBtncommand21();
     afx_msg void OnBnClickedBtncommand22();
@@ -66,6 +75,7 @@ public:
     afx_msg void OnBnClickedBtncommand24();
     afx_msg void OnBnClickedBtncommand25();
     afx_msg void OnBnClickedBtncommand26();
+    afx_msg void OnBnClickedBtncommand27();
     afx_msg void OnBnClickedBtncommand28();
     afx_msg void OnBnClickedBtncommand29();
     afx_msg void OnBnClickedBtncommand30();
@@ -80,5 +90,4 @@ public:
     afx_msg void OnBnClickedBtncommand39();
     afx_msg void OnBnClickedBtncommand40();
     afx_msg void OnBnClickedBtncommand41();
-    CListCtrl m_CommandList;
 };

@@ -1,6 +1,7 @@
 CommandTest/Debug/
 CommandTest/Release/
 *.VC.opendb
+*.VC.db
 *.svd
 *.userprefs
 *.csproj

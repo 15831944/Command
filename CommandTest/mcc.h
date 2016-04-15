@@ -77,6 +77,7 @@ MO_DLL long MO_Timer(int iMode, int iTimerNo, long lData);//計時器
 MO_DLL bool MO_ReadGumming();//讀取出膠控制狀態
 MO_DLL void MO_GummingSet(long lMicroSecond,
                           LPTHREAD_START_ROUTINE GummingTimeOutThread);//設置出膠秒數，單位[us]
+MO_DLL void MO_GummingSet(int iData, long lMicroSecond, LPTHREAD_START_ROUTINE GummingTimeOutThread);//設定出膠時間-多載(選擇多個點膠埠1~3,出膠時間(usec),中斷程序名稱)
 MO_DLL void MO_FinishGumming();//出膠完成
 MO_DLL void MO_StopGumming();//停止出膠，清除Timer
 MO_DLL void MO_Do3DLineMove(long lXTar, long lYTar, long lZTar, long lSpeed,
