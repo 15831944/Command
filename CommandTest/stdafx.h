@@ -33,7 +33,7 @@
 
 #include <afxcontrolbars.h>     // 功能區和控制列的 MFC 支援
 
-//#define MOVE
+#define MOVE
 #ifdef MOVE
 #include "mcc.h"
 #endif

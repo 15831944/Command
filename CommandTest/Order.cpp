@@ -87,8 +87,9 @@ BOOL COrder::Stop()
 /*暫停*/
 BOOL COrder::Pause()
 {
-    if (g_pThread) {
+    if (g_pThread && RunStatus == 1) {
         g_pThread->SuspendThread();
+        RunStatus = 2;//狀態改變成暫停中
         return TRUE;
     }
     else {
@@ -100,9 +101,10 @@ BOOL COrder::Continue()
 {
     if (g_pThread)//判斷是否有在運作
     {
-        if (SuspendThread(g_pThread) != GetLastError())
+        if (SuspendThread(g_pThread) != GetLastError() && RunStatus == 2)
         {
             g_pThread->ResumeThread();//啟動線程
+            RunStatus = 1;//狀態改變成運作中
             return TRUE;
         }
     }
@@ -114,6 +116,7 @@ BOOL COrder::Continue()
 /*主執行緒*/
 UINT COrder::Thread(LPVOID pParam)
 {
+    ((COrder*)pParam)->RunStatus = 1;//狀態改變成運作中
     while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->Commanding != _T("End")) {
         if (((COrder*)pParam)->Program.LabelName != _T(""))
         {
@@ -159,7 +162,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"GotoAddress") 
     {
-        ((COrder*)pParam)->RunCount = _ttoi(CommandResolve(Command, 1)) - 2;
+        if (!_ttoi(CommandResolve(Command, 1)))
+        {
+            ((COrder*)pParam)->RunCount = _ttoi(CommandResolve(Command, 1)) - 2;
+        }
     }
     /************************************************************動作**********************************************************/
 #ifdef MOVE
@@ -218,6 +224,53 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         ((COrder*)pParam)->m_Action.DecideInitializationMachine(20000,1000,7,0);
     } 
+    if (CommandResolve(Command, 0) == L"Output")
+    {
+        ((COrder*)pParam)->m_Action.DecideOutPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)));
+    }
+    if (CommandResolve(Command, 0) == L"Input")
+    {
+        if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) && _ttol(CommandResolve(Command, 3)))
+        {
+            ((COrder*)pParam)->RunCount = _ttol(CommandResolve(Command, 3)) - 2;
+        }
+    }
+    if (CommandResolve(Command, 0) == L"CirclePointOne")
+    {
+        ((COrder*)pParam)->CircleData.Status = TRUE;
+        ((COrder*)pParam)->CircleData.X = _ttol(CommandResolve(Command, 1));
+        ((COrder*)pParam)->CircleData.Y = _ttol(CommandResolve(Command, 2));
+    }
+    if (CommandResolve(Command, 0) == L"CirclePointTwo")
+    {
+        if (((COrder*)pParam)->CircleData.Status)
+        {
+            ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData.X, ((COrder*)pParam)->CircleData.Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+            ((COrder*)pParam)->CircleData.Status = FALSE;
+        }
+    }
+    if (CommandResolve(Command, 0) == L"VirtualPoint")
+    {
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }    
+    if (CommandResolve(Command, 0) == L"WaitPoint")
+    {
+        ((COrder*)pParam)->m_Action.DecideWaitPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            _ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    if (CommandResolve(Command, 0) == L"ParkPoint")
+    {
+        ((COrder*)pParam)->m_Action.DecideParkPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    if (CommandResolve(Command, 0) == L"StopPoint")
+    {
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        ((COrder*)pParam)->Pause();
+    }
 #endif
     /************************************************************參數***********************************************************/
     if (CommandResolve(Command, 0) == L"DispenseDotSet")
@@ -332,11 +385,15 @@ void COrder::ParameterDefult() {
     LineSpeedSet.AccSpeed = 0;
     LineSpeedSet.EndSpeed = 0;
     ZSet.ZBackHeight = 0;
+    GlueData.GlueTime = 0;
+    GlueData.GlueStayTime = 0;
 }
 /*判斷指標歸零*/
 void COrder::DecideClear() {
     ArcData.Status = FALSE;
+    CircleData.Status = FALSE;
     RunCount = 0;
+    RunStatus = 0;//狀態改變成未運行
     Time = 0;
 }
 

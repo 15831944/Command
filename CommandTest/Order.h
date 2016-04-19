@@ -51,26 +51,31 @@ private:    //把计
     struct ZSet {
         LONG ZBackHeight;
     };
-    //Arc笲挡篶
-    struct ArcData {
+    //Arc And Circle笲挡篶
+    struct AACData {
         BOOL Status;
         LONG X;
         LONG Y;
     };
-
+    //溅挡篶
+    struct GlueData {
+        LONG GlueTime;
+        LONG GlueStayTime;
+    };
 private:    //跑计
     HANDLE  wakeEvent;
     
 private:    //ㄧ计
-    static  UINT Thread(LPVOID pParam);
-    static  UINT SubroutineThread(LPVOID pParam);
+    static  UINT    Thread(LPVOID pParam);
+    static  UINT    SubroutineThread(LPVOID pParam);
     static  CString CommandResolve(CString Command,UINT Choose);
-    void ParameterDefult();
-    void DecideClear();
+    void            ParameterDefult();
+    void            DecideClear();
 public:     //跑计
-    
+    //璸计笲︽Ω计
     int             RunCount;
-    int             LabelCount;
+    //笲篈(0:ゼ笲 1:笲︽い 2:既氨い)
+    UINT            RunStatus;
     LONG            Time;
     CAction         m_Action;
     CString         Commanding;
@@ -83,7 +88,8 @@ public:     //跑计
     Speed           DotSpeedSet,LineSpeedSet;
     Program         Program;
     ZSet            ZSet;
-    ArcData         ArcData;
+    AACData         ArcData,CircleData;
+    GlueData        GlueData;
 public:     //ㄧ计
 	COrder();
 	virtual ~COrder();

@@ -22,6 +22,12 @@ public:     //運動API
     void DecideCircle(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVelociy, LONG lInitVelociy);
     //圓弧動作--(圓弧座標X,Y,圓弧座標X2,Y2,驅動速度,初速度)
     void DecideArc(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVelociy, LONG lInitVelociy);
+    //虛擬點動作--(虛擬點座標X,Y,Z,驅動速度,加速度,初速度)
+    void DecideVirtualPoint(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    //等待點動作--(等待點座標X,Y,Z,等待時間,驅動速度,加速度,初速度)
+    void DecideWaitPoint(LONG lX, LONG lY, LONG lZ, LONG lWaitTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    //停駐點動作--(停駐點座標X,Y,Z,排膠時間,結束後等待時間,驅動速度,加速度,初速度)
+    void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //原點賦歸動作--(原點復歸速度1,原點復歸速度2,復歸軸(7),偏移量(0))
     void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMove);
     //輸出-16個輸出(選擇埠(0~15),開啟關閉(0~1))

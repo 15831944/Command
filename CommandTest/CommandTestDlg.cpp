@@ -85,6 +85,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_COMMAND(IDM_INSERT, &CCommandTestDlg::OnInsert)
     ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
     ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CCommandTestDlg::OnNMRClickList1)
+    ON_BN_CLICKED(IDC_BTNCOMMAND42, &CCommandTestDlg::OnBnClickedBtncommand42)
 END_MESSAGE_MAP()
 
 
@@ -197,6 +198,10 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
         );
     //StrBuff = StrBuff + a.Program.LabelName;//檢測標籤用
     SetDlgItemText(IDC_EDIT1, LinStrBuff);
+    if (a.RunStatus == 2) 
+    {
+        SetDlgItemText(IDC_PAUSE, L"Continue");
+    }
     CDialogEx::OnTimer(nIDEvent);
 }
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
@@ -205,7 +210,7 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
     int nCount = a.Command.size();
     for (int i = 0; i < nCount; i++) {
         m_CommandList.InsertItem(i, NULL);
-        (i>9) ? StrBuff.Format(_T("0%d"), i+1) : StrBuff.Format(_T("00%d"), i+1);
+        (i>8) ? StrBuff.Format(_T("0%d"), i+1) : StrBuff.Format(_T("00%d"), i+1);
         m_CommandList.SetItemText(i, 0, StrBuff);
         m_CommandList.SetItemText(i, 1, a.Command.at(i));
     }
@@ -241,9 +246,12 @@ void CCommandTestDlg::OnInsert()
 /*刪除*/
 void CCommandTestDlg::OnDelete()
 {
-    int istat = m_CommandList.GetSelectionMark();//獲取選擇的項
-    a.Command.erase(a.Command.begin() + istat);
-    ListRefresh(NULL);
+    if (!Insert)
+    {
+        int istat = m_CommandList.GetSelectionMark();//獲取選擇的項
+        a.Command.erase(a.Command.begin() + istat);
+        ListRefresh(NULL);
+    }
 }
 /************************************************************命令*/
 /*單點點膠*/
@@ -251,76 +259,87 @@ void CCommandTestDlg::OnBnClickedBtncommand1()
 {
     StrBuff.Format(_T("Dot,%d,%d,%d"),GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
     (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum,StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*單點點膠設置*/
 void CCommandTestDlg::OnBnClickedBtncommand2()
 {
     StrBuff.Format(_T("DispenseDotSet,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*單點結束設置*/
 void CCommandTestDlg::OnBnClickedBtncommand3()
 {
     StrBuff.Format(_T("DispenseDotEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*PTP驅動速度*/
 void CCommandTestDlg::OnBnClickedBtncommand4()
 {
     StrBuff.Format(_T("DotSpeedSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*PTP加速度設置(%)*/
 void CCommandTestDlg::OnBnClickedBtncommand4_2()
 {
     StrBuff.Format(_T("DotAccPercent,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*線段開始*/
 void CCommandTestDlg::OnBnClickedBtncommand5()
 {
     StrBuff.Format(_T("LineStart,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*線段中間點*/
 void CCommandTestDlg::OnBnClickedBtncommand6()
 {
     StrBuff.Format(_T("LinePassing,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*線段結束點*/
 void CCommandTestDlg::OnBnClickedBtncommand7()
 {
     StrBuff.Format(_T("LineEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*圓弧中點*/
 void CCommandTestDlg::OnBnClickedBtncommand8()
 {
     StrBuff.Format(_T("ArcPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*圓中點*/
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
     StrBuff.Format(_T("CirclePointOne,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*圓中點2*/
 void CCommandTestDlg::OnBnClickedBtncommand10()
 {
     StrBuff.Format(_T("CirclePointTwo,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*線段塗膠設置*/
@@ -328,7 +347,8 @@ void CCommandTestDlg::OnBnClickedBtncommand11()
 {
     StrBuff.Format(_T("DispenseLineSet,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
         GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*線段結束設置*/
@@ -336,83 +356,105 @@ void CCommandTestDlg::OnBnClickedBtncommand12()
 {
     StrBuff.Format(_T("DispenseLineEnd,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
         GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*塗膠速度設置*/
 void CCommandTestDlg::OnBnClickedBtncommand13()
 {
     StrBuff.Format(_T("LineSpeed,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*Z軸工作高度*/
 void CCommandTestDlg::OnBnClickedBtncommand14()
 {
     StrBuff.Format(_T("ZGoBack,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*加速度設置*/
 void CCommandTestDlg::OnBnClickedBtncommand15()
 {
     StrBuff.Format(_T("DispenseAcc,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*參數初始化*/
 void CCommandTestDlg::OnBnClickedBtncommand16()
 {
-    a.Command.push_back(_T("Initialize"));
+    StrBuff = _T("Initialize");
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*輸入*/
 void CCommandTestDlg::OnBnClickedBtncommand17()
 {
     StrBuff.Format(_T("Input,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*輸出*/
 void CCommandTestDlg::OnBnClickedBtncommand18()
 {
     StrBuff.Format(_T("Output,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*點膠機開關*/
 void CCommandTestDlg::OnBnClickedBtncommand19()
 {
     StrBuff.Format(_T("DispenserSwitch,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*設置點膠端口*/
 void CCommandTestDlg::OnBnClickedBtncommand19_2()
 {
     StrBuff.Format(_T("DispenserSwitchSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    a.Command.push_back(StrBuff);
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*虛擬點*/
 void CCommandTestDlg::OnBnClickedBtncommand20()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("VirtualPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*等待點*/
 void CCommandTestDlg::OnBnClickedBtncommand21()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*停駐點*/
 void CCommandTestDlg::OnBnClickedBtncommand22()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("ParkPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*停止點*/
 void CCommandTestDlg::OnBnClickedBtncommand23()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("StopPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*填充區域*/
 void CCommandTestDlg::OnBnClickedBtncommand24()
@@ -422,25 +464,33 @@ void CCommandTestDlg::OnBnClickedBtncommand24()
 /*回原點命令*/
 void CCommandTestDlg::OnBnClickedBtncommand25()
 {
-    a.Command.push_back(_T("HomePoint"));
+    StrBuff = _T("HomePoint");
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*標籤*/           
 void CCommandTestDlg::OnBnClickedBtncommand26()
 {
-    a.Command.push_back(_T("Label,100"));
+    StrBuff.Format(_T("Label,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*前往地址*/
 void CCommandTestDlg::OnBnClickedBtncommand27()
 {
-    a.Command.push_back(_T("GotoAddress,3"));
+    StrBuff.Format(_T("GotoAddress,%d"),GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*前往標籤*/
 void CCommandTestDlg::OnBnClickedBtncommand28()
 {
-    a.Command.push_back(_T("GotoLabel,100"));
+    StrBuff.Format(_T("GotoLabel,%d"),GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    Insert = FALSE;
     ListRefresh(NULL);
 }
 /*調用子程序*/
@@ -508,7 +558,10 @@ void CCommandTestDlg::OnBnClickedBtncommand41()
 {
     // TODO: 在此加入控制項告知處理常式程式碼
 }
-
-
-
-
+/*******************************************************************************************外部設定**********************************************************/
+/*排膠設置*/
+void CCommandTestDlg::OnBnClickedBtncommand42()
+{
+    a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM1);
+    a.GlueData.GlueStayTime = GetDlgItemInt(IDC_EDITPARAM2);
+}
