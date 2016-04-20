@@ -185,20 +185,20 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
     CString DotStrBuff,LinStrBuff;
     DotStrBuff.Format(_T("動作:%d,次數:%d,距離:%d,高速:%d,低速:%d,關閉:%d,開啟:%d,加速:%d,驅動:%d,總數:%d"),
-        a.Time, a.RunCount,
+        a.Time, a.RunData.RunCount,
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
         a.DispenseDotSet.GlueCloseTime,a.DispenseDotSet.GlueOpenTime,
         a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
         a.Command.size());
     LinStrBuff.Format(_T("動作:%d,次數:%d,總數:%d,前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d\r\n後距離:%d,類型:%d,高速:%d,低速:%d,長度:%d,高度:%d,加速:%d,驅動:%d"),
-        a.Time, a.RunCount, a.Command.size(),
+        a.Time, a.RunData.RunCount, a.Command.size(),
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed
         );
     //StrBuff = StrBuff + a.Program.LabelName;//檢測標籤用
     SetDlgItemText(IDC_EDIT1, LinStrBuff);
-    if (a.RunStatus == 2) 
+    if (a.RunData.RunStatus == 2)
     {
         SetDlgItemText(IDC_PAUSE, L"Continue");
     }

@@ -87,9 +87,9 @@ BOOL COrder::Stop()
 /*暫停*/
 BOOL COrder::Pause()
 {
-    if (g_pThread && RunStatus == 1) {
+    if (g_pThread && RunData.RunStatus == 1) {
         g_pThread->SuspendThread();
-        RunStatus = 2;//狀態改變成暫停中
+        RunData.RunStatus = 2;//狀態改變成暫停中
         return TRUE;
     }
     else {
@@ -101,10 +101,10 @@ BOOL COrder::Continue()
 {
     if (g_pThread)//判斷是否有在運作
     {
-        if (SuspendThread(g_pThread) != GetLastError() && RunStatus == 2)
+        if (SuspendThread(g_pThread) != GetLastError() && RunData.RunStatus == 2)
         {
             g_pThread->ResumeThread();//啟動線程
-            RunStatus = 1;//狀態改變成運作中
+            RunData.RunStatus = 1;//狀態改變成運作中
             return TRUE;
         }
     }
@@ -116,30 +116,33 @@ BOOL COrder::Continue()
 /*主執行緒*/
 UINT COrder::Thread(LPVOID pParam)
 {
-    ((COrder*)pParam)->RunStatus = 1;//狀態改變成運作中
+    ((COrder*)pParam)->RunData.RunStatus = 1;//狀態改變成運作中
     while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->Commanding != _T("End")) {
         if (((COrder*)pParam)->Program.LabelName != _T(""))
         {
-            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunCount))
+            ((COrder*)pParam)->Program.LabelCount++;
+            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.RunCount)
+                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.size())
             {
                 ((COrder*)pParam)->Program.LabelName = _T("");
+                ((COrder*)pParam)->Program.LabelCount = 0;
             }
         }
         else
         {
-            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunCount);
+            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.RunCount);
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
         }
-        if (((COrder*)pParam)->RunCount == ((COrder*)pParam)->Command.size()-1)
+        if (((COrder*)pParam)->RunData.RunCount == ((COrder*)pParam)->Command.size()-1)
         {
-            ((COrder*)pParam)->RunCount = 0;
+            ((COrder*)pParam)->RunData.RunCount = 0;
         }
         else
         {
-            ((COrder*)pParam)->RunCount++;
+            ((COrder*)pParam)->RunData.RunCount++;
         }   
     }
     ((COrder*)pParam)->m_Action.g_bIsStop = FALSE;
@@ -164,7 +167,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (!_ttoi(CommandResolve(Command, 1)))
         {
-            ((COrder*)pParam)->RunCount = _ttoi(CommandResolve(Command, 1)) - 2;
+            ((COrder*)pParam)->RunData.RunCount = _ttoi(CommandResolve(Command, 1)) - 2;
         }
     }
     /************************************************************動作**********************************************************/
@@ -232,7 +235,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) && _ttol(CommandResolve(Command, 3)))
         {
-            ((COrder*)pParam)->RunCount = _ttol(CommandResolve(Command, 3)) - 2;
+            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
+            //((COrder*)pParam)->RunData.RunCount = _ttol(CommandResolve(Command, 3)) - 2;//跳到地址
         }
     }
     if (CommandResolve(Command, 0) == L"CirclePointOne")
@@ -363,7 +367,6 @@ CString COrder::CommandResolve(CString Command,UINT Choose)
 }
 /*參數設為Default*/
 void COrder::ParameterDefult() {
-    Program.LabelName = _T("");
     DispenseDotSet.GlueOpenTime = 0;
     DispenseDotSet.GlueCloseTime = 0;
     DispenseDotEnd.RiseDistance = 0;
@@ -392,8 +395,10 @@ void COrder::ParameterDefult() {
 void COrder::DecideClear() {
     ArcData.Status = FALSE;
     CircleData.Status = FALSE;
-    RunCount = 0;
-    RunStatus = 0;//狀態改變成未運行
+    RunData.RunCount = 0;
+    RunData.RunStatus = 0;//狀態改變成未運行
+    Program.LabelCount = 0;
+    Program.LabelName = _T("");
     Time = 0;
 }
 

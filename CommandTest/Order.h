@@ -43,6 +43,7 @@ private:    //參數
     };
     //程序控管結構(標籤名稱、子程序名稱、回子程序地址)
     struct Program {
+        int LabelCount;
         CString LabelName;
         CString SubroutineName;
         int BackSubroutineAddress;
@@ -51,17 +52,26 @@ private:    //參數
     struct ZSet {
         LONG ZBackHeight;
     };
-    //Arc And Circle運作結構
+    //Arc And Circle運作結構 (狀態、紀錄X、紀錄Y)
     struct AACData {
         BOOL Status;
         LONG X;
         LONG Y;
     };
-    //出膠結構
+    //出膠結構 (出膠時間、斷膠停留時間)
     struct GlueData {
         LONG GlueTime;
         LONG GlueStayTime;
     };
+    //運行參數結構(運行狀態、運行計數、運行迴圈)  
+    //運作狀態(0:未運作 1:運行中 2:暫停中)
+    //運行計數(目前做到第幾個指令)
+    //運行迴圈(從1-End算一個迴圈)
+    struct RunData {
+        UINT RunStatus;
+        int RunCount; 
+    };
+    
 private:    //變數
     HANDLE  wakeEvent;
     
@@ -72,10 +82,6 @@ private:    //函數
     void            ParameterDefult();
     void            DecideClear();
 public:     //變數
-    //計數運行次數
-    int             RunCount;
-    //運作狀態(0:未運作 1:運行中 2:暫停中)
-    UINT            RunStatus;
     LONG            Time;
     CAction         m_Action;
     CString         Commanding;
@@ -90,6 +96,7 @@ public:     //變數
     ZSet            ZSet;
     AACData         ArcData,CircleData;
     GlueData        GlueData;
+    RunData         RunData;
 public:     //函數
 	COrder();
 	virtual ~COrder();
