@@ -41,7 +41,7 @@ private:    //參數
         LONG Width;
         LONG HighSpeed;
     };
-    //程序控管結構(標籤名稱、子程序名稱、回子程序地址)
+    //程序控管結構(標籤計數、標籤名稱、子程序名稱、回子程序地址)
     struct Program {
         int LabelCount;
         CString LabelName;
@@ -65,11 +65,11 @@ private:    //參數
     };
     //運行參數結構(運行狀態、運行計數、運行迴圈)  
     //運作狀態(0:未運作 1:運行中 2:暫停中)
-    //運行計數(目前做到第幾個指令)
-    //運行迴圈(從1-End算一個迴圈)
+    //運行計數(目前做到第幾個指令 0:主程序 1-X:副程序)
     struct RunData {
         UINT RunStatus;
-        int RunCount; 
+        std::vector<UINT> RunCount;
+        UINT MSChange; //控管目前所讀的程序
     };
     
 private:    //變數
@@ -81,11 +81,16 @@ private:    //函數
     static  CString CommandResolve(CString Command,UINT Choose);
     void            ParameterDefult();
     void            DecideClear();
+    
 public:     //變數
     LONG            Time;
     CAction         m_Action;
     CString         Commanding;
-    std::vector<CString> Command;
+    std::vector<CString> CommandMemory;
+    std::vector<CString> CommandSwap;
+    std::vector<std::vector<CString>> Command;
+    
+    
 
     DispenseDotSet  DispenseDotSet;
     DispenseDotEnd  DispenseDotEnd;
@@ -108,6 +113,7 @@ public:     //函數
 	BOOL    Pause();
     //繼續命令解譯(成功return 1失敗return 0)
     BOOL    Continue();
+    void            MainSubroutineSeparate();
 protected:
 	DECLARE_MESSAGE_MAP()
 };

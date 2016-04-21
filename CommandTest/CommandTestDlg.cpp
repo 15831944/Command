@@ -86,6 +86,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
     ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CCommandTestDlg::OnNMRClickList1)
     ON_BN_CLICKED(IDC_BTNCOMMAND42, &CCommandTestDlg::OnBnClickedBtncommand42)
+    ON_BN_CLICKED(IDC_BTNCOMMAND29_2, &CCommandTestDlg::OnBnClickedBtncommand292)
+    ON_BN_CLICKED(IDC_BTNVIEW, &CCommandTestDlg::OnBnClickedBtnview)
 END_MESSAGE_MAP()
 
 
@@ -183,7 +185,7 @@ void CCommandTestDlg::OnBnClickedBtnhome()
 }
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
-    CString DotStrBuff,LinStrBuff;
+    CString DotStrBuff, LinStrBuff, RunStrBuff;
     DotStrBuff.Format(_T("動作:%d,次數:%d,距離:%d,高速:%d,低速:%d,關閉:%d,開啟:%d,加速:%d,驅動:%d,總數:%d"),
         a.Time, a.RunData.RunCount,
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
@@ -191,12 +193,12 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
         a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
         a.Command.size());
     LinStrBuff.Format(_T("動作:%d,次數:%d,總數:%d,前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d\r\n後距離:%d,類型:%d,高速:%d,低速:%d,長度:%d,高度:%d,加速:%d,驅動:%d"),
-        a.Time, a.RunData.RunCount, a.Command.size(),
+        a.RunData.MSChange, a.RunData.RunCount.size(), a.Command.size(),
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed
         );
-    //StrBuff = StrBuff + a.Program.LabelName;//檢測標籤用
+    //StrBuff = StrBuff + a.Program.LabelName;//檢測標籤用 
     SetDlgItemText(IDC_EDIT1, LinStrBuff);
     if (a.RunData.RunStatus == 2)
     {
@@ -207,13 +209,37 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
     CString StrBuff;
     m_CommandList.DeleteAllItems();
-    int nCount = a.Command.size();
-    for (int i = 0; i < nCount; i++) {
-        m_CommandList.InsertItem(i, NULL);
-        (i>8) ? StrBuff.Format(_T("0%d"), i+1) : StrBuff.Format(_T("00%d"), i+1);
-        m_CommandList.SetItemText(i, 0, StrBuff);
-        m_CommandList.SetItemText(i, 1, a.Command.at(i));
+    int nCount = a.CommandMemory.size();
+    if (!ScrollBarRefresh)
+    {
+        for (int i = 0; i < nCount; i++) {
+            m_CommandList.InsertItem(i, NULL);
+            (i>8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
+            m_CommandList.SetItemText(i, 0, StrBuff);
+            m_CommandList.SetItemText(i, 1, a.CommandMemory.at(i));
+        }
     }
+    else
+    {
+        for (UINT i = 0; i < a.Command.size(); i++)
+        {
+            for (UINT j = 0; j<a.Command.at(i).size(); j++)
+            {
+                m_CommandList.InsertItem(j, NULL);
+                (j>8) ? StrBuff.Format(_T("0%d"), j + 1) : StrBuff.Format(_T("00%d"), j + 1);
+                m_CommandList.SetItemText(j, 0, StrBuff);
+                m_CommandList.SetItemText(j, 1, a.Command.at(i).at(j));
+            }
+        }
+        m_CommandList.InsertItem(0, NULL);
+        StrBuff.Format(_T("%d"), a.Command.at(0).size());
+        m_CommandList.SetItemText(0, 1, StrBuff);
+        m_CommandList.InsertItem(1, NULL);
+        StrBuff.Format(_T("%d"), a.Command.at(1).size());
+        m_CommandList.SetItemText(1, 1, StrBuff);
+
+    }
+    
 }
 /*列表點下左鍵*/
 void CCommandTestDlg::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -249,7 +275,7 @@ void CCommandTestDlg::OnDelete()
     if (!Insert)
     {
         int istat = m_CommandList.GetSelectionMark();//獲取選擇的項
-        a.Command.erase(a.Command.begin() + istat);
+        a.CommandMemory.erase(a.CommandMemory.begin() + istat);
         ListRefresh(NULL);
     }
 }
@@ -258,7 +284,7 @@ void CCommandTestDlg::OnDelete()
 void CCommandTestDlg::OnBnClickedBtncommand1()
 {
     StrBuff.Format(_T("Dot,%d,%d,%d"),GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum,StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum,StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -266,7 +292,7 @@ void CCommandTestDlg::OnBnClickedBtncommand1()
 void CCommandTestDlg::OnBnClickedBtncommand2()
 {
     StrBuff.Format(_T("DispenseDotSet,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -274,7 +300,7 @@ void CCommandTestDlg::OnBnClickedBtncommand2()
 void CCommandTestDlg::OnBnClickedBtncommand3()
 {
     StrBuff.Format(_T("DispenseDotEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -282,7 +308,7 @@ void CCommandTestDlg::OnBnClickedBtncommand3()
 void CCommandTestDlg::OnBnClickedBtncommand4()
 {
     StrBuff.Format(_T("DotSpeedSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -290,7 +316,7 @@ void CCommandTestDlg::OnBnClickedBtncommand4()
 void CCommandTestDlg::OnBnClickedBtncommand4_2()
 {
     StrBuff.Format(_T("DotAccPercent,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -298,7 +324,7 @@ void CCommandTestDlg::OnBnClickedBtncommand4_2()
 void CCommandTestDlg::OnBnClickedBtncommand5()
 {
     StrBuff.Format(_T("LineStart,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -306,7 +332,7 @@ void CCommandTestDlg::OnBnClickedBtncommand5()
 void CCommandTestDlg::OnBnClickedBtncommand6()
 {
     StrBuff.Format(_T("LinePassing,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -314,7 +340,7 @@ void CCommandTestDlg::OnBnClickedBtncommand6()
 void CCommandTestDlg::OnBnClickedBtncommand7()
 {
     StrBuff.Format(_T("LineEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -322,7 +348,7 @@ void CCommandTestDlg::OnBnClickedBtncommand7()
 void CCommandTestDlg::OnBnClickedBtncommand8()
 {
     StrBuff.Format(_T("ArcPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -330,7 +356,7 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
     StrBuff.Format(_T("CirclePointOne,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -338,7 +364,7 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 void CCommandTestDlg::OnBnClickedBtncommand10()
 {
     StrBuff.Format(_T("CirclePointTwo,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -347,7 +373,7 @@ void CCommandTestDlg::OnBnClickedBtncommand11()
 {
     StrBuff.Format(_T("DispenseLineSet,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
         GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -356,7 +382,7 @@ void CCommandTestDlg::OnBnClickedBtncommand12()
 {
     StrBuff.Format(_T("DispenseLineEnd,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
         GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -364,7 +390,7 @@ void CCommandTestDlg::OnBnClickedBtncommand12()
 void CCommandTestDlg::OnBnClickedBtncommand13()
 {
     StrBuff.Format(_T("LineSpeed,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -372,7 +398,7 @@ void CCommandTestDlg::OnBnClickedBtncommand13()
 void CCommandTestDlg::OnBnClickedBtncommand14()
 {
     StrBuff.Format(_T("ZGoBack,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -380,7 +406,7 @@ void CCommandTestDlg::OnBnClickedBtncommand14()
 void CCommandTestDlg::OnBnClickedBtncommand15()
 {
     StrBuff.Format(_T("DispenseAcc,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -388,7 +414,7 @@ void CCommandTestDlg::OnBnClickedBtncommand15()
 void CCommandTestDlg::OnBnClickedBtncommand16()
 {
     StrBuff = _T("Initialize");
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -396,7 +422,7 @@ void CCommandTestDlg::OnBnClickedBtncommand16()
 void CCommandTestDlg::OnBnClickedBtncommand17()
 {
     StrBuff.Format(_T("Input,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -404,7 +430,7 @@ void CCommandTestDlg::OnBnClickedBtncommand17()
 void CCommandTestDlg::OnBnClickedBtncommand18()
 {
     StrBuff.Format(_T("Output,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -412,7 +438,7 @@ void CCommandTestDlg::OnBnClickedBtncommand18()
 void CCommandTestDlg::OnBnClickedBtncommand19()
 {
     StrBuff.Format(_T("DispenserSwitch,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -420,7 +446,7 @@ void CCommandTestDlg::OnBnClickedBtncommand19()
 void CCommandTestDlg::OnBnClickedBtncommand19_2()
 {
     StrBuff.Format(_T("DispenserSwitchSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -428,7 +454,7 @@ void CCommandTestDlg::OnBnClickedBtncommand19_2()
 void CCommandTestDlg::OnBnClickedBtncommand20()
 {
     StrBuff.Format(_T("VirtualPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -436,7 +462,7 @@ void CCommandTestDlg::OnBnClickedBtncommand20()
 void CCommandTestDlg::OnBnClickedBtncommand21()
 {
     StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -444,7 +470,7 @@ void CCommandTestDlg::OnBnClickedBtncommand21()
 void CCommandTestDlg::OnBnClickedBtncommand22()
 {
     StrBuff.Format(_T("ParkPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -452,7 +478,7 @@ void CCommandTestDlg::OnBnClickedBtncommand22()
 void CCommandTestDlg::OnBnClickedBtncommand23()
 {
     StrBuff.Format(_T("StopPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -465,7 +491,7 @@ void CCommandTestDlg::OnBnClickedBtncommand24()
 void CCommandTestDlg::OnBnClickedBtncommand25()
 {
     StrBuff = _T("HomePoint");
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -473,7 +499,7 @@ void CCommandTestDlg::OnBnClickedBtncommand25()
 void CCommandTestDlg::OnBnClickedBtncommand26()
 {
     StrBuff.Format(_T("Label,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -481,7 +507,7 @@ void CCommandTestDlg::OnBnClickedBtncommand26()
 void CCommandTestDlg::OnBnClickedBtncommand27()
 {
     StrBuff.Format(_T("GotoAddress,%d"),GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
@@ -489,19 +515,33 @@ void CCommandTestDlg::OnBnClickedBtncommand27()
 void CCommandTestDlg::OnBnClickedBtncommand28()
 {
     StrBuff.Format(_T("GotoLabel,%d"),GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.Command.emplace(a.Command.begin() + InsertNum, StrBuff) : a.Command.push_back(StrBuff);
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
 }
 /*調用子程序*/
 void CCommandTestDlg::OnBnClickedBtncommand29()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("CallSubroutine,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
+}
+/*開始子程序*/
+void CCommandTestDlg::OnBnClickedBtncommand292()
+{
+    StrBuff.Format(_T("SubroutineStart,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*結束子程序*/
 void CCommandTestDlg::OnBnClickedBtncommand30()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("SubroutineEnd"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*循環地址*/
 void CCommandTestDlg::OnBnClickedBtncommand31()
@@ -564,4 +604,12 @@ void CCommandTestDlg::OnBnClickedBtncommand42()
 {
     a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM1);
     a.GlueData.GlueStayTime = GetDlgItemInt(IDC_EDITPARAM2);
+}
+
+/*測試*/
+void CCommandTestDlg::OnBnClickedBtnview()
+{
+    a.CommandMemory.push_back(_T("End"));
+    a.MainSubroutineSeparate();
+    ListRefresh(TRUE);
 }

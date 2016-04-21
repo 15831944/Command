@@ -47,8 +47,9 @@ BOOL COrder::Run()
 {
     if (!g_pThread) {
         Commanding = _T("Start");
+        CommandMemory.push_back(_T("End"));
+        MainSubroutineSeparate();
         DecideClear();
-        Command.push_back(_T("End"));
         wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         g_pThread = AfxBeginThread(Thread, (LPVOID)this);
         return TRUE;
@@ -118,11 +119,23 @@ UINT COrder::Thread(LPVOID pParam)
 {
     ((COrder*)pParam)->RunData.RunStatus = 1;//狀態改變成運作中
     while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->Commanding != _T("End")) {
+        if (((COrder*)pParam)->Program.SubroutineName != _T(""))
+        {
+            for (UINT i = 1; i < ((COrder*)pParam)->Command.size(); i++)
+            {
+                if (((COrder*)pParam)->Command.at(i).at(0) == ((COrder*)pParam)->Program.SubroutineName)
+                {
+                    ((COrder*)pParam)->RunData.MSChange = i;
+                }
+            }
+            ((COrder*)pParam)->Program.SubroutineName = _T("");
+        }
+        
         if (((COrder*)pParam)->Program.LabelName != _T(""))
         {
             ((COrder*)pParam)->Program.LabelCount++;
-            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.RunCount)
-                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.size())
+            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange))
+                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).size())
             {
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
@@ -130,19 +143,19 @@ UINT COrder::Thread(LPVOID pParam)
         }
         else
         {
-            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.RunCount);
+            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange));
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
         }
-        if (((COrder*)pParam)->RunData.RunCount == ((COrder*)pParam)->Command.size()-1)
+        if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).size()-1)
         {
-            ((COrder*)pParam)->RunData.RunCount = 0;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) = 0;
         }
         else
         {
-            ((COrder*)pParam)->RunData.RunCount++;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange)++;
         }   
     }
     ((COrder*)pParam)->m_Action.g_bIsStop = FALSE;
@@ -165,10 +178,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"GotoAddress") 
     {
-        if (!_ttoi(CommandResolve(Command, 1)))
+        if (_ttoi(CommandResolve(Command, 1)))
         {
-            ((COrder*)pParam)->RunData.RunCount = _ttoi(CommandResolve(Command, 1)) - 2;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) = _ttoi(CommandResolve(Command, 1)) - 2;
         }
+    }
+    if (CommandResolve(Command, 0) == L"CallSubroutine")
+    {
+        ((COrder*)pParam)->Program.SubroutineName = _T("SubroutineStart,") + CommandResolve(Command, 1);
+    }
+    if (CommandResolve(Command, 0) == L"SubroutineEnd")
+    {
+        ((COrder*)pParam)->RunData.MSChange = 0;
+        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange)--;//上次執行過後有+1所以要減回來
     }
     /************************************************************動作**********************************************************/
 #ifdef MOVE
@@ -395,11 +417,54 @@ void COrder::ParameterDefult() {
 void COrder::DecideClear() {
     ArcData.Status = FALSE;
     CircleData.Status = FALSE;
-    RunData.RunCount = 0;
+    RunData.MSChange = 0;
     RunData.RunStatus = 0;//狀態改變成未運行
     Program.LabelCount = 0;
     Program.LabelName = _T("");
+    Program.SubroutineName = _T("");
+    for (UINT i = 0; i < RunData.RunCount.size(); i++)
+    {
+        RunData.RunCount.at(i) = 0;
+    }
     Time = 0;
+}
+/*劃分主程序和副程序*/
+void COrder::MainSubroutineSeparate()
+{
+    Command.clear();
+    std::vector<UINT> SubroutineCount;
+    BOOL SubroutineFlag = FALSE;
+    for (UINT i = 0; i < CommandMemory.size(); i++) {
+        if (CommandResolve(CommandMemory.at(i), 0) == L"SubroutineStart")
+        {
+            SubroutineCount.push_back(i);
+            SubroutineFlag = TRUE;
+        }
+        if (!SubroutineFlag)
+        {
+            CommandSwap.push_back(CommandMemory.at(i));
+        }
+        if (CommandResolve(CommandMemory.at(i), 0) == L"SubroutineEnd")
+        {
+            SubroutineCount.push_back(i);
+            SubroutineFlag = FALSE;
+        }
+    }
+    Command.push_back(CommandSwap);
+    CommandSwap.clear();
+    RunData.RunCount.push_back(0);
+    for (UINT i = 0; i < SubroutineCount.size(); i++)
+    {
+        for (UINT j = SubroutineCount.at(i); j <= SubroutineCount.at(i + 1); j++)
+        {
+            CommandSwap.push_back(CommandMemory.at(j));
+        }
+        Command.push_back(CommandSwap);
+        CommandSwap.clear();
+        RunData.RunCount.push_back(0);
+        i++;
+    }
+    
 }
 
 
