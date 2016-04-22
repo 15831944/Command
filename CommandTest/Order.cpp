@@ -35,6 +35,7 @@ COrder::COrder()
     LineSpeedSet.AccSpeed = 0;
     LineSpeedSet.EndSpeed = 0;
     ZSet.ZBackHeight = 0;
+    RunData.MSChange.push_back(0);
 }
 COrder::~COrder()
 {
@@ -125,7 +126,8 @@ UINT COrder::Thread(LPVOID pParam)
             {
                 if (((COrder*)pParam)->Command.at(i).at(0) == ((COrder*)pParam)->Program.SubroutineName)
                 {
-                    ((COrder*)pParam)->RunData.MSChange = i;
+                    ((COrder*)pParam)->RunData.MSChange.push_back(i);
+                    ((COrder*)pParam)->RunData.StackingCount++;
                 }
             }
             ((COrder*)pParam)->Program.SubroutineName = _T("");
@@ -134,8 +136,8 @@ UINT COrder::Thread(LPVOID pParam)
         if (((COrder*)pParam)->Program.LabelName != _T(""))
         {
             ((COrder*)pParam)->Program.LabelCount++;
-            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange))
-                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).size())
+            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
+                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
             {
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
@@ -143,19 +145,19 @@ UINT COrder::Thread(LPVOID pParam)
         }
         else
         {
-            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange));
+            ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
         }
-        if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange).size()-1)
+        if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size()-1)
         {
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) = 0;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;
         }
         else
         {
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange)++;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
         }   
     }
     ((COrder*)pParam)->m_Action.g_bIsStop = FALSE;
@@ -180,7 +182,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (_ttoi(CommandResolve(Command, 1)))
         {
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange) = _ttoi(CommandResolve(Command, 1)) - 2;
+            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = _ttoi(CommandResolve(Command, 1)) - 2;
         }
     }
     if (CommandResolve(Command, 0) == L"CallSubroutine")
@@ -189,8 +191,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"SubroutineEnd")
     {
-        ((COrder*)pParam)->RunData.MSChange = 0;
-        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange)--;//上次執行過後有+1所以要減回來
+        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;//程序計數清零
+        ((COrder*)pParam)->RunData.MSChange.pop_back();
+        ((COrder*)pParam)->RunData.StackingCount--; 
+        //((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount) = 0;
+        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//上次執行過後有+1所以要減回來
     }
     /************************************************************動作**********************************************************/
 #ifdef MOVE
@@ -417,8 +422,9 @@ void COrder::ParameterDefult() {
 void COrder::DecideClear() {
     ArcData.Status = FALSE;
     CircleData.Status = FALSE;
-    RunData.MSChange = 0;
+    RunData.MSChange.at(0) = 0;
     RunData.RunStatus = 0;//狀態改變成未運行
+    RunData.StackingCount = 0;
     Program.LabelCount = 0;
     Program.LabelName = _T("");
     Program.SubroutineName = _T("");

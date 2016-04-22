@@ -46,7 +46,6 @@ private:    //參數
         int LabelCount;
         CString LabelName;
         CString SubroutineName;
-        int BackSubroutineAddress;
     };
     //Z軸資訊結構(Z軸回升高度)
     struct ZSet {
@@ -66,10 +65,12 @@ private:    //參數
     //運行參數結構(運行狀態、運行計數、運行迴圈)  
     //運作狀態(0:未運作 1:運行中 2:暫停中)
     //運行計數(目前做到第幾個指令 0:主程序 1-X:副程序)
+    //控管跳躍的程序
     struct RunData {
         UINT RunStatus;
-        std::vector<UINT> RunCount;
-        UINT MSChange; //控管目前所讀的程序
+        std::vector<UINT> RunCount;//計數程序命令
+        std::vector<UINT> MSChange; //控管目前所讀的程序
+        UINT StackingCount;
     };
     
 private:    //變數

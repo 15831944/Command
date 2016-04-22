@@ -547,6 +547,8 @@ void CCommandTestDlg::OnBnClickedBtncommand30()
 void CCommandTestDlg::OnBnClickedBtncommand31()
 {
     // TODO: 在此加入控制項告知處理常式程式碼
+    a.CommandMemory.pop_back();
+    ListRefresh(NULL);
 }
 /*步驟重複X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()
