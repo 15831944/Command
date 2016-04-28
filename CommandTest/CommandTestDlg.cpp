@@ -36,8 +36,13 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_WM_TIMER()
     ON_BN_CLICKED(IDC_PAUSE, &CCommandTestDlg::OnBnClickedPause)
     ON_BN_CLICKED(IDC_STOP, &CCommandTestDlg::OnBnClickedStop)
+    ON_BN_CLICKED(IDC_BTNHOME, &CCommandTestDlg::OnBnClickedBtnhome)
+    ON_BN_CLICKED(IDC_BTNVIEW, &CCommandTestDlg::OnBnClickedBtnview)
     ON_BN_CLICKED(IDOK, &CCommandTestDlg::OnBnClickedOk)
-    ON_BN_CLICKED(IDC_BTNHOME, &CCommandTestDlg::OnBnClickedBtnhome)   
+    ON_COMMAND(IDM_INSERT, &CCommandTestDlg::OnInsert)
+    ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
+    ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CCommandTestDlg::OnNMRClickList1)
+       
     ON_BN_CLICKED(IDC_BTNCOMMAND1, &CCommandTestDlg::OnBnClickedBtncommand1)
     ON_BN_CLICKED(IDC_BTNCOMMAND2, &CCommandTestDlg::OnBnClickedBtncommand2)
     ON_BN_CLICKED(IDC_BTNCOMMAND3, &CCommandTestDlg::OnBnClickedBtncommand3)
@@ -81,13 +86,12 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BTNCOMMAND39, &CCommandTestDlg::OnBnClickedBtncommand39)
     ON_BN_CLICKED(IDC_BTNCOMMAND40, &CCommandTestDlg::OnBnClickedBtncommand40)
     ON_BN_CLICKED(IDC_BTNCOMMAND41, &CCommandTestDlg::OnBnClickedBtncommand41)
-    
-    ON_COMMAND(IDM_INSERT, &CCommandTestDlg::OnInsert)
-    ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
-    ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CCommandTestDlg::OnNMRClickList1)
+
+
     ON_BN_CLICKED(IDC_BTNCOMMAND42, &CCommandTestDlg::OnBnClickedBtncommand42)
-    ON_BN_CLICKED(IDC_BTNCOMMAND29_2, &CCommandTestDlg::OnBnClickedBtncommand292)
-    ON_BN_CLICKED(IDC_BTNVIEW, &CCommandTestDlg::OnBnClickedBtnview)
+    ON_BN_CLICKED(IDC_BTNCOMMAND43, &CCommandTestDlg::OnBnClickedBtncommand43)
+    ON_BN_CLICKED(IDC_BTNCOMMAND44, &CCommandTestDlg::OnBnClickedBtncommand44)
+    ON_BN_CLICKED(IDC_BTNCOMMAND45, &CCommandTestDlg::OnBnClickedBtncommand45)
 END_MESSAGE_MAP()
 
 
@@ -527,14 +531,6 @@ void CCommandTestDlg::OnBnClickedBtncommand29()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*開始子程序*/
-void CCommandTestDlg::OnBnClickedBtncommand292()
-{
-    StrBuff.Format(_T("SubroutineStart,%d"), GetDlgItemInt(IDC_EDITPARAM1));
-    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
-    Insert = FALSE;
-    ListRefresh(NULL);
-}
 /*結束子程序*/
 void CCommandTestDlg::OnBnClickedBtncommand30()
 {
@@ -600,6 +596,30 @@ void CCommandTestDlg::OnBnClickedBtncommand41()
 {
     // TODO: 在此加入控制項告知處理常式程式碼
 }
+/*開始副程式*/
+void CCommandTestDlg::OnBnClickedBtncommand43()
+{
+    StrBuff.Format(_T("SubProgramStart,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
+}
+/*結束副程式*/
+void CCommandTestDlg::OnBnClickedBtncommand44()
+{
+    StrBuff.Format(_T("SubProgramEnd"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
+}
+/*調用副程式*/
+void CCommandTestDlg::OnBnClickedBtncommand45()
+{
+    StrBuff.Format(_T("CallSubProgram,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
+}
 /*******************************************************************************************外部設定**********************************************************/
 /*排膠設置*/
 void CCommandTestDlg::OnBnClickedBtncommand42()
@@ -615,3 +635,10 @@ void CCommandTestDlg::OnBnClickedBtnview()
     a.MainSubroutineSeparate();
     ListRefresh(TRUE);
 }
+
+
+
+
+
+
+

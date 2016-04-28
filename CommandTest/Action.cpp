@@ -337,6 +337,61 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
 #endif
 }
 /*
+*(現在位置在結束點上)線段結束動作--多載
+*輸入(線段結束點、線段點膠設定、加速度、線速度、Z軸工作高度設定、點膠結束設定、返回設定、系統參數)
+*執行Z軸回升型態1
+*/
+void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
+    LONG lCloseONDelayTime, LONG lZBack, LONG lHighVelocity, LONG lDistance, LONG lHigh,
+    LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+    /*線段點膠設定(停留時間，關機距離，關機延遲)
+    LONG lCloseOffDelayTime ,LONG lCloseDistance ,LONG lCloseONDelayTime
+    */
+    //3.點膠機關閉後，為了讓壓力在針頭移至下一點前變得均衡而在線段點膠結束點處產生的延時。
+    //5.為防止過量流體在線段結束點處發生堆積，點膠機在距離線段結束點前多遠處關閉。
+    //6.點膠機在線段結束點處停止後保持開啟的時長。
+    /*返回設定(返回長度，z返回高度，返回速度，類型)
+    LONG lDistance ,LONG lHigh ,LONG lLowVelocity
+    *(iType 必為1使用兩段速回升)
+    */
+    /*Z軸工作高度設定(Z軸回升相對距離)
+    LONG lZBack
+    */
+    /*點膠結束設定(高速度)
+    LONG lHighVelocity
+    */
+    LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+    LONG lLineClose = 0, lXClose = 0, lYClose = 0;
+    lNowX = MO_ReadLogicPosition(0);
+    lNowY = MO_ReadLogicPosition(1);
+    lNowZ = MO_ReadLogicPosition(2);
+    if (lHighVelocity == 0)
+    {
+        lHighVelocity = lWorkVelociy;
+    }
+    if (lLowVelocity == 0)
+    {
+        lLowVelocity = lWorkVelociy;
+    }
+    MO_Timer(0, 0, lCloseONDelayTime * 1000);
+    MO_Timer(1, 0, lCloseONDelayTime * 1000);//線段點膠設定---(6)關機延遲 
+    Sleep(1);//防止出錯，避免計時器初直為0
+    while (MO_Timer(3, 0, 0))
+    {
+        Sleep(1);
+    }
+    MO_StopGumming();//停止出膠
+    GelatinizeBack(1, lNowX, lNowY, lNowZ, lNowX, lNowY, lDistance, lHigh, lZBack, lLowVelocity, lHighVelocity, lAcceleration, lInitVelociy);//返回設定
+    MO_Timer(0, 0, lCloseOffDelayTime * 1000);
+    MO_Timer(1, 0, lCloseOffDelayTime * 1000);//線段點膠設定---(3)停留時間 
+    Sleep(1);//防止出錯，避免計時器初直為0
+    while (MO_Timer(3, 0, 0))
+    {
+        Sleep(1);
+    }
+}
+/*
 *圓形動作
 *輸入(圓形、圓形結束點、線速、系統參數)
 */

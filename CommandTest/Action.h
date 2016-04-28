@@ -18,6 +18,8 @@ public:     //運動API
     void DecideLineMidMove(LONG lX, LONG lY, LONG lZ, LONG lMidDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //線段結束動作--(線段結束X,線段結束Y,線段結束Z,關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
     void DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBack, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    //(現在)線段結束動作多載--(關機後在結束點停留時間(停留時間),關機後的延遲時間(關機延遲),Z軸回升相對距離,點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),驅動速度,加速度,初速度)
+    void DecideLineEndMove(LONG lCloseOffDelayTime, LONG lCloseONDelayTime, LONG lZBack, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //圓形動作--(圓點座標X,Y,圓點座標X2,Y2,驅動速度,初速度)
     void DecideCircle(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVelociy, LONG lInitVelociy);
     //圓弧動作--(圓弧座標X,Y,圓弧座標X2,Y2,驅動速度,初速度)

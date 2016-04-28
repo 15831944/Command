@@ -40,8 +40,10 @@ public:
     afx_msg void OnBnClickedStop();
     afx_msg void OnBnClickedOk();
     afx_msg void OnBnClickedBtnhome();
+    afx_msg void OnBnClickedBtnview();
     afx_msg void OnInsert();
     afx_msg void OnDelete();
+    
     afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
     void ListRefresh(BOOL ScrollBarRefresh);
 
@@ -91,6 +93,8 @@ public:
     afx_msg void OnBnClickedBtncommand40();
     afx_msg void OnBnClickedBtncommand41();
     afx_msg void OnBnClickedBtncommand42();
-    afx_msg void OnBnClickedBtncommand292();
-    afx_msg void OnBnClickedBtnview();
+
+    afx_msg void OnBnClickedBtncommand43();
+    afx_msg void OnBnClickedBtncommand44();
+    afx_msg void OnBnClickedBtncommand45();
 };

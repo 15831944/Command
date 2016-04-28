@@ -41,36 +41,39 @@ private:    //參數
         LONG Width;
         LONG HighSpeed;
     };
-    //程序控管結構(標籤計數、標籤名稱、子程序名稱、回子程序地址)
+    //程序控管結構(標籤計數、標籤名稱、回子程序地址)
     struct Program {
         int LabelCount;
         CString LabelName;
-        CString SubroutineName;
+        std::vector<UINT> SubroutineStack;
+        std::vector<CPoint> SubroutinePointStack;
     };
     //Z軸資訊結構(Z軸回升高度)
     struct ZSet {
         LONG ZBackHeight;
     };
-    //Arc And Circle運作結構 (狀態、紀錄X、紀錄Y)
+    //Arc And Circle And Start運作結構 (狀態、紀錄X、紀錄Y)
     struct AACData {
         BOOL Status;
         LONG X;
         LONG Y;
+        LONG Z;
     };
     //出膠結構 (出膠時間、斷膠停留時間)
     struct GlueData {
         LONG GlueTime;
         LONG GlueStayTime;
     };
-    //運行參數結構(運行狀態、運行計數、運行迴圈)  
+    //運行參數結構(副程式名子、運行狀態、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)  
     //運作狀態(0:未運作 1:運行中 2:暫停中)
     //運行計數(目前做到第幾個指令 0:主程序 1-X:副程序)
-    //控管跳躍的程序
     struct RunData {
+        CString SubProgramName;
         UINT RunStatus;
         std::vector<UINT> RunCount;//計數程序命令
         std::vector<UINT> MSChange; //控管目前所讀的程序
         UINT StackingCount;
+        UINT ActionStatus;
     };
     
 private:    //變數
@@ -100,7 +103,7 @@ public:     //變數
     Speed           DotSpeedSet,LineSpeedSet;
     Program         Program;
     ZSet            ZSet;
-    AACData         ArcData,CircleData;
+    AACData         ArcData,CircleData,StartData;
     GlueData        GlueData;
     RunData         RunData;
 public:     //函數
