@@ -30,12 +30,21 @@ COrder::COrder()
     DispenseLineEnd.LowSpeed = 0;
     DispenseLineEnd.Width = 0;
     DispenseLineEnd.Height = 0;
-    DotSpeedSet.AccSpeed = 0;
-    DotSpeedSet.EndSpeed = 0;
-    LineSpeedSet.AccSpeed = 0;
-    LineSpeedSet.EndSpeed = 0;
+    DotSpeedSet.AccSpeed = 100000;
+    DotSpeedSet.EndSpeed = 30000;
+    LineSpeedSet.AccSpeed = 100000;
+    LineSpeedSet.EndSpeed = 30000;
     ZSet.ZBackHeight = 0;
     RunData.MSChange.push_back(0);
+
+    InitData.Status = FALSE;
+    InitData.X = 0;
+    InitData.Y = 0;
+    InitData.Z = 0;
+    ArcData.push_back(InitData);
+    CircleData1.push_back(InitData);
+    CircleData2.push_back(InitData);
+    StartData.push_back(InitData);
 }
 COrder::~COrder()
 {
@@ -43,6 +52,7 @@ COrder::~COrder()
 BEGIN_MESSAGE_MAP(COrder, CWnd)
 END_MESSAGE_MAP()
 // COrder 訊息處理常式
+/**************************************************************************執行續動作區塊*************************************************************************/
 /*開始*/
 BOOL COrder::Run()
 {
@@ -92,6 +102,7 @@ BOOL COrder::Pause()
     if (g_pThread && RunData.RunStatus == 1) {
         g_pThread->SuspendThread();
         RunData.RunStatus = 2;//狀態改變成暫停中
+        m_Action.g_bIsPause = TRUE;
         return TRUE;
     }
     else {
@@ -107,6 +118,7 @@ BOOL COrder::Continue()
         {
             g_pThread->ResumeThread();//啟動線程
             RunData.RunStatus = 1;//狀態改變成運作中
+            m_Action.g_bIsPause = FALSE;
             return TRUE;
         }
     }
@@ -140,6 +152,16 @@ UINT COrder::Thread(LPVOID pParam)
             {
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
+                //執行Call子程序，但沒有此子程序時
+                if (((COrder*)pParam)->Program.CallSubroutineStatus && ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
+                {
+                    if (!((COrder*)pParam)->Program.SubroutineStack.empty())
+                    {
+                        ((COrder*)pParam)->Program.SubroutinCount--;
+                        ((COrder*)pParam)->Program.SubroutineStack.pop_back();
+                        ((COrder*)pParam)->Program.CallSubroutineStatus = FALSE;
+                    }
+                }   
             }
         }
         else
@@ -175,53 +197,55 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     /************************************************************程序**********************************************************/
     if (CommandResolve(Command, 0) == L"GotoLabel") 
     {
-        if (((COrder*)pParam)->RunData.ActionStatus == 1)
-        {
-            ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height,((COrder*)pParam)->DispenseLineEnd.LowSpeed,
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-            ((COrder*)pParam)->ArcData.Status = FALSE;
-            ((COrder*)pParam)->CircleData.Status = FALSE;
-        }
-        ((COrder*)pParam)->RunData.ActionStatus = 2;
         ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
     }
     if (CommandResolve(Command, 0) == L"GotoAddress") 
     {
         if (_ttoi(CommandResolve(Command, 1)))
         {
-            if (((COrder*)pParam)->RunData.ActionStatus == 1)
-            {
-                ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                    ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
-                    ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                ((COrder*)pParam)->ArcData.Status = FALSE;
-                ((COrder*)pParam)->CircleData.Status = FALSE;
-            }
-            ((COrder*)pParam)->RunData.ActionStatus = 2;
             ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = _ttoi(CommandResolve(Command, 1)) - 2; 
         }
     }
     if (CommandResolve(Command, 0) == L"CallSubroutine")
     {
-        if (((COrder*)pParam)->RunData.ActionStatus == 1)
-        {
-            ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-            ((COrder*)pParam)->ArcData.Status = FALSE;
-            ((COrder*)pParam)->CircleData.Status = FALSE;
-        }
-        /************************************************修正*/
+        //CallSubroutineStatus狀態打開
+        ((COrder*)pParam)->Program.CallSubroutineStatus = TRUE;
         ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+        //將目前程序地址紀錄
         ((COrder*)pParam)->Program.SubroutineStack.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+        //新增紀錄目前機械手臂位置堆疊
+        ACSData Buff;
+        Buff.X = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 0));
+        Buff.Y = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 1));
+        Buff.Z = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 2));
+        ((COrder*)pParam)->Program.SubroutinePointStack.push_back(Buff);
+        //新增狀態堆疊
+        ((COrder*)pParam)->ArcData.push_back(((COrder*)pParam)->InitData);
+        ((COrder*)pParam)->CircleData1.push_back(((COrder*)pParam)->InitData);
+        ((COrder*)pParam)->CircleData2.push_back(((COrder*)pParam)->InitData);
+        ((COrder*)pParam)->StartData.push_back(((COrder*)pParam)->InitData);
+        ((COrder*)pParam)->RunData.ActionStatus.push_back(0);
+        //堆疊計數加1
+        ((COrder*)pParam)->Program.SubroutinCount++;    
     }
     if (CommandResolve(Command, 0) == L"SubroutineEnd")
     {
+        //判斷子程序堆疊中是否為空
         if (!((COrder*)pParam)->Program.SubroutineStack.empty())
         {
+            //將程序地址設為呼叫子程序時地址
             ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
+            //將堆疊釋放
             ((COrder*)pParam)->Program.SubroutineStack.pop_back();
+            //將堆疊計數減1
+            ((COrder*)pParam)->Program.SubroutinCount--;
+
+
+            ((COrder*)pParam)->ArcData.pop_back();
+            ((COrder*)pParam)->CircleData1.pop_back();
+            ((COrder*)pParam)->CircleData2.pop_back();
+            ((COrder*)pParam)->StartData.pop_back();
+            ((COrder*)pParam)->RunData.ActionStatus.pop_back();
         }
     }
     if (CommandResolve(Command, 0) == L"CallSubProgram")
@@ -230,10 +254,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"SubProgramEnd")
     {
-        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;//程序計數清零
+        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;//副程序計數清零
         ((COrder*)pParam)->RunData.MSChange.pop_back();
         ((COrder*)pParam)->RunData.StackingCount--; 
-        //((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount) = 0;
         ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//上次執行過後有+1所以要減回來
     }
     /************************************************************動作**********************************************************/
@@ -241,98 +264,225 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     if (CommandResolve(Command, 0) == L"Dot")
     {
         ((COrder*)pParam)->Time++;
+        LineGotoActionJudge(pParam);
         ((COrder*)pParam)->m_Action.DecidePointGlue(_ttoi(CommandResolve(Command, 1)), _ttoi(CommandResolve(Command, 2)), _ttoi(CommandResolve(Command, 3)),
            ((COrder*)pParam)->DispenseDotSet.GlueOpenTime, ((COrder*)pParam)->DispenseDotSet.GlueCloseTime,
-           ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
+           ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed,6000);
     }
     if (CommandResolve(Command, 0) == L"LineStart")
     {
         ((COrder*)pParam)->Time++;
-        ((COrder*)pParam)->StartData.Status = TRUE;
-        ((COrder*)pParam)->StartData.X = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->StartData.Y = _ttol(CommandResolve(Command, 2));
-        ((COrder*)pParam)->StartData.Z = _ttol(CommandResolve(Command, 3));
-
-        ((COrder*)pParam)->m_Action.DecideLineStartMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
-            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-        ((COrder*)pParam)->RunData.ActionStatus = 1;
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1));
+        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2));
+        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3));
+        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 1;
     }
     if (CommandResolve(Command, 0) == L"LinePassing")
     {
         ((COrder*)pParam)->Time++;
-        if (((COrder*)pParam)->ArcData.Status)
+        if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
         {
-            ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.X, ((COrder*)pParam)->ArcData.Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-            ((COrder*)pParam)->ArcData.Status = FALSE;
-        }
-        else
-        {
-            if (((COrder*)pParam)->RunData.ActionStatus == 2)
+            if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS存在尚未執行過LP
             {
-                ((COrder*)pParam)->m_Action.DecideLineStartMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-                    ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
-                    ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫LS 
+                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    //呼叫ARC
+                    ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                }
+                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫LS
+                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    //呼叫Circle
+                    ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                    //呼叫LP
+                    ((COrder*)pParam)->m_Action.DecideLineMidMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                }
+                else
+                {
+                    //呼叫LS-LP
+                    ((COrder*)pParam)->m_Action.DecideLineSToP(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance, ((COrder*)pParam)->DispenseLineSet.NodeTime,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                }
             }
-            ((COrder*)pParam)->m_Action.DecideLineMidMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-                ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-        }  
-        ((COrder*)pParam)->RunData.ActionStatus = 1;
+            else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
+            {
+                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫ARC
+                    ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                }
+                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫Circle
+                    ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                    //呼叫LP
+                    ((COrder*)pParam)->m_Action.DecideLineMidMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                }
+                else
+                {
+                    //呼叫LP
+                    ((COrder*)pParam)->m_Action.DecideLineMidMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                }
+            }
+        }
+        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;
     }
     if (CommandResolve(Command, 0) == L"LineEnd")
     {
         ((COrder*)pParam)->Time++;
-        if (((COrder*)pParam)->ArcData.Status)
+        if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
         {
-            ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.X, ((COrder*)pParam)->ArcData.Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-            ((COrder*)pParam)->ArcData.Status = FALSE;
+            if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)
+            {
+                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫一個LS
+                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    //再呼叫一個ARC-LE
+                    ((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                }
+                else if(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫LS
+                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    //呼叫Circle-LE
+                    ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                }
+                else
+                {
+                    //呼叫LS-LE
+                    ((COrder*)pParam)->m_Action.DecideLineSToE(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+
+                }
+            }
+            else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)
+            {
+                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫ARC-LE
+                    ((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                }
+                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                {
+                    //呼叫Circle-LE
+                    ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                }
+                else
+                {
+                    //呼叫LE
+                    ((COrder*)pParam)->m_Action.DecideLineEndMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                }
+            }   
         }
-        if (((COrder*)pParam)->RunData.ActionStatus != 2)
-        {
-            ((COrder*)pParam)->m_Action.DecideLineEndMove(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-                ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height,
-                ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-        }
-        ((COrder*)pParam)->RunData.ActionStatus = 0;
+        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
     }
     if (CommandResolve(Command, 0) == L"ArcPoint")
     {
-        if (((COrder*)pParam)->RunData.ActionStatus != 2)
+        if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)
         {
-            ((COrder*)pParam)->ArcData.Status = TRUE;
-            ((COrder*)pParam)->ArcData.X = _ttol(CommandResolve(Command, 1));
-            ((COrder*)pParam)->ArcData.Y = _ttol(CommandResolve(Command, 2));
-        }  
-    }
-    if (CommandResolve(Command, 0) == L"CirclePointOne")
-    {
-        if (((COrder*)pParam)->RunData.ActionStatus != 2)
-        {
-            ((COrder*)pParam)->CircleData.Status = TRUE;
-            ((COrder*)pParam)->CircleData.X = _ttol(CommandResolve(Command, 1));
-            ((COrder*)pParam)->CircleData.Y = _ttol(CommandResolve(Command, 2));
-        }  
-    }
-    if (CommandResolve(Command, 0) == L"CirclePointTwo")
-    {
-        if (((COrder*)pParam)->RunData.ActionStatus != 2)
-        {
-            if (((COrder*)pParam)->CircleData.Status)
-            {
-                ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData.X, ((COrder*)pParam)->CircleData.Y, _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)),
-                    ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-                ((COrder*)pParam)->CircleData.Status = FALSE;
-            }
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
         }
+        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1));
+        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2));
+    }
+    if (CommandResolve(Command, 0) == L"CirclePoint")
+    {
+        if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)
+        {
+            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+        }
+        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1));
+        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2));
+        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3));
+        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 4));
+        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 5));
+        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6));
     }
     if (CommandResolve(Command, 0) == L"HomePoint")
     {
+        LineGotoActionJudge(pParam);
         ((COrder*)pParam)->m_Action.DecideInitializationMachine(20000, 1000, 7, 0);
+    }
+    if (CommandResolve(Command, 0) == L"VirtualPoint")
+    {
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    if (CommandResolve(Command, 0) == L"WaitPoint")
+    {
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->m_Action.DecideWaitPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            _ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    if (CommandResolve(Command, 0) == L"ParkPoint")
+    {
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->m_Action.DecideParkPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    if (CommandResolve(Command, 0) == L"StopPoint")
+    {
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        ((COrder*)pParam)->Pause();
+    }
+    if (CommandResolve(Command, 0) == L"FillArea")
+    {
+        LineGotoActionJudge(pParam);
+        ((COrder*)pParam)->m_Action.DecideFill(_ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)), _ttol(CommandResolve(Command, 7)), _ttol(CommandResolve(Command, 8)), _ttol(CommandResolve(Command, 9)),
+            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+            _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
     }
     if (CommandResolve(Command, 0) == L"Output")
     {
@@ -342,45 +492,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) && _ttol(CommandResolve(Command, 3)))
         {
-            if (((COrder*)pParam)->RunData.ActionStatus == 1)
-            {
-                ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                    ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
-                    ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                ((COrder*)pParam)->ArcData.Status = FALSE;
-                ((COrder*)pParam)->CircleData.Status = FALSE;
-            }
-            ((COrder*)pParam)->RunData.ActionStatus = 2;
             ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
             //((COrder*)pParam)->RunData.RunCount = _ttol(CommandResolve(Command, 3)) - 2;//跳到地址
         }
-    }
-    if (CommandResolve(Command, 0) == L"VirtualPoint")
-    {
-        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-    }    
-    if (CommandResolve(Command, 0) == L"WaitPoint")
-    {
-        ((COrder*)pParam)->m_Action.DecideWaitPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            _ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-    }
-    if (CommandResolve(Command, 0) == L"ParkPoint")
-    {
-        ((COrder*)pParam)->m_Action.DecideParkPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-    }
-    if (CommandResolve(Command, 0) == L"StopPoint")
-    {
-        ((COrder*)pParam)->m_Action.DecideVirtualPoint(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-        ((COrder*)pParam)->Pause();
     }
 #endif
     /************************************************************參數***********************************************************/
     if (CommandResolve(Command, 0) == L"DispenseDotSet")
     {
-        
         ((COrder*)pParam)->DispenseDotSet.GlueOpenTime = _ttol(CommandResolve(Command, 1));
         ((COrder*)pParam)->DispenseDotSet.GlueCloseTime = _ttol(CommandResolve(Command, 2));
     }
@@ -415,15 +534,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         ((COrder*)pParam)->DispenseLineEnd.Width = _ttol(CommandResolve(Command, 4));
         ((COrder*)pParam)->DispenseLineEnd.HighSpeed = _ttol(CommandResolve(Command, 5));
     }
-    if (CommandResolve(Command, 0) == L"LineSpeed")
+    if (CommandResolve(Command, 0) == L"LineSpeedSet")
     {
         ((COrder*)pParam)->LineSpeedSet.EndSpeed = _ttol(CommandResolve(Command, 1));
     }
     if (CommandResolve(Command, 0) == L"ZGoBack")
     {
         ((COrder*)pParam)->ZSet.ZBackHeight = _ttol(CommandResolve(Command, 1));
+        ((COrder*)pParam)->ZSet.ZBackType = _ttol(CommandResolve(Command, 2));
     }
-    if (CommandResolve(Command, 0) == L"DispenseAcc") 
+    if (CommandResolve(Command, 0) == L"DispenseAccSet") 
     {
         if (_ttol(CommandResolve(Command, 1)) == 0)
         {
@@ -448,6 +568,27 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     g_pSubroutineThread = NULL;
     return 0;
+}
+void COrder::LineGotoActionJudge(LPVOID pParam)
+{
+#ifdef MOVE
+    if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS時 移動至LS虛擬點
+    {
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
+    else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LP時 斷膠抬升
+    {
+        ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
+            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+    }
+#endif
+    //狀態清除
+    ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+    ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 }
 /*指令分解*/
 CString COrder::CommandResolve(CString Command,UINT Choose)
@@ -493,18 +634,22 @@ void COrder::ParameterDefult() {
     GlueData.GlueStayTime = 0;
 }
 /*判斷指標歸零*/
-void COrder::DecideClear() {
-    ArcData.Status = FALSE;
-    CircleData.Status = FALSE;
-    RunData.MSChange.at(0) = 0;
+void COrder::DecideClear() { 
+    
+    /*ArcData.Status = FALSE;
+    CircleData1.Status = FALSE;
+    StartData.Status = FALSE;*/
     RunData.RunStatus = 0;//狀態改變成未運行
+    RunData.MSChange.at(0) = 0;
     RunData.StackingCount = 0;
     RunData.SubProgramName = _T("");
-    RunData.ActionStatus = 0;
+    RunData.ActionStatus.push_back(0);
     Program.LabelCount = 0;
     Program.LabelName = _T("");
+    Program.CallSubroutineStatus = FALSE;
     Program.SubroutineStack.clear();
-    
+    Program.SubroutinCount = 0;
+
     for (UINT i = 0; i < RunData.RunCount.size(); i++)
     {
         RunData.RunCount.at(i) = 0;

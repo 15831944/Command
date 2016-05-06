@@ -190,24 +190,28 @@ void CCommandTestDlg::OnBnClickedBtnhome()
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
     CString DotStrBuff, LinStrBuff, RunStrBuff;
-    DotStrBuff.Format(_T("動作:%d,次數:%d,距離:%d,高速:%d,低速:%d,關閉:%d,開啟:%d,加速:%d,驅動:%d,總數:%d"),
-        a.Time, a.RunData.RunCount,
+    CString XYZlocation;
+    DotStrBuff.Format(_T("第一階段抬升距離:%d,高速:%d,低速:%d\r\t\t關閉時間:%d,開啟時間:%d,加速:%d,驅動:%d\r\n"),
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
         a.DispenseDotSet.GlueCloseTime,a.DispenseDotSet.GlueOpenTime,
-        a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
-        a.Command.size());
-    LinStrBuff.Format(_T("動作:%d,次數:%d,總數:%d,前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d\r\n後距離:%d,類型:%d,高速:%d,低速:%d,長度:%d,高度:%d,加速:%d,驅動:%d"),
-        a.RunData.MSChange, a.RunData.RunCount.size(), a.Command.size(),
+        a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed
+    );
+    LinStrBuff.Format(_T("運動狀態:%d,線段開始狀態:%d,圓弧狀態:%d,圓狀態:%d\r\t前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n"),
+        a.RunData.ActionStatus, a.StartData.at(0).Status, a.ArcData.at(0).Status,a.CircleData1.at(0).Status,
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed
-        );
-    //StrBuff = StrBuff + a.Program.LabelName;//檢測標籤用 
-    SetDlgItemText(IDC_EDIT1, LinStrBuff);
+    );
+    RunStrBuff = DotStrBuff + LinStrBuff;//檢測標籤用 
+    SetDlgItemText(IDC_EDIT1, RunStrBuff);
     if (a.RunData.RunStatus == 2)
     {
         SetDlgItemText(IDC_PAUSE, L"Continue");
     }
+#ifdef MOVE
+    XYZlocation.Format(_T("X:%d,Y:%d,Z:%d,GlueStatus:%d"), MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming());
+#endif 
+    SetDlgItemText(IDC_EDIT2, XYZlocation);
     CDialogEx::OnTimer(nIDEvent);
 }
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
@@ -359,7 +363,7 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
 /*圓中點*/
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
-    StrBuff.Format(_T("CirclePointOne,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    StrBuff.Format(_T("CirclePoint,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -367,10 +371,10 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 /*圓中點2*/
 void CCommandTestDlg::OnBnClickedBtncommand10()
 {
-    StrBuff.Format(_T("CirclePointTwo,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    /*StrBuff.Format(_T("CirclePointTwo,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
-    ListRefresh(NULL);
+    ListRefresh(NULL);*/
 }
 /*線段塗膠設置*/
 void CCommandTestDlg::OnBnClickedBtncommand11()
@@ -393,7 +397,7 @@ void CCommandTestDlg::OnBnClickedBtncommand12()
 /*塗膠速度設置*/
 void CCommandTestDlg::OnBnClickedBtncommand13()
 {
-    StrBuff.Format(_T("LineSpeed,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    StrBuff.Format(_T("LineSpeedSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -401,7 +405,7 @@ void CCommandTestDlg::OnBnClickedBtncommand13()
 /*Z軸工作高度*/
 void CCommandTestDlg::OnBnClickedBtncommand14()
 {
-    StrBuff.Format(_T("ZGoBack,%d"), GetDlgItemInt(IDC_EDITPARAM1));
+    StrBuff.Format(_T("ZGoBack,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -409,7 +413,7 @@ void CCommandTestDlg::OnBnClickedBtncommand14()
 /*加速度設置*/
 void CCommandTestDlg::OnBnClickedBtncommand15()
 {
-    StrBuff.Format(_T("DispenseAcc,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+    StrBuff.Format(_T("DispenseAccSet,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -489,7 +493,10 @@ void CCommandTestDlg::OnBnClickedBtncommand23()
 /*填充區域*/
 void CCommandTestDlg::OnBnClickedBtncommand24()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,50000,50000,60000"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*回原點命令*/
 void CCommandTestDlg::OnBnClickedBtncommand25()
@@ -543,8 +550,6 @@ void CCommandTestDlg::OnBnClickedBtncommand30()
 void CCommandTestDlg::OnBnClickedBtncommand31()
 {
     // TODO: 在此加入控制項告知處理常式程式碼
-    a.CommandMemory.pop_back();
-    ListRefresh(NULL);
 }
 /*步驟重複X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()
