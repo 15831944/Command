@@ -96,7 +96,7 @@ void CAction::DecidePointGlue(LONG lX, LONG lY, LONG lZ, LONG lDoTime, LONG lDel
     lNowZ = MO_ReadLogicPosition(2);
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lZ;
+        lZBackDistance = abs(lZBackDistance - lZ);
     }
     if (!g_bIsStop)
     {
@@ -222,7 +222,7 @@ void CAction::DecideLineMidMove(LONG lX, LONG lY, LONG lZ, LONG lMidDelayTime, L
     PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
     if (!g_bIsStop)
     {
-        AttachPointMove(lX, lY, lZ, lWorkVelociy, lAcceleration, lInitVelociy,0);//使用附屬執行
+        AttachPointMove(lX, lY, 0, lWorkVelociy, lAcceleration, lInitVelociy,0);//使用附屬執行
         PreventMoveError();//防止軸卡出錯
     }
     MO_Timer(0, 0, lMidDelayTime * 1000);
@@ -269,7 +269,7 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
 #ifdef MOVE
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lZ;
+        lZBackDistance = abs(lZBackDistance - lZ);
     }
     LONG lNowX = 0, lNowY = 0, lNowZ = 0;
     LONG lLineClose = 0, lXClose = 0, lYClose = 0;
@@ -377,7 +377,7 @@ void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
     lNowZ = MO_ReadLogicPosition(2);
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lNowZ;
+        lZBackDistance = abs(lZBackDistance - lNowZ);
     }
     if (lHighVelocity == 0)
     {
@@ -540,7 +540,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     lBuffY = (-(lYClose - lY)) + lY;
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lNowZ;
+        lZBackDistance = abs(lZBackDistance - lNowZ);
     }
     if (lHighVelocity == 0)
     {
@@ -580,7 +580,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         else
         {
             lLineClose = lCloseDistance;
-            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lX2, lLineClose);
+            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lY2, lLineClose);
             if (!g_bIsStop)
             {
                 MO_Do3DLineMove(lXClose, lYClose, 0, lWorkVelociy, lAcceleration, lInitVelociy); //線段點膠設定---(5)關機距離
@@ -603,7 +603,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         else
         {
             lLineClose = lCloseDistance;
-            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lX2, lLineClose);
+            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lY2, lLineClose);
             if (!g_bIsStop)
             {
                 MO_Do3DLineMove(lXClose, lYClose, 0, lWorkVelociy, lAcceleration, lInitVelociy); //線段點膠設定---(5)關機距離
@@ -800,7 +800,7 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
     }
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lNowZ;
+        lZBackDistance = abs(lZBackDistance - lNowZ);
     }
     PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
     if (lNowX == lX3 && lNowY == lY3)//表示結束點在起始點上
@@ -935,7 +935,7 @@ void CAction::DecideArcleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lClo
     }
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lNowZ;
+        lZBackDistance = abs(lZBackDistance - lNowZ);
     }
 
     PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
@@ -1074,6 +1074,7 @@ void CAction::DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis
 {
 #ifdef MOVE
     MO_SetHardLim(7, 1);
+    MO_FinishGumming();
     if (!g_bIsStop)
     {
         MO_MoveToHome(lSpeed1, lSpeed2, lAxis, lMove);
@@ -1117,7 +1118,7 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
     }
     if (!bZDisType)//絕對位置
     {
-        lZBackDistance = lZBackDistance - lZ1;
+        lZBackDistance = abs(lZBackDistance - lZ1);
     }
     if (lZ1 == lZ2)
     {
@@ -1221,7 +1222,7 @@ CString CAction::NowOffSet(LONG lX, LONG lY, LONG lZ)
     CString csBuff = 0;
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
-    lNowZ = MO_ReadLogicPosition(1);
+    lNowZ = MO_ReadLogicPosition(2);
     csBuff.Format(_T("%ld,%ld,%ld"), (lNowX - lX), (lNowY - lY), (lNowZ - lZ));
     return csBuff;
 #endif

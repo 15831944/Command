@@ -189,20 +189,23 @@ void CCommandTestDlg::OnBnClickedBtnhome()
 }
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
-    CString DotStrBuff, LinStrBuff, RunStrBuff;
+    CString DotStrBuff, LinStrBuff, RunStrBuff , SubroutineBuff;
     CString XYZlocation;
     DotStrBuff.Format(_T("第一階段抬升距離:%d,高速:%d,低速:%d\r\t\t關閉時間:%d,開啟時間:%d,加速:%d,驅動:%d\r\n"),
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
         a.DispenseDotSet.GlueCloseTime,a.DispenseDotSet.GlueOpenTime,
         a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed
     );
-    LinStrBuff.Format(_T("運動狀態:%d,線段開始狀態:%d,圓弧狀態:%d,圓狀態:%d\r\t前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n"),
-        a.RunData.ActionStatus, a.StartData.at(0).Status, a.ArcData.at(0).Status,a.CircleData1.at(0).Status,
+    /*運動狀態:%d,線段開始狀態:%d,圓弧狀態:%d,圓狀態:%d\r\t*/
+    LinStrBuff.Format(_T("前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n"),
+        //a.RunData.ActionStatus, a.StartData.at(0).Status, a.ArcData.at(0).Status,a.CircleData1.at(0).Status,
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed
     );
-    RunStrBuff = DotStrBuff + LinStrBuff;//檢測標籤用 
+    SubroutineBuff.Format(_T("子程序計數:%d,運動狀態數量:%d,開始狀態數量:%d圓弧狀態數量:%d,圓狀態數量:%d,offset數量:%d,子程序位置數量:%d,機械手臂數量:%d"),
+        a.Program.SubroutinCount, a.RunData.ActionStatus.size(), a.StartData.size(), a.ArcData.size(), a.CircleData1.size(), a.OffsetData.size(), a.Program.SubroutineStack.size(), a.Program.SubroutinePointStack.size());
+    RunStrBuff = DotStrBuff + LinStrBuff + SubroutineBuff;//檢測標籤用 
     SetDlgItemText(IDC_EDIT1, RunStrBuff);
     if (a.RunData.RunStatus == 2)
     {
@@ -501,7 +504,7 @@ void CCommandTestDlg::OnBnClickedBtncommand24()
 /*回原點命令*/
 void CCommandTestDlg::OnBnClickedBtncommand25()
 {
-    StrBuff = _T("HomePoint");
+    StrBuff = _T("GoHome");
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -636,9 +639,6 @@ void CCommandTestDlg::OnBnClickedBtncommand42()
 /*測試*/
 void CCommandTestDlg::OnBnClickedBtnview()
 {
-    a.CommandMemory.push_back(_T("End"));
-    a.MainSubroutineSeparate();
-    ListRefresh(TRUE);
 }
 
 

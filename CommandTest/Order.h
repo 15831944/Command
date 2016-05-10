@@ -87,9 +87,12 @@ private:    //函數
     static  UINT    Thread(LPVOID pParam);
     static  UINT    SubroutineThread(LPVOID pParam);
     static  void    LineGotoActionJudge(LPVOID pParam);
+    static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
     static  CString CommandResolve(CString Command,UINT Choose);
     void            ParameterDefult();
+    void            DecideInit();
     void            DecideClear();
+    void            MainSubProgramSeparate();
     
 public:     //變數
     LONG            Time;
@@ -109,7 +112,7 @@ public:     //變數
     GlueData        GlueData;
     RunData         RunData;
     ACSData         InitData;
-    std::vector<ACSData> ArcData, CircleData1, CircleData2, StartData;
+    std::vector<ACSData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 public:     //函數
 	COrder();
 	virtual ~COrder();
@@ -120,8 +123,7 @@ public:     //函數
     //暫停命令解譯(成功return 1失敗return 0)
 	BOOL    Pause();
     //繼續命令解譯(成功return 1失敗return 0)
-    BOOL    Continue();
-    void            MainSubroutineSeparate();
+    BOOL    Continue(); 
 protected:
 	DECLARE_MESSAGE_MAP()
 };
