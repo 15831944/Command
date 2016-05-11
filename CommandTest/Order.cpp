@@ -71,6 +71,7 @@ BOOL COrder::Stop()
         {
             g_pThread->ResumeThread();//啟動線程
             m_Action.g_bIsStop = TRUE;
+            RunData.RunStatus = 1;//狀態設為運作中
             #ifdef MOVE
                 MO_STOP();//立即停止運動指令
             #endif
@@ -82,6 +83,7 @@ BOOL COrder::Stop()
         else
         {
             m_Action.g_bIsStop = TRUE;
+            RunData.RunStatus = 1;//狀態設為運作中
             #ifdef MOVE
                 MO_STOP();//立即停止運動指令
             #endif
@@ -189,6 +191,7 @@ UINT COrder::Thread(LPVOID pParam)
             ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
         }   
     }
+    LineGotoActionJudge(pParam);
     //((COrder*)pParam)->m_Action.DecideInitializationMachine(20000,1000,7,0);
     ((COrder*)pParam)->m_Action.g_bIsStop = FALSE;
     ((COrder*)pParam)->DecideClear();
@@ -276,6 +279,48 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->RunData.ActionStatus.pop_back();
             //將堆疊計數減1
             ((COrder*)pParam)->Program.SubroutinCount--;
+        }
+    }
+    if (CommandResolve(Command, 0) == L"Loop")
+    {
+        if (_ttol(CommandResolve(Command, 2)))
+        {
+            if (!((COrder*)pParam)->RepeatData.LoopAddressNum.size())
+            {
+                ((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                ((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
+                ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+            }
+            else
+            {
+                UINT LoopAddressNumSize = ((COrder*)pParam)->RepeatData.LoopAddressNum.size();
+                for (int i = 0; i < LoopAddressNumSize; i++)
+                {
+                    if (((COrder*)pParam)->RepeatData.LoopAddressNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
+                    {
+                        if (((COrder*)pParam)->RepeatData.LoopCount.at(i) > 1)
+                        {
+                            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+                            --((COrder*)pParam)->RepeatData.LoopCount.at(i);
+                        }
+                        else
+                        {
+                            ((COrder*)pParam)->RepeatData.LoopAddressNum.erase(((COrder*)pParam)->RepeatData.LoopAddressNum.begin() + i);
+                            ((COrder*)pParam)->RepeatData.LoopCount.erase(((COrder*)pParam)->RepeatData.LoopCount.begin() + i);
+                        } 
+                    }
+                    else
+                    {
+                        if (i == LoopAddressNumSize - 1)//掃到最後一個時
+                        {
+                            ((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                            ((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
+                            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+                        }
+       
+                    }
+                }
+            }
         }
     }
     if (CommandResolve(Command, 0) == L"CallSubProgram")
@@ -394,8 +439,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
                 }
             }
+            ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;
         }
-        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;
     }
     if (CommandResolve(Command, 0) == L"LineEnd")
     {
@@ -809,6 +854,9 @@ void COrder::DecideClear()
     RunData.MSChange.clear();
     RunData.ActionStatus.clear();
     RunData.RunCount.clear();
+    //迴圈陣列清除
+    RepeatData.LoopAddressNum.clear();
+    RepeatData.LoopCount.clear();
 }
 /*劃分主程式和副程式*/
 void COrder::MainSubProgramSeparate()

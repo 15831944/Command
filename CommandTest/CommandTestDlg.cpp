@@ -189,7 +189,7 @@ void CCommandTestDlg::OnBnClickedBtnhome()
 }
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
-    CString DotStrBuff, LinStrBuff, RunStrBuff , SubroutineBuff;
+    CString DotStrBuff, LinStrBuff, RunStrBuff , SubroutineBuff,LoopBuff;
     CString XYZlocation;
     DotStrBuff.Format(_T("第一階段抬升距離:%d,高速:%d,低速:%d\r\t\t關閉時間:%d,開啟時間:%d,加速:%d,驅動:%d\r\n"),
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
@@ -197,15 +197,21 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
         a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed
     );
     /*運動狀態:%d,線段開始狀態:%d,圓弧狀態:%d,圓狀態:%d\r\t*/
-    LinStrBuff.Format(_T("前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n"),
+    LinStrBuff.Format(_T("前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n總數:%d"),
         //a.RunData.ActionStatus, a.StartData.at(0).Status, a.ArcData.at(0).Status,a.CircleData1.at(0).Status,
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
-        a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed
+        a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed,
+        a.Time
     );
     SubroutineBuff.Format(_T("子程序計數:%d,運動狀態數量:%d,開始狀態數量:%d圓弧狀態數量:%d,圓狀態數量:%d,offset數量:%d,子程序位置數量:%d,機械手臂數量:%d"),
         a.Program.SubroutinCount, a.RunData.ActionStatus.size(), a.StartData.size(), a.ArcData.size(), a.CircleData1.size(), a.OffsetData.size(), a.Program.SubroutineStack.size(), a.Program.SubroutinePointStack.size());
-    RunStrBuff = DotStrBuff + LinStrBuff + SubroutineBuff;//檢測標籤用 
+    if (a.RepeatData.LoopAddressNum.size())
+    {
+        LoopBuff.Format(_T("地址:%d,計數:%d,陣列總數:%d"), a.RepeatData.LoopAddressNum.at(0), a.RepeatData.LoopCount.at(0), a.RepeatData.LoopAddressNum.size());
+    }
+    
+    RunStrBuff = DotStrBuff + LinStrBuff + LoopBuff;//檢測標籤用 
     SetDlgItemText(IDC_EDIT1, RunStrBuff);
     if (a.RunData.RunStatus == 2)
     {
@@ -549,10 +555,13 @@ void CCommandTestDlg::OnBnClickedBtncommand30()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*循環地址*/
+/*循環*/
 void CCommandTestDlg::OnBnClickedBtncommand31()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("Loop,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*步驟重複X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()

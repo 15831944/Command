@@ -1105,7 +1105,7 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
     */
 #ifdef MOVE
     LONG lNowX = 0, lNowY = 0, lNowZ = 0;
-    PauseDoGlue();//¼È°±«ì´_«áÄ~Äò¥X½¦(g_bIsPause=0)
+    
 
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
