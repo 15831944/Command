@@ -486,7 +486,7 @@ void CCommandTestDlg::OnBnClickedBtncommand21()
 /*停駐點*/
 void CCommandTestDlg::OnBnClickedBtncommand22()
 {
-    StrBuff.Format(_T("ParkPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
+    StrBuff.Format(_T("ParkPosition"));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -566,12 +566,18 @@ void CCommandTestDlg::OnBnClickedBtncommand31()
 /*步驟重複X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*步驟重複Y*/
 void CCommandTestDlg::OnBnClickedBtncommand33()
 {
-    // TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*查找標記*/
 void CCommandTestDlg::OnBnClickedBtncommand34()
@@ -641,8 +647,13 @@ void CCommandTestDlg::OnBnClickedBtncommand45()
 /*排膠設置*/
 void CCommandTestDlg::OnBnClickedBtncommand42()
 {
-    a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM1);
-    a.GlueData.GlueStayTime = GetDlgItemInt(IDC_EDITPARAM2);
+    a.ParkPositionData.X = GetDlgItemInt(IDC_EDITPARAM1);
+    a.ParkPositionData.Y = GetDlgItemInt(IDC_EDITPARAM2);
+    a.ParkPositionData.Z = GetDlgItemInt(IDC_EDITPARAM3);
+    a.GlueData.GlueAuto = GetDlgItemInt(IDC_EDITPARAM4);
+    a.GlueData.GlueWaitTime = GetDlgItemInt(IDC_EDITPARAM5);
+    a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM6);
+    a.GlueData.GlueStayTime = 0;  
 }
 
 /*測試*/

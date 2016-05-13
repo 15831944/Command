@@ -316,6 +316,7 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
                 }
                 Sleep(1);
             }
+            MO_StopGumming();//停止出膠
         }
         else
         {
@@ -326,9 +327,12 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
                 MO_Do3DLineMove(lXClose, lYClose, 0, lWorkVelociy, lAcceleration, lInitVelociy); //線段點膠設定---(5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
+            MO_StopGumming();//停止出膠
+            AttachPointMove(lX, lY, lZ, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行
+            PreventMoveError();//防止軸卡出錯
         }
     }
-    MO_StopGumming();//停止出膠
+ 
     GelatinizeBack(iType, lX, lY, lZ, lNowX, lNowY, lDistance, lHigh, lZBackDistance , lLowVelocity, lHighVelocity, lAcceleration, lInitVelociy);//返回設定
     MO_Timer(0, 0, lCloseOffDelayTime * 1000);
     MO_Timer(1, 0, lCloseOffDelayTime * 1000);//線段點膠設定---(3)停留時間 
@@ -576,6 +580,18 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         {
             AttachPointMove(lX2, lY2, 0, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行(移動到點2)
             PreventMoveError();//防止軸卡出錯
+            MO_Timer(0, 0, lCloseONDelayTime * 1000);
+            MO_Timer(1, 0, lCloseONDelayTime * 1000);//線段點膠設定---(6)關機延遲
+            Sleep(1);//防止出錯，避免計時器初直為0
+            while (MO_Timer(3, 0, 0))
+            {
+                if (g_bIsStop == 1)
+                {
+                    break;
+                }
+                Sleep(1);
+            }
+            MO_StopGumming();//停止出膠
         }
         else
         {
@@ -586,6 +602,9 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
                 MO_Do3DLineMove(lXClose, lYClose, 0, lWorkVelociy, lAcceleration, lInitVelociy); //線段點膠設定---(5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
+            MO_StopGumming();//停止出膠
+            AttachPointMove(lX, lY, lZ, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行
+            PreventMoveError();//防止軸卡出錯
         }
     }
     else
@@ -599,6 +618,18 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
             MO_TimerSetIntter(dTime * 1000000, LPInterrupt);//計時到跳至執行序
             AttachPointMove(lX2, lY2, 0, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行(移動到點2使用執行緒中斷) 
             PreventMoveError();//防止軸卡出錯
+            MO_Timer(0, 0, lCloseONDelayTime * 1000);
+            MO_Timer(1, 0, lCloseONDelayTime * 1000);//線段點膠設定---(6)關機延遲
+            Sleep(1);//防止出錯，避免計時器初直為0
+            while (MO_Timer(3, 0, 0))
+            {
+                if (g_bIsStop == 1)
+                {
+                    break;
+                }
+                Sleep(1);
+            }
+            MO_StopGumming();//停止出膠
         }
         else
         {
@@ -609,21 +640,12 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
                 MO_Do3DLineMove(lXClose, lYClose, 0, lWorkVelociy, lAcceleration, lInitVelociy); //線段點膠設定---(5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
+            MO_StopGumming();//停止出膠
+            AttachPointMove(lX, lY, lZ, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行
+            PreventMoveError();//防止軸卡出錯
         }
 
     }
-    MO_Timer(0, 0, lCloseONDelayTime * 1000);
-    MO_Timer(1, 0, lCloseONDelayTime * 1000);//線段點膠設定---(6)關機延遲
-    Sleep(1);//防止出錯，避免計時器初直為0
-    while (MO_Timer(3, 0, 0))
-    {
-        if (g_bIsStop == 1)
-        {
-            break;
-        }
-        Sleep(1);
-    }
-    MO_StopGumming();//停止出膠
     GelatinizeBack(iType, lX2, lY2, lZ2, lNowX, lNowY, lDistance, lHigh, lZBackDistance, lLowVelocity, lHighVelocity, lAcceleration, lInitVelociy);//返回設定
     MO_Timer(0, 0, lCloseOffDelayTime * 1000);
     MO_Timer(1, 0, lCloseOffDelayTime * 1000);//線段點膠設定---(3)停留時間 
@@ -660,7 +682,6 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVel
     BOOL bRev = 0;
     CString csX = 0, csY = 0;
     CString csBuff = 0, csNowPonit = 0, csLineCircle = 0, csLineCircleEnd = 0;
-    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
     csX.Format(L"%ld", lNowX);
@@ -676,6 +697,7 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVel
     lCircleX = CStringToLong(csBuff, 0);
     lCircleY = CStringToLong(csBuff, 1);
     bRev = CStringToLong(csBuff, 2);//取得圓心(X，Y，Rev，)
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
     if (!g_bIsStop)
     {
         MO_Do2DArcMove(0, 0, lCircleX - lNowX, lCircleY - lNowY, lInitVelociy, lWorkVelociy, bRev);
@@ -706,7 +728,6 @@ void CAction::DecideArc(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVeloci
     BOOL bRev = 0;
     CString csX = 0, csY = 0;
     CString csBuff = 0, csNowPonit = 0, csLineCircle = 0, csLineCircleEnd = 0;
-    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
     csX.Format(L"%ld", lNowX);
@@ -722,6 +743,7 @@ void CAction::DecideArc(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWorkVeloci
     lCircleX = CStringToLong(csBuff, 0);
     lCircleY = CStringToLong(csBuff, 1);
     bRev = CStringToLong(csBuff, 2);//取得圓心(X，Y，Rev，)
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
     if (!g_bIsStop)
     {
         MO_Do2DArcMove(lX2 - lNowX, lY2 - lNowY, lCircleX - lNowX, lCircleY - lNowY, lInitVelociy, lWorkVelociy, bRev);
@@ -1045,7 +1067,7 @@ void CAction::DecideWaitPoint(LONG lX, LONG lY, LONG lZ, LONG lWaitTime, LONG lW
 *停駐點動作
 *輸入(停駐點、系統參數)
 */
-void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
 {
     /*停駐點(x座標，y座標，z座標，排膠時間，結束後等待時間，)
     LONG lX, LONG lY, LONG lZ,LONG lTimeGlue,LONG lWaitTime
@@ -1056,13 +1078,25 @@ void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lW
 #ifdef MOVE
     AttachPointMove(lX, lY, lZ, lWorkVelociy, lAcceleration, lInitVelociy, 0);//使用附屬執行
     PreventMoveError();//防止軸卡出錯
+    MO_Timer(0, 0, lWaitTime * 1000);
+    MO_Timer(1, 0, 0);//(ms)
+    Sleep(1);//防止出錯，避免計時器初直為0
+    while (MO_Timer(3, 0, 0))
+    {
+        if (g_bIsStop == 1)
+        {
+            MO_Timer(2, 0, 0);//停止計時器
+            break;
+        }
+        Sleep(1);
+    }
     if (lTimeGlue == 0)
     {
         Sleep(1);
     }
     else
     {
-        DoGlue(lTimeGlue, lWaitTime, GummingTimeOutThread);//執行排膠
+        DoGlue(lTimeGlue, lStayTime, GummingTimeOutThread);//執行排膠
     }
 #endif
 }

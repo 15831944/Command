@@ -48,7 +48,7 @@ private:    //參數
 		LONG Width;
 		LONG HighSpeed;
 	};
-	//程序控管結構(標籤計數、標籤名稱、回子程序地址)
+	//程序控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序機械手臂堆疊)
 	struct Program {
 		int LabelCount;
 		CString LabelName;
@@ -62,31 +62,43 @@ private:    //參數
 		LONG ZBackHeight;
 		BOOL ZBackType;
 	};
-	//出膠結構 (出膠時間、斷膠停留時間)
+	//出膠結構 (自動排膠開關、等待時間、出膠時間、斷膠停留時間)
 	struct GlueData {
+        BOOL GlueAuto;
+        LONG GlueWaitTime;
 		LONG GlueTime;
 		LONG GlueStayTime;
 	};
 	//運行參數結構(副程式名子、運行狀態、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)  
 	//運作狀態(0:未運作 1:運行中 2:暫停中)
 	//運行計數(目前做到第幾個指令 0:主程序 1-X:副程序)
+    //目前所要讀取的堆疊計數
 	//動作狀態(0:線段執行完畢 1:線段尚未執行完成 2:Goto過的線段)
 	struct RunData {
 		CString SubProgramName;
 		UINT RunStatus;
 		std::vector<UINT> RunCount;//計數程序命令
 		std::vector<UINT> MSChange; //控管目前所讀的程序
-		UINT StackingCount;
+        UINT StackingCount;
 		std::vector<UINT> ActionStatus;
 	};
     struct RepeatData {
+        BOOL LoopSwitch;
         std::vector<UINT> LoopAddressNum;
-        std::vector<UINT> LoopCount;
+        std::vector<UINT> LoopCount; 
+        BOOL StepRepeatSwitch;
+        std::vector<UINT> StepRepeatNum;
+        std::vector<UINT> StepRepeatInitOffsetX;
+        std::vector<UINT> StepRepeatInitOffsetY;
+        std::vector<UINT> StepRepeatCountX;
+        std::vector<UINT> StepRepeatCountY;
     };
 	
 private:    //變數
 	HANDLE  wakeEvent;
-	
+    CAction         m_Action;
+    ACSData         InitData;
+
 private:    //函數
 	static  UINT    Thread(LPVOID pParam);
 	static  UINT    SubroutineThread(LPVOID pParam);
@@ -100,23 +112,22 @@ private:    //函數
 	
 public:     //變數
 	LONG            Time;
-	CAction         m_Action;
-	CString         Commanding;
 	std::vector<CString> CommandMemory;
-	std::vector<CString> CommandSwap;
-	std::vector<std::vector<CString>> Command;
-	
+    CString         Commanding;
+    std::vector<CString> CommandSwap;
+    std::vector<std::vector<CString>> Command;
+
 	DispenseDotSet  DispenseDotSet;
 	DispenseDotEnd  DispenseDotEnd;
 	DispenseLineSet DispenseLineSet;
 	DispenseLineEnd DispenseLineEnd;
 	Speed           DotSpeedSet,LineSpeedSet;
-	Program         Program;
-    RepeatData      RepeatData;
 	ZSet            ZSet;
 	GlueData        GlueData;
-	RunData         RunData;
-	ACSData         InitData;
+    ACSData         ParkPositionData;
+    RunData         RunData;
+    RepeatData      RepeatData;
+    Program         Program;
 	std::vector<ACSData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 public:     //函數
 	COrder();

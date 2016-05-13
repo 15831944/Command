@@ -42,7 +42,7 @@ public:     //運動API
 	//等待點動作--(等待點座標X,Y,Z,等待時間,驅動速度,加速度,初速度)
 	void DecideWaitPoint(LONG lX, LONG lY, LONG lZ, LONG lWaitTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//停駐點動作--(停駐點座標X,Y,Z,排膠時間,結束後等待時間,驅動速度,加速度,初速度)
-	void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+	void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//原點賦歸動作--(原點復歸速度1,原點復歸速度2,復歸軸(7),偏移量(0))
 	void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMove);
     //填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸上升距離，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，驅動速度，加速度，初速度)
