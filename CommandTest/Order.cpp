@@ -13,28 +13,14 @@ IMPLEMENT_DYNAMIC(COrder, CWnd)
 COrder::COrder()
 {
     wakeEvent = NULL;
-    DispenseDotSet.GlueOpenTime = 0;
-    DispenseDotSet.GlueCloseTime = 0;
-    DispenseDotEnd.RiseDistance = 0;
-    DispenseDotEnd.RiseHightSpeed = 0;
-    DispenseDotEnd.RiseLowSpeed = 0;
-    DispenseLineSet.BeforeMoveDelay = 0;
-    DispenseLineSet.BeforeMoveDistance = 0;
-    DispenseLineSet.NodeTime = 0;
-    DispenseLineSet.ShutdownDelay = 0;
-    DispenseLineSet.ShutdownDistance = 0;
-    DispenseLineSet.StayTime = 0;
-    DispenseLineEnd.Type = 0;
-    DispenseLineEnd.HighSpeed = 0;
-    DispenseLineEnd.LowSpeed = 0;
-    DispenseLineEnd.Width = 0;
-    DispenseLineEnd.Height = 0;
-    DotSpeedSet.AccSpeed = 100000;
-    DotSpeedSet.EndSpeed = 30000;
-    LineSpeedSet.AccSpeed = 100000;
-    LineSpeedSet.EndSpeed = 30000;
-    ZSet.ZBackHeight = 0;
-    ZSet.ZBackType = 0;   
+    DispenseDotSet = { 0,0 };
+    DispenseDotEnd = { 0,0,0 };
+    DispenseLineSet = { 0,0,0,0,0,0 };
+    DispenseLineEnd = { 0,0,0,0,0 };
+    DotSpeedSet = {100000,30000};
+    LineSpeedSet = {100000,30000};
+    ZSet = {0,0}; 
+    GlueData = { {0,0,0,0},0,0,0,0 };
 }
 COrder::~COrder()
 {
@@ -52,7 +38,11 @@ BOOL COrder::Run()
         {
             CommandMemory.push_back(_T("End"));
         }
+        //參數設定為預設
+        //ParameterDefult();
+        //劃分主副程序
         MainSubProgramSeparate();
+        //狀態初始化
         DecideInit();
         wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
         g_pThread = AfxBeginThread(Thread, (LPVOID)this);
@@ -259,7 +249,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         //將目前程序地址紀錄
         ((COrder*)pParam)->Program.SubroutineStack.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
         //新增紀錄目前機械手臂位置堆疊
-        ACSData Buff;
+        CoordinateData Buff;
         Buff.X = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 0));
         Buff.Y = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 1));
         Buff.Z = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 2));
@@ -833,7 +823,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         LineGotoActionJudge(pParam);
         if (((COrder*)pParam)->GlueData.GlueAuto)
         {
-            ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->ParkPositionData.X,((COrder*)pParam)->ParkPositionData.Y,((COrder*)pParam)->ParkPositionData.Z,
+            ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X,((COrder*)pParam)->GlueData.ParkPositionData.Y,((COrder*)pParam)->GlueData.ParkPositionData.Z,
                 ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime,((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
         }
     }
@@ -1008,29 +998,14 @@ CString COrder::CommandResolve(CString Command,UINT Choose)
 }
 /*參數設為Default*/
 void COrder::ParameterDefult() {
-    DispenseDotSet.GlueOpenTime = 0;
-    DispenseDotSet.GlueCloseTime = 0;
-    DispenseDotEnd.RiseDistance = 0;
-    DispenseDotEnd.RiseHightSpeed = 0;
-    DispenseDotEnd.RiseLowSpeed = 0;
-    DispenseLineSet.BeforeMoveDelay = 0;
-    DispenseLineSet.BeforeMoveDistance = 0;
-    DispenseLineSet.NodeTime = 0;
-    DispenseLineSet.ShutdownDelay = 0;
-    DispenseLineSet.ShutdownDistance = 0;
-    DispenseLineSet.StayTime = 0;
-    DispenseLineEnd.Type = 0;
-    DispenseLineEnd.HighSpeed = 0;
-    DispenseLineEnd.LowSpeed = 0;
-    DispenseLineEnd.Width = 0;
-    DispenseLineEnd.Height = 0;
-    DotSpeedSet.AccSpeed = 0;
-    DotSpeedSet.EndSpeed = 0;
-    LineSpeedSet.AccSpeed = 0;
-    LineSpeedSet.EndSpeed = 0;
-    ZSet.ZBackHeight = 0;
-    GlueData.GlueTime = 0;
-    GlueData.GlueStayTime = 0;
+    DispenseDotSet = Default.DispenseDotSet;
+    DispenseDotEnd = Default.DispenseDotEnd;
+    DotSpeedSet = Default.DotSpeedSet;
+    DispenseLineSet = Default.DispenseLineSet;
+    DispenseLineEnd = Default.DispenseLineEnd;
+    LineSpeedSet = Default.LineSpeedSet;
+    ZSet = Default.ZSet;
+    GlueData = Default.GlueData;
 }
 void COrder::DecideInit()
 {

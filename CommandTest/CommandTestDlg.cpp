@@ -27,6 +27,7 @@ void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
 {
     CDialogEx::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_LIST1, m_CommandList);
+    DDX_Control(pDX, IDC_LIST2, m_ParamList);
 }
 
 BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
@@ -105,10 +106,31 @@ BOOL CCommandTestDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 設定大圖示
 	SetIcon(m_hIcon, FALSE);		// 設定小圖示
 	// TODO: 在此加入額外的初始設定
+    //命令列表
     m_CommandList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
     m_CommandList.InsertColumn(0, _T("編號"), LVCFMT_CENTER, 36, -1);
     m_CommandList.InsertColumn(1, _T("Command"), LVCFMT_LEFT, 300, -1);
-    SetTimer(1, 100, NULL);
+    //參數列表
+    m_ParamList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
+    m_ParamList.InsertColumn(0, _T("名稱"), LVCFMT_CENTER, 100, -1);
+    m_ParamList.InsertColumn(1, _T("參數值"), LVCFMT_LEFT, 150, -1);
+    CStringArray StrTable;
+    StrTable.Add(_T("點膠出膠時間")); StrTable.Add(_T("點膠停留時間"));
+    StrTable.Add(_T("點膠回程距離")); StrTable.Add(_T("點膠低回程速度")); StrTable.Add(_T("點膠高回程速度"));
+    StrTable.Add(_T("點膠加速度")); StrTable.Add(_T("點膠驅動速度"));
+    StrTable.Add(_T("線段移動前延遲")); StrTable.Add(_T("線段設置距離")); StrTable.Add(_T("線段節點時間")); StrTable.Add(_T("線段停留時間")); StrTable.Add(_T("線段關機距離")); StrTable.Add(_T("線段關機延遲"));
+    StrTable.Add(_T("線段返回類型")); StrTable.Add(_T("線段返回低速")); StrTable.Add(_T("線段返回高度")); StrTable.Add(_T("線段返回長度")); StrTable.Add(_T("線段返回高速"));
+    StrTable.Add(_T("線段驅動速度")); StrTable.Add(_T("線段加速度"));
+    StrTable.Add(_T("Z軸回升距離")); StrTable.Add(_T("Z軸回升型態"));
+    StrTable.Add(_T("停駐點X，Y，Z")); StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
+    StrTable.Add(_T("動作總數"));
+    for (int i = 0; i < 28; i++) {
+        m_ParamList.InsertItem(i, NULL);
+        m_ParamList.SetItemText(i, 0, StrTable[i]);
+        m_ParamList.SetItemText(i, 1, 0);
+    }
+    SetTimer(1, 500, NULL);
+    //軸卡運動開啟
 #ifdef MOVE
     MO_Open(1);
     MO_SetHardLim(7, 1);
@@ -149,11 +171,12 @@ HCURSOR CCommandTestDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-
+/*開始*/
 void CCommandTestDlg::OnBnClickedStart()
 {
     a.Run();
 }
+/*暫停&繼續*/
 void CCommandTestDlg::OnBnClickedPause()
 {
     CString StrBuff;
@@ -169,6 +192,7 @@ void CCommandTestDlg::OnBnClickedPause()
         SetDlgItemText(IDC_PAUSE, L"Pause");
     }
 }
+/*停止*/
 void CCommandTestDlg::OnBnClickedStop()
 {
     a.Stop();
@@ -177,7 +201,7 @@ void CCommandTestDlg::OnBnClickedStop()
 /*清除陣列*/
 void CCommandTestDlg::OnBnClickedOk()
 {
-    a.Command.clear();
+    a.CommandMemory.clear();
     ListRefresh(NULL);
 }
 /*原點賦歸*/
@@ -187,40 +211,47 @@ void CCommandTestDlg::OnBnClickedBtnhome()
     MO_MoveToHome(20000, 1000, 7, 0);//原點復歸
 #endif
 }
+/*View*/
+void CCommandTestDlg::OnBnClickedBtnview()
+{
+}
+/*刷新*/
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
-    CString DotStrBuff, LinStrBuff, RunStrBuff , SubroutineBuff,LoopBuff;
-    CString XYZlocation;
-    DotStrBuff.Format(_T("第一階段抬升距離:%d,高速:%d,低速:%d\r\t\t關閉時間:%d,開啟時間:%d,加速:%d,驅動:%d\r\n"),
-        a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseHightSpeed,a.DispenseDotEnd.RiseLowSpeed,
-        a.DispenseDotSet.GlueCloseTime,a.DispenseDotSet.GlueOpenTime,
-        a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed
-    );
-    /*運動狀態:%d,線段開始狀態:%d,圓弧狀態:%d,圓狀態:%d\r\t*/
-    LinStrBuff.Format(_T("前延遲:%d,前距離:%d,節點:%d,停留:%d,後延遲:%d後距離:%d\r\n類型:%d,高速:%d,低速:%d,長度:%d,高度:%d\r\t\t加速:%d,驅動:%d\r\n總數:%d"),
-        //a.RunData.ActionStatus, a.StartData.at(0).Status, a.ArcData.at(0).Status,a.CircleData1.at(0).Status,
+    CString XYZlocation,StrBuff;
+    LONG DataArray[30] = { a.DispenseDotSet.GlueOpenTime, a.DispenseDotSet.GlueCloseTime,
+        a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseLowSpeed,a.DispenseDotEnd.RiseHightSpeed,
+        a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
         a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed,
+        a.ZSet.ZBackHeight,a.ZSet.ZBackType,
+        a.GlueData.ParkPositionData.X,a.GlueData.ParkPositionData.Y,a.GlueData.ParkPositionData.Z,a.GlueData.GlueAuto,a.GlueData.GlueWaitTime,a.GlueData.GlueTime,a.GlueData.GlueStayTime,
         a.Time
-    );
-    SubroutineBuff.Format(_T("子程序計數:%d,運動狀態數量:%d,開始狀態數量:%d圓弧狀態數量:%d,圓狀態數量:%d,offset數量:%d,子程序位置數量:%d,機械手臂數量:%d"),
-        a.Program.SubroutinCount, a.RunData.ActionStatus.size(), a.StartData.size(), a.ArcData.size(), a.CircleData1.size(), a.OffsetData.size(), a.Program.SubroutineStack.size(), a.Program.SubroutinePointStack.size());
-    if (a.RepeatData.LoopAddressNum.size())
-    {
-        LoopBuff.Format(_T("地址:%d,計數:%d,陣列總數:%d"), a.RepeatData.LoopAddressNum.at(0), a.RepeatData.LoopCount.at(0), a.RepeatData.LoopAddressNum.size());
+    };
+    int ArrayCount = 0;
+    for (int i = 0; i < 28; i++)
+    {   
+        if (i == 22)
+        {
+            StrBuff.Format(_T("%d,%d,%d"), DataArray[22], DataArray[23], DataArray[24]);
+            ArrayCount += 3;
+        }
+        else
+        {
+            StrBuff.Format(_T("%d"), DataArray[ArrayCount]);
+            ArrayCount++;
+        }    
+        m_ParamList.SetItemText(i, 1, StrBuff);
     }
-    
-    RunStrBuff = DotStrBuff + LinStrBuff + LoopBuff;//檢測標籤用 
-    SetDlgItemText(IDC_EDIT1, RunStrBuff);
+    #ifdef MOVE
+        XYZlocation.Format(_T("X:%d,Y:%d,Z:%d,GlueStatus:%d"), MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming());
+    #endif 
+    SetDlgItemText(IDC_EDIT2, XYZlocation);
     if (a.RunData.RunStatus == 2)
     {
         SetDlgItemText(IDC_PAUSE, L"Continue");
     }
-#ifdef MOVE
-    XYZlocation.Format(_T("X:%d,Y:%d,Z:%d,GlueStatus:%d"), MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming());
-#endif 
-    SetDlgItemText(IDC_EDIT2, XYZlocation);
     CDialogEx::OnTimer(nIDEvent);
 }
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
@@ -238,7 +269,8 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
     }
     else
     {
-        for (UINT i = 0; i < a.Command.size(); i++)
+        //測試SubProgram時使用
+        /*for (UINT i = 0; i < a.Command.size(); i++)
         {
             for (UINT j = 0; j<a.Command.at(i).size(); j++)
             {
@@ -253,10 +285,8 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
         m_CommandList.SetItemText(0, 1, StrBuff);
         m_CommandList.InsertItem(1, NULL);
         StrBuff.Format(_T("%d"), a.Command.at(1).size());
-        m_CommandList.SetItemText(1, 1, StrBuff);
-
+        m_CommandList.SetItemText(1, 1, StrBuff);*/
     }
-    
 }
 /*列表點下左鍵*/
 void CCommandTestDlg::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -502,7 +532,7 @@ void CCommandTestDlg::OnBnClickedBtncommand23()
 /*填充區域*/
 void CCommandTestDlg::OnBnClickedBtncommand24()
 {
-    StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,50000,50000,60000"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
+    StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8), GetDlgItemInt(IDC_EDITPARAM9));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -647,19 +677,15 @@ void CCommandTestDlg::OnBnClickedBtncommand45()
 /*排膠設置*/
 void CCommandTestDlg::OnBnClickedBtncommand42()
 {
-    a.ParkPositionData.X = GetDlgItemInt(IDC_EDITPARAM1);
-    a.ParkPositionData.Y = GetDlgItemInt(IDC_EDITPARAM2);
-    a.ParkPositionData.Z = GetDlgItemInt(IDC_EDITPARAM3);
+    a.GlueData.ParkPositionData.X = GetDlgItemInt(IDC_EDITPARAM1);
+    a.GlueData.ParkPositionData.Y = GetDlgItemInt(IDC_EDITPARAM2);
+    a.GlueData.ParkPositionData.Z = GetDlgItemInt(IDC_EDITPARAM3);
     a.GlueData.GlueAuto = GetDlgItemInt(IDC_EDITPARAM4);
     a.GlueData.GlueWaitTime = GetDlgItemInt(IDC_EDITPARAM5);
     a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM6);
-    a.GlueData.GlueStayTime = 0;  
+    a.GlueData.GlueStayTime = GetDlgItemInt(IDC_EDITPARAM7);
 }
 
-/*測試*/
-void CCommandTestDlg::OnBnClickedBtnview()
-{
-}
 
 
 

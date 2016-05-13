@@ -30,6 +30,7 @@ protected:
 	HICON m_hIcon;
     COrder a;
     CListCtrl m_CommandList;
+    CListCtrl m_ParamList;
     CString StrBuff;
     BOOL Insert;
     UINT InsertNum;
@@ -46,8 +47,6 @@ public:
     
     afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
     void ListRefresh(BOOL ScrollBarRefresh);
-
-
 
     afx_msg void OnBnClickedBtncommand1();
     afx_msg void OnBnClickedBtncommand2();
@@ -92,9 +91,11 @@ public:
     afx_msg void OnBnClickedBtncommand39();
     afx_msg void OnBnClickedBtncommand40();
     afx_msg void OnBnClickedBtncommand41();
+    //排膠設置
     afx_msg void OnBnClickedBtncommand42();
-
+    //副程式
     afx_msg void OnBnClickedBtncommand43();
     afx_msg void OnBnClickedBtncommand44();
     afx_msg void OnBnClickedBtncommand45();
+    
 };
