@@ -4,7 +4,8 @@
 // 專案專用 Include 檔案
 
 #pragma once
-
+#define _CRT_NON_CONFORMING_SWPRINTFS
+#define _CRT_SECURE_NO_WARNINGS
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN            // 從 Windows 標頭排除不常使用的成員
 #endif
@@ -37,7 +38,10 @@
 #ifdef MOVE
 #include "mcc.h"
 #endif
-
+#define VI
+#ifdef VI
+#include "Vision.h"
+#endif
 
 #ifdef _UNICODE
 #if defined _M_IX86

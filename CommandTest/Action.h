@@ -44,7 +44,7 @@ public:     //運動API
 	//停駐點動作--(停駐點座標X,Y,Z,排膠時間,結束後等待時間,驅動速度,加速度,初速度)
 	void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//原點賦歸動作--(原點復歸速度1,原點復歸速度2,復歸軸(7),偏移量(0))
-	void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMove);
+	void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ);
     //填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸上升距離，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，驅動速度，加速度，初速度)
     void DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, LONG lZBackDistance, BOOL bZDisType, int iType, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//輸出-16個輸出(選擇埠(0~15),開啟關閉(0~1))
@@ -55,6 +55,12 @@ public:     //運動API
     CString NowOffSet(LONG lX, LONG lY, LONG lZ);
     //回傳目前位置
     CString NowLocation();
+
+
+    //人機用函數-軟體負極限
+    void HMNegLim();
+    //人機用函數-軟體正極限(x,y,z為最大工作範圍)
+    void HMPosLim(LONG lX, LONG lY, LONG lZ);
 private:    //自行運用函數
 	void AttachPointMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIntt); //附屬--- 移動點動作
 	void DoGlue(LONG lTime, LONG lDelayTime, LPTHREAD_START_ROUTINE GummingTimeOutThread);//出膠，多載有延遲時間(配合執行緒使用)

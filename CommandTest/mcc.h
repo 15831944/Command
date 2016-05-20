@@ -21,8 +21,8 @@ MO_DLL BOOL MO_Open(int interrupt);//開啟軸卡並將邏輯位置歸零
 MO_DLL void MO_Close();//關閉軸卡
 MO_DLL void MO_STOP();//停止驅動
 MO_DLL void MO_DecSTOP();//減速停止
-MO_DLL void MO_MoveToHome(LONG lSpeed1, LONG lSpeed2, int iAxis,
-                          LONG lMove);//原點復歸
+MO_DLL void MO_MoveToHome(LONG lSpeed1, LONG lSpeed2, int iAxis);//原點復歸
+MO_DLL void MO_MoveToHome(LONG lSpeed1, LONG lSpeed2, int iAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ);//原點復歸-多載(速度1，速度2，指定軸7，偏移量X,Y,Z)
 MO_DLL void MO_Do2DLineMove(LONG lXTar, LONG lYTar, LONG lSpeed,
                             LONG lAcceleration, LONG lInitSpeed);//XY兩軸直線補間移動
 MO_DLL void MO_DoZLineMove(LONG lZTar, LONG lSpeed, LONG lAcceleration,
@@ -86,6 +86,7 @@ MO_DLL void MO_Do2ArcReduce(LONG lXTar, LONG lYTar, LONG XCenter, LONG YCenter,
 MO_DLL void MO_Do3DLineMoveInterr(LONG lXTar, LONG lYTar, LONG lZTar, LONG lSpeed,
     LONG lAcceleration, LONG lInitSpeed, LPTHREAD_START_ROUTINE LPInterrupt); //XYZ三軸直線補間移動 - 多載(中斷)
 MO_DLL void MO_TimerSetIntter(LONG lMicroSecond,LPTHREAD_START_ROUTINE TimeOutThread);//設定計時器到後觸發中斷(usec)
+
 // CmccApp
 // 這個類別的實作請參閱 mcc.cpp
 //

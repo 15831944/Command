@@ -81,6 +81,9 @@ BOOL CCommandTestApp::InitInstance()
 	else if (nResponse == IDCANCEL)
 	{
 		// TODO: 在此放置於使用 [取消] 來停止使用對話方塊時
+        #ifdef VI
+         VI_VisionFree();
+        #endif
 		// 處理的程式碼
 	}
 	else if (nResponse == -1)

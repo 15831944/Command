@@ -1,5 +1,5 @@
-
-// CommandTestDlg.cpp : ¹ê§@ÀÉ
+ï»¿
+// CommandTestDlg.cpp : å¯¦ä½œæª”
 //
 
 #include "stdafx.h"
@@ -7,13 +7,15 @@
 #include "CommandTestDlg.h"
 #include "afxdialogex.h"
 #include "mcc.h"
+#include "Default.h"
+#include "Camera.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-// CCommandTestDlg ¹ï¸Ü¤è¶ô
+// CCommandTestDlg å°è©±æ–¹å¡Š
 
 
 
@@ -88,68 +90,80 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BTNCOMMAND40, &CCommandTestDlg::OnBnClickedBtncommand40)
     ON_BN_CLICKED(IDC_BTNCOMMAND41, &CCommandTestDlg::OnBnClickedBtncommand41)
 
-
-    ON_BN_CLICKED(IDC_BTNCOMMAND42, &CCommandTestDlg::OnBnClickedBtncommand42)
     ON_BN_CLICKED(IDC_BTNCOMMAND43, &CCommandTestDlg::OnBnClickedBtncommand43)
     ON_BN_CLICKED(IDC_BTNCOMMAND44, &CCommandTestDlg::OnBnClickedBtncommand44)
     ON_BN_CLICKED(IDC_BTNCOMMAND45, &CCommandTestDlg::OnBnClickedBtncommand45)
+    ON_BN_CLICKED(IDC_BTNDEFAULT, &CCommandTestDlg::OnBnClickedBtndefault)
+    ON_BN_CLICKED(IDC_BTNVISION, &CCommandTestDlg::OnBnClickedBtnvision)
 END_MESSAGE_MAP()
 
 
-// CCommandTestDlg °T®§³B²z±`¦¡
+// CCommandTestDlg è¨Šæ¯è™•ç†å¸¸å¼
 BOOL CCommandTestDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// ³]©w¦¹¹ï¸Ü¤è¶ôªº¹Ï¥Ü¡C·íÀ³¥Îµ{¦¡ªº¥Dµøµ¡¤£¬O¹ï¸Ü¤è¶ô®É¡A
-	// ®Ø¬[·|¦Û°Ê±q¨Æ¦¹§@·~
-	SetIcon(m_hIcon, TRUE);			// ³]©w¤j¹Ï¥Ü
-	SetIcon(m_hIcon, FALSE);		// ³]©w¤p¹Ï¥Ü
-	// TODO: ¦b¦¹¥[¤JÃB¥~ªºªì©l³]©w
-    //©R¥O¦Cªí
+	// è¨­å®šæ­¤å°è©±æ–¹å¡Šçš„åœ–ç¤ºã€‚ç•¶æ‡‰ç”¨ç¨‹å¼çš„ä¸»è¦–çª—ä¸æ˜¯å°è©±æ–¹å¡Šæ™‚ï¼Œ
+	// æ¡†æ¶æœƒè‡ªå‹•å¾äº‹æ­¤ä½œæ¥­
+	SetIcon(m_hIcon, TRUE);			// è¨­å®šå¤§åœ–ç¤º
+	SetIcon(m_hIcon, FALSE);		// è¨­å®šå°åœ–ç¤º
+	// TODO: åœ¨æ­¤åŠ å…¥é¡å¤–çš„åˆå§‹è¨­å®š
+    //å‘½ä»¤åˆ—è¡¨
     m_CommandList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
-    m_CommandList.InsertColumn(0, _T("½s¸¹"), LVCFMT_CENTER, 36, -1);
+    m_CommandList.InsertColumn(0, _T("ç·¨è™Ÿ"), LVCFMT_CENTER, 36, -1);
     m_CommandList.InsertColumn(1, _T("Command"), LVCFMT_LEFT, 300, -1);
-    //°Ñ¼Æ¦Cªí
+    //åƒæ•¸åˆ—è¡¨
     m_ParamList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
-    m_ParamList.InsertColumn(0, _T("¦WºÙ"), LVCFMT_CENTER, 100, -1);
-    m_ParamList.InsertColumn(1, _T("°Ñ¼Æ­È"), LVCFMT_LEFT, 150, -1);
+    m_ParamList.InsertColumn(0, _T("åç¨±"), LVCFMT_CENTER, 100, -1);
+    m_ParamList.InsertColumn(1, _T("åƒæ•¸å€¼"), LVCFMT_LEFT, 150, -1);
     CStringArray StrTable;
-    StrTable.Add(_T("ÂI½¦¥X½¦®É¶¡")); StrTable.Add(_T("ÂI½¦°±¯d®É¶¡"));
-    StrTable.Add(_T("ÂI½¦¦^µ{¶ZÂ÷")); StrTable.Add(_T("ÂI½¦§C¦^µ{³t«×")); StrTable.Add(_T("ÂI½¦°ª¦^µ{³t«×"));
-    StrTable.Add(_T("ÂI½¦¥[³t«×")); StrTable.Add(_T("ÂI½¦ÅX°Ê³t«×"));
-    StrTable.Add(_T("½u¬q²¾°Ê«e©µ¿ğ")); StrTable.Add(_T("½u¬q³]¸m¶ZÂ÷")); StrTable.Add(_T("½u¬q¸`ÂI®É¶¡")); StrTable.Add(_T("½u¬q°±¯d®É¶¡")); StrTable.Add(_T("½u¬qÃö¾÷¶ZÂ÷")); StrTable.Add(_T("½u¬qÃö¾÷©µ¿ğ"));
-    StrTable.Add(_T("½u¬qªğ¦^Ãş«¬")); StrTable.Add(_T("½u¬qªğ¦^§C³t")); StrTable.Add(_T("½u¬qªğ¦^°ª«×")); StrTable.Add(_T("½u¬qªğ¦^ªø«×")); StrTable.Add(_T("½u¬qªğ¦^°ª³t"));
-    StrTable.Add(_T("½u¬qÅX°Ê³t«×")); StrTable.Add(_T("½u¬q¥[³t«×"));
-    StrTable.Add(_T("Z¶b¦^¤É¶ZÂ÷")); StrTable.Add(_T("Z¶b¦^¤É«¬ºA"));
-    StrTable.Add(_T("°±¾nÂIX¡AY¡AZ")); StrTable.Add(_T("±Æ½¦¶}Ãö")); StrTable.Add(_T("±Æ½¦µ¥«İ®É¶¡")); StrTable.Add(_T("±Æ½¦®É¶¡")); StrTable.Add(_T("±Æ½¦«á°±¯d®É¶¡"));
-    StrTable.Add(_T("°Ê§@Á`¼Æ"));
-    for (int i = 0; i < 28; i++) {
+    StrTable.Add(_T("é»è† å‡ºè† æ™‚é–“")); StrTable.Add(_T("é»è† åœç•™æ™‚é–“"));
+    StrTable.Add(_T("é»è† å›ç¨‹è·é›¢")); StrTable.Add(_T("é»è† ä½å›ç¨‹é€Ÿåº¦")); StrTable.Add(_T("é»è† é«˜å›ç¨‹é€Ÿåº¦"));
+    StrTable.Add(_T("é»è† åŠ é€Ÿåº¦")); StrTable.Add(_T("é»è† é©…å‹•é€Ÿåº¦"));
+    StrTable.Add(_T("ç·šæ®µç§»å‹•å‰å»¶é²")); StrTable.Add(_T("ç·šæ®µè¨­ç½®è·é›¢")); StrTable.Add(_T("ç·šæ®µç¯€é»æ™‚é–“")); StrTable.Add(_T("ç·šæ®µåœç•™æ™‚é–“")); StrTable.Add(_T("ç·šæ®µé—œæ©Ÿè·é›¢")); StrTable.Add(_T("ç·šæ®µé—œæ©Ÿå»¶é²"));
+    StrTable.Add(_T("ç·šæ®µè¿”å›é¡å‹")); StrTable.Add(_T("ç·šæ®µè¿”å›ä½é€Ÿ")); StrTable.Add(_T("ç·šæ®µè¿”å›é«˜åº¦")); StrTable.Add(_T("ç·šæ®µè¿”å›é•·åº¦")); StrTable.Add(_T("ç·šæ®µè¿”å›é«˜é€Ÿ"));
+    StrTable.Add(_T("ç·šæ®µåŠ é€Ÿåº¦")); StrTable.Add(_T("ç·šæ®µé©…å‹•é€Ÿåº¦"));
+    StrTable.Add(_T("Zè»¸å›å‡è·é›¢")); StrTable.Add(_T("Zè»¸å›å‡å‹æ…‹"));
+    StrTable.Add(_T("åœé§é»Xï¼ŒYï¼ŒZ")); StrTable.Add(_T("æ’è† é–‹é—œ")); StrTable.Add(_T("æ’è† ç­‰å¾…æ™‚é–“")); StrTable.Add(_T("æ’è† æ™‚é–“")); StrTable.Add(_T("æ’è† å¾Œåœç•™æ™‚é–“"));
+    StrTable.Add(_T("å‹•ä½œç¸½æ•¸")); StrTable.Add(_T("å½±åƒOffsetX")); StrTable.Add(_T("å½±åƒOffsetY")); StrTable.Add(_T("å½±åƒAngle"));
+    StrTable.Add(_T("å°ä½é»1X")); StrTable.Add(_T("å°ä½é»1Y")); StrTable.Add(_T("å°ä½é»1offsetX")); StrTable.Add(_T("å°ä½é»1offsetY"));
+    StrTable.Add(_T("å°ä½é»2X")); StrTable.Add(_T("å°ä½é»2Y")); StrTable.Add(_T("å°ä½é»2offsetX")); StrTable.Add(_T("å°ä½é»2offsetY"));
+    StrTable.Add(_T("æœ€çµ‚X")); StrTable.Add(_T("æœ€çµ‚Y"));
+    for (int i = 0; i < StrTable.GetSize(); i++) {
         m_ParamList.InsertItem(i, NULL);
         m_ParamList.SetItemText(i, 0, StrTable[i]);
         m_ParamList.SetItemText(i, 1, 0);
     }
+    a.Default.DotSpeedSet = { 100000,30000 };
+    a.Default.LineSpeedSet = { 100000,30000 };
+    a.Default.ZSet = { 5000,1 };
     SetTimer(1, 500, NULL);
-    //¶b¥d¹B°Ê¶}±Ò
+    //è»¸å¡é‹å‹•é–‹å•Ÿ
 #ifdef MOVE
     MO_Open(1);
     MO_SetHardLim(7, 1);
-    MO_SetDecOK(1);//¶}±Ò´î³t¦³®Ä
+    MO_SetDecOK(1);//é–‹å•Ÿæ¸›é€Ÿæœ‰æ•ˆ
+    MO_SetSoftLim(7, 1);
+    MO_SetCompSoft(1, -10, -10, -10);
+    MO_SetCompSoft(0, 150000, 180000, 70000); //0, 150000, 190000, 80000
 #endif
-	return TRUE;  // ¶Ç¦^ TRUE¡A°£«D±z¹ï±±¨î¶µ³]©wµJÂI
+#ifdef VI
+    VI_CameraInit(0, 1);
+#endif
+	return TRUE;  // å‚³å› TRUEï¼Œé™¤éæ‚¨å°æ§åˆ¶é …è¨­å®šç„¦é»
 }
-// ¦pªG±N³Ì¤p¤Æ«ö¶s¥[¤J±zªº¹ï¸Ü¤è¶ô¡A±z»İ­n¤U¦Cªºµ{¦¡½X¡A
-// ¥H«KÃ¸»s¹Ï¥Ü¡C¹ï©ó¨Ï¥Î¤å¥ó/ÀËµø¼Ò¦¡ªº MFC À³¥Îµ{¦¡¡A
-// ®Ø¬[·|¦Û°Ê§¹¦¨¦¹§@·~¡C
+// å¦‚æœå°‡æœ€å°åŒ–æŒ‰éˆ•åŠ å…¥æ‚¨çš„å°è©±æ–¹å¡Šï¼Œæ‚¨éœ€è¦ä¸‹åˆ—çš„ç¨‹å¼ç¢¼ï¼Œ
+// ä»¥ä¾¿ç¹ªè£½åœ–ç¤ºã€‚å°æ–¼ä½¿ç”¨æ–‡ä»¶/æª¢è¦–æ¨¡å¼çš„ MFC æ‡‰ç”¨ç¨‹å¼ï¼Œ
+// æ¡†æ¶æœƒè‡ªå‹•å®Œæˆæ­¤ä½œæ¥­ã€‚
 void CCommandTestDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // Ã¸»sªº¸Ë¸m¤º®e
+		CPaintDC dc(this); // ç¹ªè£½çš„è£ç½®å…§å®¹
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// ±N¹Ï¥Ü¸m¤¤©ó¥Î¤áºİ¯x§Î
+		// å°‡åœ–ç¤ºç½®ä¸­æ–¼ç”¨æˆ¶ç«¯çŸ©å½¢
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -157,7 +171,7 @@ void CCommandTestDlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// ´yÃ¸¹Ï¥Ü
+		// æç¹ªåœ–ç¤º
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -165,18 +179,31 @@ void CCommandTestDlg::OnPaint()
 		CDialogEx::OnPaint();
 	}
 }
-// ·í¨Ï¥ÎªÌ©ì¦²³Ì¤p¤Æµøµ¡®É¡A
-// ¨t²Î©I¥s³o­Ó¥\¯à¨ú±o´å¼ĞÅã¥Ü¡C
+// ç•¶ä½¿ç”¨è€…æ‹–æ›³æœ€å°åŒ–è¦–çª—æ™‚ï¼Œ
+// ç³»çµ±å‘¼å«é€™å€‹åŠŸèƒ½å–å¾—æ¸¸æ¨™é¡¯ç¤ºã€‚
 HCURSOR CCommandTestDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-/*¶}©l*/
+
+/*é–‹å§‹*/
 void CCommandTestDlg::OnBnClickedStart()
 {
+    
+    /*è¨­ç½®Modelç•¶å‰ç›®éŒ„*/
+    CString path;
+    GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+    path.ReleaseBuffer();
+    int pos = path.ReverseFind('\\');
+    path = path.Left(pos) + _T("\\Model\\");
+    LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+    lstrcpy(lpszText, path);
+    a.VisionFile.ModelPath = lpszText;
+    /*é‹è¡Œ*/
     a.Run();
+
 }
-/*¼È°±&Ä~Äò*/
+/*æš«åœ&ç¹¼çºŒ*/
 void CCommandTestDlg::OnBnClickedPause()
 {
     CString StrBuff;
@@ -192,45 +219,72 @@ void CCommandTestDlg::OnBnClickedPause()
         SetDlgItemText(IDC_PAUSE, L"Pause");
     }
 }
-/*°±¤î*/
+/*åœæ­¢*/
 void CCommandTestDlg::OnBnClickedStop()
 {
     a.Stop();
     SetDlgItemText(IDC_PAUSE, L"Pause");
 }
-/*²M°£°}¦C*/
+/*æ¸…é™¤é™£åˆ—*/
 void CCommandTestDlg::OnBnClickedOk()
 {
     a.CommandMemory.clear();
     ListRefresh(NULL);
 }
-/*­ìÂI½áÂk*/
+/*åŸé»è³¦æ­¸*/
 void CCommandTestDlg::OnBnClickedBtnhome()
 {
+    AfxBeginThread(Thread, (LPVOID)this);
+}
+/*åŸé»è³¦æ­¸åŸ·è¡Œç·’*/
+UINT CCommandTestDlg::Thread(LPVOID pParam)
+{
 #ifdef MOVE 
-    MO_MoveToHome(20000, 1000, 7, 0);//­ìÂI´_Âk
+    MO_SetHardLim(7, 1);
+    MO_SetSoftLim(7, 0);
+    MO_FinishGumming();
+    MO_MoveToHome(20000, 10000, 7, 50000, 10000, 0);
+    while (MO_ReadIsDriving(7))
+    {
+        Sleep(1);
+    }
+    MO_SetSoftLim(7, 1);
 #endif
+    return 0;
 }
 /*View*/
 void CCommandTestDlg::OnBnClickedBtnview()
 {
+    CString path;
+    GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+    path.ReleaseBuffer();
+    int pos = path.ReverseFind('\\');
+    path = path.Left(pos) + _T("\\Model");
+    LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+    lstrcpy(lpszText, path);
+    //MessageBox(lpszText);
+    a.ListAllFileInDirectory(lpszText, TEXT("\\*.txt"));
 }
-/*¨ê·s*/
+/*åˆ·æ–°*/
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
     CString XYZlocation,StrBuff;
-    LONG DataArray[30] = { a.DispenseDotSet.GlueOpenTime, a.DispenseDotSet.GlueCloseTime,
+    LONG DataArray[43] = { a.DispenseDotSet.GlueOpenTime, a.DispenseDotSet.GlueCloseTime,
         a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseLowSpeed,a.DispenseDotEnd.RiseHightSpeed,
         a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
-        a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDelay, a.DispenseLineSet.ShutdownDistance,
+        a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDistance, a.DispenseLineSet.ShutdownDelay,
         a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
         a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed,
         a.ZSet.ZBackHeight,a.ZSet.ZBackType,
         a.GlueData.ParkPositionData.X,a.GlueData.ParkPositionData.Y,a.GlueData.ParkPositionData.Z,a.GlueData.GlueAuto,a.GlueData.GlueWaitTime,a.GlueData.GlueTime,a.GlueData.GlueStayTime,
-        a.Time
+        a.Time,a.VisionOffset.OffsetX,a.VisionOffset.OffsetY,a.VisionOffset.Angle,
+        a.FiducialMark1.Point.X, a.FiducialMark1.Point.Y,a.FiducialMark1.OffsetX,a.FiducialMark1.OffsetY,
+        a.FiducialMark2.Point.X, a.FiducialMark2.Point.Y,a.FiducialMark2.OffsetX,a.FiducialMark2.OffsetY,
+        a.FinalWorkCoordinateData.X,a.FinalWorkCoordinateData.Y
     };
+    
     int ArrayCount = 0;
-    for (int i = 0; i < 28; i++)
+    for (int i = 0; i < 41; i++)
     {   
         if (i == 22)
         {
@@ -252,6 +306,13 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
     {
         SetDlgItemText(IDC_PAUSE, L"Continue");
     }
+    /*ç¶ è‰²åŸé»è³¦æ­¸æŒ‰éˆ•*/
+    #ifdef MOVE
+    if (MO_ReadStartBtn())
+    {
+        MO_MoveToHome(20000, 1000, 7, 50000,10000,0);
+    }
+    #endif
     CDialogEx::OnTimer(nIDEvent);
 }
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
@@ -269,7 +330,7 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
     }
     else
     {
-        //´ú¸ÕSubProgram®É¨Ï¥Î
+        //æ¸¬è©¦SubProgramæ™‚ä½¿ç”¨
         /*for (UINT i = 0; i < a.Command.size(); i++)
         {
             for (UINT j = 0; j<a.Command.at(i).size(); j++)
@@ -288,46 +349,46 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
         m_CommandList.SetItemText(1, 1, StrBuff);*/
     }
 }
-/*¦CªíÂI¤U¥ªÁä*/
+/*åˆ—è¡¨é»ä¸‹å·¦éµ*/
 void CCommandTestDlg::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
 {
     LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
     CListCtrl *CList = (CListCtrl *)GetDlgItem(IDC_LIST1);
     CMenu menu, *pSubMenu;
     CPoint CurPnt;
-    int ItemCount = m_CommandList.GetItemCount();//Àò¨ú¶µ¥ØÁ`¼Æ
+    int ItemCount = m_CommandList.GetItemCount();//ç²å–é …ç›®ç¸½æ•¸
     NM_LISTVIEW  *pEditCtrl = (NM_LISTVIEW *)pNMHDR;
     if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
-        menu.LoadMenu(IDR_MENU1);//¥[¤Jµæ³æ
+        menu.LoadMenu(IDR_MENU1);//åŠ å…¥èœå–®
         pSubMenu = menu.GetSubMenu(0);
         GetCursorPos(&CurPnt);
-        pSubMenu->TrackPopupMenu(TPM_LEFTALIGN, CurPnt.x, CurPnt.y, this);//ÂI¥kÁä¥X²{ªºµæ³æ¦ì¸m
+        pSubMenu->TrackPopupMenu(TPM_LEFTALIGN, CurPnt.x, CurPnt.y, this);//é»å³éµå‡ºç¾çš„èœå–®ä½ç½®
     }
     *pResult = 0;
 }
-/*´¡¤J*/
+/*æ’å…¥*/
 void CCommandTestDlg::OnInsert()
 {
     if (!Insert)
     {
-        int istat = m_CommandList.GetSelectionMark();//Àò¨ú¿ï¾Üªº¶µ
+        int istat = m_CommandList.GetSelectionMark();//ç²å–é¸æ“‡çš„é …
         m_CommandList.InsertItem(istat, NULL);
         Insert = TRUE;
         InsertNum = istat;
     }  
 }
-/*§R°£*/
+/*åˆªé™¤*/
 void CCommandTestDlg::OnDelete()
 {
     if (!Insert)
     {
-        int istat = m_CommandList.GetSelectionMark();//Àò¨ú¿ï¾Üªº¶µ
+        int istat = m_CommandList.GetSelectionMark();//ç²å–é¸æ“‡çš„é …
         a.CommandMemory.erase(a.CommandMemory.begin() + istat);
         ListRefresh(NULL);
     }
 }
-/************************************************************©R¥O*/
-/*³æÂIÂI½¦*/
+/************************************************************å‘½ä»¤*/
+/*å–®é»é»è† */
 void CCommandTestDlg::OnBnClickedBtncommand1()
 {
     StrBuff.Format(_T("Dot,%d,%d,%d"),GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -335,7 +396,7 @@ void CCommandTestDlg::OnBnClickedBtncommand1()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*³æÂIÂI½¦³]¸m*/
+/*å–®é»é»è† è¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand2()
 {
     StrBuff.Format(_T("DispenseDotSet,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
@@ -343,7 +404,7 @@ void CCommandTestDlg::OnBnClickedBtncommand2()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*³æÂIµ²§ô³]¸m*/
+/*å–®é»çµæŸè¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand3()
 {
     StrBuff.Format(_T("DispenseDotEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -351,7 +412,7 @@ void CCommandTestDlg::OnBnClickedBtncommand3()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*PTPÅX°Ê³t«×*/
+/*PTPé©…å‹•é€Ÿåº¦*/
 void CCommandTestDlg::OnBnClickedBtncommand4()
 {
     StrBuff.Format(_T("DotSpeedSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -359,7 +420,7 @@ void CCommandTestDlg::OnBnClickedBtncommand4()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*PTP¥[³t«×³]¸m(%)*/
+/*PTPåŠ é€Ÿåº¦è¨­ç½®(%)*/
 void CCommandTestDlg::OnBnClickedBtncommand4_2()
 {
     StrBuff.Format(_T("DotAccPercent,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -367,7 +428,7 @@ void CCommandTestDlg::OnBnClickedBtncommand4_2()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½u¬q¶}©l*/
+/*ç·šæ®µé–‹å§‹*/
 void CCommandTestDlg::OnBnClickedBtncommand5()
 {
     StrBuff.Format(_T("LineStart,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -375,7 +436,7 @@ void CCommandTestDlg::OnBnClickedBtncommand5()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½u¬q¤¤¶¡ÂI*/
+/*ç·šæ®µä¸­é–“é»*/
 void CCommandTestDlg::OnBnClickedBtncommand6()
 {
     StrBuff.Format(_T("LinePassing,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -383,7 +444,7 @@ void CCommandTestDlg::OnBnClickedBtncommand6()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½u¬qµ²§ôÂI*/
+/*ç·šæ®µçµæŸé»*/
 void CCommandTestDlg::OnBnClickedBtncommand7()
 {
     StrBuff.Format(_T("LineEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -391,7 +452,7 @@ void CCommandTestDlg::OnBnClickedBtncommand7()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¶ê©·¤¤ÂI*/
+/*åœ“å¼§ä¸­é»*/
 void CCommandTestDlg::OnBnClickedBtncommand8()
 {
     StrBuff.Format(_T("ArcPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -399,7 +460,7 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¶ê¤¤ÂI*/
+/*åœ“ä¸­é»*/
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
     StrBuff.Format(_T("CirclePoint,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
@@ -407,7 +468,7 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¶ê¤¤ÂI2*/
+/*åœ“ä¸­é»2*/
 void CCommandTestDlg::OnBnClickedBtncommand10()
 {
     /*StrBuff.Format(_T("CirclePointTwo,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -415,7 +476,7 @@ void CCommandTestDlg::OnBnClickedBtncommand10()
     Insert = FALSE;
     ListRefresh(NULL);*/
 }
-/*½u¬q¶î½¦³]¸m*/
+/*ç·šæ®µå¡—è† è¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand11()
 {
     StrBuff.Format(_T("DispenseLineSet,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
@@ -424,7 +485,7 @@ void CCommandTestDlg::OnBnClickedBtncommand11()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½u¬qµ²§ô³]¸m*/
+/*ç·šæ®µçµæŸè¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand12()
 {
     StrBuff.Format(_T("DispenseLineEnd,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
@@ -433,7 +494,7 @@ void CCommandTestDlg::OnBnClickedBtncommand12()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¶î½¦³t«×³]¸m*/
+/*å¡—è† é€Ÿåº¦è¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand13()
 {
     StrBuff.Format(_T("LineSpeedSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -441,7 +502,7 @@ void CCommandTestDlg::OnBnClickedBtncommand13()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*Z¶b¤u§@°ª«×*/
+/*Zè»¸å·¥ä½œé«˜åº¦*/
 void CCommandTestDlg::OnBnClickedBtncommand14()
 {
     StrBuff.Format(_T("ZGoBack,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
@@ -449,7 +510,7 @@ void CCommandTestDlg::OnBnClickedBtncommand14()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¥[³t«×³]¸m*/
+/*åŠ é€Ÿåº¦è¨­ç½®*/
 void CCommandTestDlg::OnBnClickedBtncommand15()
 {
     StrBuff.Format(_T("DispenseAccSet,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
@@ -457,7 +518,7 @@ void CCommandTestDlg::OnBnClickedBtncommand15()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*°Ñ¼Æªì©l¤Æ*/
+/*åƒæ•¸åˆå§‹åŒ–*/
 void CCommandTestDlg::OnBnClickedBtncommand16()
 {
     StrBuff = _T("Initialize");
@@ -465,7 +526,7 @@ void CCommandTestDlg::OnBnClickedBtncommand16()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¿é¤J*/
+/*è¼¸å…¥*/
 void CCommandTestDlg::OnBnClickedBtncommand17()
 {
     StrBuff.Format(_T("Input,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -473,7 +534,7 @@ void CCommandTestDlg::OnBnClickedBtncommand17()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¿é¥X*/
+/*è¼¸å‡º*/
 void CCommandTestDlg::OnBnClickedBtncommand18()
 {
     StrBuff.Format(_T("Output,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
@@ -481,7 +542,7 @@ void CCommandTestDlg::OnBnClickedBtncommand18()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*ÂI½¦¾÷¶}Ãö*/
+/*é»è† æ©Ÿé–‹é—œ*/
 void CCommandTestDlg::OnBnClickedBtncommand19()
 {
     StrBuff.Format(_T("DispenserSwitch,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -489,7 +550,7 @@ void CCommandTestDlg::OnBnClickedBtncommand19()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*³]¸mÂI½¦ºİ¤f*/
+/*è¨­ç½®é»è† ç«¯å£*/
 void CCommandTestDlg::OnBnClickedBtncommand19_2()
 {
     StrBuff.Format(_T("DispenserSwitchSet,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -497,7 +558,7 @@ void CCommandTestDlg::OnBnClickedBtncommand19_2()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*µêÀÀÂI*/
+/*è™›æ“¬é»*/
 void CCommandTestDlg::OnBnClickedBtncommand20()
 {
     StrBuff.Format(_T("VirtualPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -505,7 +566,7 @@ void CCommandTestDlg::OnBnClickedBtncommand20()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*µ¥«İÂI*/
+/*ç­‰å¾…é»*/
 void CCommandTestDlg::OnBnClickedBtncommand21()
 {
     StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4));
@@ -513,7 +574,7 @@ void CCommandTestDlg::OnBnClickedBtncommand21()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*°±¾nÂI*/
+/*åœé§é»*/
 void CCommandTestDlg::OnBnClickedBtncommand22()
 {
     StrBuff.Format(_T("ParkPosition"));
@@ -521,7 +582,7 @@ void CCommandTestDlg::OnBnClickedBtncommand22()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*°±¤îÂI*/
+/*åœæ­¢é»*/
 void CCommandTestDlg::OnBnClickedBtncommand23()
 {
     StrBuff.Format(_T("StopPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3));
@@ -529,7 +590,7 @@ void CCommandTestDlg::OnBnClickedBtncommand23()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¶ñ¥R°Ï°ì*/
+/*å¡«å……å€åŸŸ*/
 void CCommandTestDlg::OnBnClickedBtncommand24()
 {
     StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8), GetDlgItemInt(IDC_EDITPARAM9));
@@ -537,7 +598,7 @@ void CCommandTestDlg::OnBnClickedBtncommand24()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¦^­ìÂI©R¥O*/
+/*å›åŸé»å‘½ä»¤*/
 void CCommandTestDlg::OnBnClickedBtncommand25()
 {
     StrBuff = _T("GoHome");
@@ -545,7 +606,7 @@ void CCommandTestDlg::OnBnClickedBtncommand25()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¼ĞÅÒ*/           
+/*æ¨™ç±¤*/           
 void CCommandTestDlg::OnBnClickedBtncommand26()
 {
     StrBuff.Format(_T("Label,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -553,7 +614,7 @@ void CCommandTestDlg::OnBnClickedBtncommand26()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*«e©¹¦a§}*/
+/*å‰å¾€åœ°å€*/
 void CCommandTestDlg::OnBnClickedBtncommand27()
 {
     StrBuff.Format(_T("GotoAddress,%d"),GetDlgItemInt(IDC_EDITPARAM1));
@@ -561,7 +622,7 @@ void CCommandTestDlg::OnBnClickedBtncommand27()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*«e©¹¼ĞÅÒ*/
+/*å‰å¾€æ¨™ç±¤*/
 void CCommandTestDlg::OnBnClickedBtncommand28()
 {
     StrBuff.Format(_T("GotoLabel,%d"),GetDlgItemInt(IDC_EDITPARAM1));
@@ -569,7 +630,7 @@ void CCommandTestDlg::OnBnClickedBtncommand28()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½Õ¥Î¤lµ{§Ç*/
+/*èª¿ç”¨å­ç¨‹åº*/
 void CCommandTestDlg::OnBnClickedBtncommand29()
 {
     StrBuff.Format(_T("CallSubroutine,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -577,7 +638,7 @@ void CCommandTestDlg::OnBnClickedBtncommand29()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*µ²§ô¤lµ{§Ç*/
+/*çµæŸå­ç¨‹åº*/
 void CCommandTestDlg::OnBnClickedBtncommand30()
 {
     StrBuff.Format(_T("SubroutineEnd"));
@@ -585,7 +646,7 @@ void CCommandTestDlg::OnBnClickedBtncommand30()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*´`Àô*/
+/*å¾ªç’°*/
 void CCommandTestDlg::OnBnClickedBtncommand31()
 {
     StrBuff.Format(_T("Loop,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
@@ -593,7 +654,7 @@ void CCommandTestDlg::OnBnClickedBtncommand31()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¨BÆJ­«½ÆX*/
+/*æ­¥é©Ÿé‡è¤‡X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()
 {
     StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
@@ -601,7 +662,7 @@ void CCommandTestDlg::OnBnClickedBtncommand32()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¨BÆJ­«½ÆY*/
+/*æ­¥é©Ÿé‡è¤‡Y*/
 void CCommandTestDlg::OnBnClickedBtncommand33()
 {
     StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
@@ -609,47 +670,62 @@ void CCommandTestDlg::OnBnClickedBtncommand33()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*¬d§ä¼Ğ°O*/
+/*æŸ¥æ‰¾æ¨™è¨˜*/
 void CCommandTestDlg::OnBnClickedBtncommand34()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    StrBuff.Format(_T("FindMark,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
-/*°ò·Ç¼Ğ°O*/
+/*åŸºæº–æ¨™è¨˜*/
 void CCommandTestDlg::OnBnClickedBtncommand35()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    StrBuff.Format(_T("FiducialMark,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
-/*¬d§ä¼Ğ°O½Õ¾ã*/
+/*æŸ¥æ‰¾æ¨™è¨˜èª¿æ•´*/
 void CCommandTestDlg::OnBnClickedBtncommand36()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    StrBuff.Format(_T("FindMarkAdjust"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
-/*°ò·Ç¼Ğ°O½Õ¾ã*/
+/*åŸºæº–æ¨™è¨˜èª¿æ•´*/
 void CCommandTestDlg::OnBnClickedBtncommand37()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    StrBuff.Format(_T("FiducialMarkAdjust"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
-/*¬d§ä¨¤«×¼Ğ°O*/
+/*æŸ¥æ‰¾è§’åº¦æ¨™è¨˜*/
 void CCommandTestDlg::OnBnClickedBtncommand38()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    StrBuff.Format(_T("FindFiducialAngle,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
-/*¥ú·½*/
+/*å…‰æº*/
 void CCommandTestDlg::OnBnClickedBtncommand39()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    // TODO: åœ¨æ­¤åŠ å…¥æ§åˆ¶é …å‘ŠçŸ¥è™•ç†å¸¸å¼ç¨‹å¼ç¢¼
 }
-/*CCDÄ²µo¾¹*/
+/*CCDè§¸ç™¼å™¨*/
 void CCommandTestDlg::OnBnClickedBtncommand40()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    // TODO: åœ¨æ­¤åŠ å…¥æ§åˆ¶é …å‘ŠçŸ¥è™•ç†å¸¸å¼ç¨‹å¼ç¢¼
 }
-/*ÂX®i¨BÆJ­«½Æ*/
+/*æ“´å±•æ­¥é©Ÿé‡è¤‡*/
 void CCommandTestDlg::OnBnClickedBtncommand41()
 {
-    // TODO: ¦b¦¹¥[¤J±±¨î¶µ§iª¾³B²z±`¦¡µ{¦¡½X
+    // TODO: åœ¨æ­¤åŠ å…¥æ§åˆ¶é …å‘ŠçŸ¥è™•ç†å¸¸å¼ç¨‹å¼ç¢¼
 }
-/*¶}©l°Æµ{¦¡*/
+/*é–‹å§‹å‰¯ç¨‹å¼*/
 void CCommandTestDlg::OnBnClickedBtncommand43()
 {
     StrBuff.Format(_T("SubProgramStart,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -657,7 +733,7 @@ void CCommandTestDlg::OnBnClickedBtncommand43()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*µ²§ô°Æµ{¦¡*/
+/*çµæŸå‰¯ç¨‹å¼*/
 void CCommandTestDlg::OnBnClickedBtncommand44()
 {
     StrBuff.Format(_T("SubProgramEnd"));
@@ -665,7 +741,7 @@ void CCommandTestDlg::OnBnClickedBtncommand44()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*½Õ¥Î°Æµ{¦¡*/
+/*èª¿ç”¨å‰¯ç¨‹å¼*/
 void CCommandTestDlg::OnBnClickedBtncommand45()
 {
     StrBuff.Format(_T("CallSubProgram,%d"), GetDlgItemInt(IDC_EDITPARAM1));
@@ -673,23 +749,21 @@ void CCommandTestDlg::OnBnClickedBtncommand45()
     Insert = FALSE;
     ListRefresh(NULL);
 }
-/*******************************************************************************************¥~³¡³]©w**********************************************************/
-/*±Æ½¦³]¸m*/
-void CCommandTestDlg::OnBnClickedBtncommand42()
+/*******************************************************************************************å¤–éƒ¨è¨­å®š**********************************************************/
+/*Defaultè¨­ç½®*/
+void CCommandTestDlg::OnBnClickedBtndefault()
 {
-    a.GlueData.ParkPositionData.X = GetDlgItemInt(IDC_EDITPARAM1);
-    a.GlueData.ParkPositionData.Y = GetDlgItemInt(IDC_EDITPARAM2);
-    a.GlueData.ParkPositionData.Z = GetDlgItemInt(IDC_EDITPARAM3);
-    a.GlueData.GlueAuto = GetDlgItemInt(IDC_EDITPARAM4);
-    a.GlueData.GlueWaitTime = GetDlgItemInt(IDC_EDITPARAM5);
-    a.GlueData.GlueTime = GetDlgItemInt(IDC_EDITPARAM6);
-    a.GlueData.GlueStayTime = GetDlgItemInt(IDC_EDITPARAM7);
+    CDialog* m_pDlg;
+    m_pDlg = new CDefault();
+    m_pDlg->Create(IDD_DIALOG1, this);
+    m_pDlg->ShowWindow(SW_SHOW);
 }
-
-
-
-
-
-
+/*å½±åƒæ“ä½œ*/
+void CCommandTestDlg::OnBnClickedBtnvision()
+{
+    m_pCameraDlg = new CCamera();
+    m_pCameraDlg->Create(IDD_DIALOG2, this);
+    m_pCameraDlg->ShowWindow(SW_SHOW);
+}
 
 
