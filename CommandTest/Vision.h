@@ -6,6 +6,9 @@
 	#error "對 PCH 包含此檔案前先包含 'stdafx.h'"
 #endif
 
+//#define ProjectUse
+#define TestUse
+
 #include "resource.h"		// 主要符號
 
 //===================================================================================================
@@ -22,9 +25,18 @@ extern "C" _declspec(dllexport) void VI_VisionAlloc(BOOL color);
 //即時影像:開1/關0
 extern "C" _declspec(dllexport) void VI_CameraSwitch(BOOL OnOff);
 //攝影機即時影像初紿化顯示
+#ifdef ProjectUse
+extern "C" _declspec(dllexport) void VI_CameraInit(CWnd* DisplayWindow, BOOL color, BOOL move);
+#endif
+#ifdef TestUse
 extern "C" _declspec(dllexport) void VI_CameraInit(BOOL color, BOOL move);
+#endif
 //Display 視窗顯示位置配置:move:1->移至小視窗用
 extern "C" _declspec(dllexport) void VI_DisplayAlloc(CWnd* DisplayWindow, BOOL move);
+//顯示位置配置。搭配VI_VisionAlloc使用。用於初始化不配置CWnd* DisplayWindow
+extern "C" _declspec(dllexport) void VI_DisplaySet(CWnd* DisplayWindow, BOOL move);
+//顯示位置配置，含左上原點offset偏移控制
+extern "C" _declspec(dllexport) void VI_DisplayPosSet(CWnd* DisplayWindow, DOUBLE OffsetX, DOUBLE OffsetY);
 //設置繪製用的透明圖層
 extern "C" _declspec(dllexport) void VI_SetOverlayImage();
 //清除透明圖層內容
@@ -50,19 +62,23 @@ extern "C" _declspec(dllexport) void VI_SetSearchAngle(void* MilModel, int start
 //設定PatternMatch 搜尋範圍，視野中心位置，指定寬度、高度
 extern "C" _declspec(dllexport) void VI_SetSearchRange(void* MilModel, int width, int height);
 //搜尋標記，依模式功能
-extern "C" _declspec(dllexport) BOOL VI_FindMaskProc(BYTE mode, void* MilModel, DOUBLE &X, DOUBLE &Y, DOUBLE &A);
+extern "C" _declspec(dllexport) BOOL VI_FindMarkProc(BYTE mode, void* MilModel, DOUBLE &X, DOUBLE &Y, DOUBLE &A);
 //搜尋標記，然後繪製其位置
-extern "C" _declspec(dllexport) BOOL VI_FindMaskDrawResult(CWnd* DisplayWindow, void* MilModel, DOUBLE &Score);
+extern "C" _declspec(dllexport) BOOL VI_FindMarkDrawResult(CWnd* DisplayWindow, void* MilModel, DOUBLE &Score);
 //搜尋標記，然後回傳其中心位置
-extern "C" _declspec(dllexport) BOOL VI_FindMaskCenterPos(void* MilTargetImage, void* MilModel, DOUBLE &PosX, DOUBLE &PosY);
+extern "C" _declspec(dllexport) BOOL VI_FindMarkCenterPos(void* MilTargetImage, void* MilModel, DOUBLE &PosX, DOUBLE &PosY);
 //搜尋標記，然後回傳與視野中心相對距離
-extern "C" _declspec(dllexport) BOOL VI_FindMaskRelDist(void* MilTargetImage, void* MilModel, BOOL PixelOrRel, DOUBLE &DistX, DOUBLE &DistY, DOUBLE &Score);
+extern "C" _declspec(dllexport) BOOL VI_FindMarkRelDist(void* MilModel, BOOL PixelOrRel, DOUBLE &DistX, DOUBLE &DistY, DOUBLE &Score);
 //查找標記指令，回傳與視野中心相對實際距離
-extern "C" _declspec(dllexport) BOOL VI_FindMask(void* MilModel, DOUBLE &DistX, DOUBLE &DistY);
+extern "C" _declspec(dllexport) BOOL VI_FindMark(void* MilModel, DOUBLE &DistX, DOUBLE &DistY);
+//動態查找標記，CameraTrigger指令。
+extern "C" _declspec(dllexport) BOOL VI_CameraTrigger(void* MilModel, long &MarkPointX, long &MarkPointY, long TriggerPointX, long TriggerPointY, DOUBLE &DistX, DOUBLE &DistY);
 //建立互動矩形框
 extern "C" _declspec(dllexport) void VI_SetInteractiveBox(int width, int height);
 //從互動矩形框建立PatternMatch Model 
-extern "C" _declspec(dllexport) void VI_CreateModelFromInteractiveBox(void* MilModel, CString path, CString name);
+extern "C" _declspec(dllexport) BOOL VI_CreateModelFromInteractiveBox(void* MilModel, CString path, CString name, DOUBLE objwidth, DOUBLE objheight);
+//取得InteractiveBox互動矩形框位置資訊
+extern "C" _declspec(dllexport) void VI_GetInteractiveBoxPos(int &PosX, int &PosY, int &Width, int &Height);
 //取消互動模式，移除互動矩形框
 extern "C" _declspec(dllexport) void VI_RemoveInteractiveBox();
 //載入 PatternMatch Model
@@ -104,11 +120,13 @@ extern "C" _declspec(dllexport) void VI_SetCameraToTipOffset(DOUBLE OffsetX, DOU
 // 修正計算，相關函數
 //---------------------------------------------------------------------------------------------------
 //絕對座標位置修正
-extern "C" _declspec(dllexport) void VI_CorrectLocation(long &PointX, long &PointY, long RefX, long RefY, double OffSetX, double OffSetY, double Andgle);
+extern "C" _declspec(dllexport) void VI_CorrectLocation(long &PointX, long &PointY, long RefX, long RefY, double OffSetX, double OffSetY, double Andgle, BOOL Mode);
 //工件旋轉角度計算
 //兩對位點比對接收馬達位置計算向量夾角,回傳對位點1的offset及兩向量夾角
 //1=兩對位點皆有找到，0=只找到一點
 extern "C" _declspec(dllexport) void VI_FindModel(void *PicTemp, void *PicTemp1, void* Model, void* Model1, double LocatX, double LocatY, double LocatX1, double LocatY1, double &OffSetX, double &OffSetY, double &Angle);
+//取得 Model檔的位置資訊
+extern "C" _declspec(dllexport) void VI_GetModelPos(void* MilModel, double &PosX, double &PosY);
 //計算向量夾角
 extern "C" _declspec(dllexport) double VI_AngleCount(double LocatX, double LocatY, double LocatX1, double LocatY1, double sumx, double sumy, double sumx1, double sumy1);
 //計算向量夾角 (符號修改版)

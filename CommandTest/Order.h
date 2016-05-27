@@ -73,6 +73,16 @@ private:
         ZSet            ZSet;
         GlueData        GlueData;
     };
+    //回原點結構
+    struct GoHome {
+        LONG Speed1;
+        LONG Speed2;
+        LONG Axis;
+        LONG MoveX;
+        LONG MoveY;
+        LONG MoveZ;
+        LONG Status;
+    };
     /************************************************************影像參數結構*******************************************************/
     //影像對位點結構(對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
     struct Vision {
@@ -90,8 +100,9 @@ private:
         DOUBLE OffsetY;
         DOUBLE Angle;
     };
-    //影像LodaModel設置結構(精確度、尋找速度、匹配值、搜尋範圍寬度、搜尋範圍高度、搜尋範圍起始角度、搜尋範圍結束角度)
+    //影像LodaModel設置結構(修正模式、精確度、尋找速度、匹配值、搜尋範圍寬度、搜尋範圍高度、搜尋範圍起始角度、搜尋範圍結束角度、搜尋錯誤編號)
     struct VisionSet {
+        BOOL ModifyMode;
         BOOL Accuracy;
         BOOL Speed;
         BYTE Score;
@@ -99,12 +110,21 @@ private:
         int height;
         int Startangle;
         int Endangle;
+        int SearchError;
     };
     //影像LoadModel檔案位置結構(路徑、檔案總數、檔案名稱)
     struct VisionFile {
         LPTSTR ModelPath;
         UINT ModelCount;
         std::vector<CString> AllModelName;
+    };
+    //影像擴大搜尋 ()
+    struct VisionTrigger {
+        UINT AdjustStatus;
+        BOOL Trigger1Switch;
+        BOOL Trigger2Switch;
+        std::vector<CoordinateData> Trigger1;
+        std::vector<CoordinateData> Trigger2;
     };
     //初始化結構
     struct VisionDefault{
@@ -135,6 +155,7 @@ private:
 		std::vector<UINT> MSChange; //控管目前所讀的程序
         UINT StackingCount;
 		std::vector<UINT> ActionStatus;
+        UINT CurrentRunCommandNum;
 	};
     //Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y)
     /*
@@ -153,28 +174,39 @@ private:
     };
 private:    //變數
 	HANDLE          wakeEvent;
+    //主運動物件
     CAction         m_Action;
+    //命令
     CoordinateData  InitData;
     CString         Commanding;
     std::vector<CString> CommandSwap;
     std::vector<std::vector<CString>> Command;
+    //程序
     RepeatData      RepeatData;
     Program         Program;
+    //狀態
     std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
-
+    
 private:    //函數
+    //執行續
+    static  UINT    HomeThread(LPVOID pParam);
 	static  UINT    Thread(LPVOID pParam);
 	static  UINT    SubroutineThread(LPVOID pParam);
+    //動作處理
 	static  void    LineGotoActionJudge(LPVOID pParam);
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
     static  void    VisionModify(LPVOID pParam);
+    void            VisionFindMarkError(LPVOID pParam);
+    //命令處理
 	static  CString CommandResolve(CString Command,UINT Choose);
+    //初始化處理
 	void            ParameterDefult();
 	void            DecideInit();
 	void            DecideClear();
 	void            MainSubProgramSeparate();
-    
-	
+    //檔案處理
+    BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
+    static  BOOL    FileExist(LPCWSTR FilePathName);
 public:     //變數
     //動作總數
 	LONG            Time;
@@ -182,6 +214,7 @@ public:     //變數
 	std::vector<CString> CommandMemory;
     //參數值
     Default         Default;
+
     DispenseDotSet  DispenseDotSet;
     DispenseDotEnd  DispenseDotEnd;
     DispenseLineSet DispenseLineSet;
@@ -189,15 +222,18 @@ public:     //變數
     Speed           DotSpeedSet, LineSpeedSet;
     ZSet            ZSet;
     GlueData        GlueData;
+    GoHome          GoHome;
     //運行程序資料
     RunData         RunData;
     //影像參數 
-    Vision          FindMark, FiducialMark1,FiducialMark2;
-    VisionSet       VisionSet;
-    VisionFile      VisionFile;
-    VisionOffset    VisionOffset;
     VisionDefault   VisionDefault;
-    BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
+    VisionSet       VisionSet;
+    VisionFile      VisionFile;   
+
+    //影像
+    Vision          FindMark, FiducialMark1, FiducialMark2;
+    VisionOffset    VisionOffset;
+    VisionTrigger   VisionTrigger;
     //影像修正後工作座標
     CoordinateData  FinalWorkCoordinateData;
 public:     //函數
@@ -210,7 +246,11 @@ public:     //函數
 	//暫停命令解譯(成功return 1失敗return 0)
 	BOOL    Pause();
 	//繼續命令解譯(成功return 1失敗return 0)
-	BOOL    Continue(); 
+	BOOL    Continue();
+    //原點賦歸(成功return  1 失敗 return 0 )
+    BOOL    Home(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ);
+    //View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
+    BOOL    View(BOOL mode);
 
 protected:
 	DECLARE_MESSAGE_MAP()

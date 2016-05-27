@@ -56,7 +56,10 @@ BOOL CDefault::OnInitDialog()
     StrTable.Add(_T("Z軸回升距離")); StrTable.Add(_T("Z軸回升型態"));
     StrTable.Add(_T("停駐點X")); StrTable.Add(_T("停駐點Y")); StrTable.Add(_T("停駐點Z"));
     StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
-    for (int i = 0; i < 29; i++) {
+    StrTable.Add(_T("影像尋找精度")); StrTable.Add(_T("影像尋找速度")); StrTable.Add(_T("影像比對分數"));
+    StrTable.Add(_T("影像尋找寬度")); StrTable.Add(_T("影像尋找高度")); StrTable.Add(_T("影像尋找起始角度")); StrTable.Add(_T("影像尋找結束角度"));
+    StrTable.Add(_T("影像未搜尋到方法"));
+    for (int i = 0; i < 37; i++) {
         m_ListDefault.InsertItem(i, NULL);
         m_ListDefault.SetItemText(i, 0, StrTable[i]);
     }
@@ -67,7 +70,7 @@ BOOL CDefault::OnInitDialog()
 void CDefault::ParamShow()
 {
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
-    LONG ParamArray[29];
+    LONG ParamArray[36];
     ParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime;
     ParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime;
     ParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance;
@@ -97,7 +100,16 @@ void CDefault::ParamShow()
     ParamArray[26] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime;
     ParamArray[27] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime;
     ParamArray[28] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime;
-    for (int i = 0; i < 29; i++) {
+    ParamArray[29] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy;
+    ParamArray[30] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed;
+    ParamArray[31] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score;
+    ParamArray[32] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width;
+    ParamArray[33] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height;
+    ParamArray[34] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle;
+    ParamArray[35] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle;
+    ParamArray[36] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.SearchError;
+
+    for (int i = 0; i < 37; i++) {
         CString StrBuff;
         StrBuff.Format(_T("%d"), ParamArray[i]);
         m_ListDefault.SetItemText(i, 1, StrBuff);
@@ -106,6 +118,7 @@ void CDefault::ParamShow()
 void CDefault::ParamModify()
 {
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    //運動參數
     ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime = _ttol(m_ListDefault.GetItemText(0, 1));
     ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime = _ttol(m_ListDefault.GetItemText(1, 1));
     ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance = _ttol(m_ListDefault.GetItemText(2, 1));
@@ -134,11 +147,20 @@ void CDefault::ParamModify()
     ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueAuto = _ttol(m_ListDefault.GetItemText(25, 1));
     ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime = _ttol(m_ListDefault.GetItemText(26, 1));
     ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime = _ttol(m_ListDefault.GetItemText(27, 1));
-    ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime = _ttol(m_ListDefault.GetItemText(28, 1));    
+    ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime = _ttol(m_ListDefault.GetItemText(28, 1)); 
+    //影像參數
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy = _ttol(m_ListDefault.GetItemText(29, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed = _ttol(m_ListDefault.GetItemText(30, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score = _ttol(m_ListDefault.GetItemText(31, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width = _ttol(m_ListDefault.GetItemText(32, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height = _ttol(m_ListDefault.GetItemText(33, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle = _ttol(m_ListDefault.GetItemText(34, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle = _ttol(m_ListDefault.GetItemText(35, 1));
+    ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.SearchError = _ttol(m_ListDefault.GetItemText(36, 1));
 }
 void CDefault::OnBnClickedButton2()
 {
-    for (int i = 0; i < 29; i++) {
+    for (int i = 0; i < 37; i++) {
         m_ListDefault.SetItemText(i, 1, _T("0"));
     }
     ParamModify();

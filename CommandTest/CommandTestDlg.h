@@ -31,9 +31,14 @@ protected:
 	CString StrBuff;
 	BOOL Insert;
 	UINT InsertNum;
+    LONG OffsetX, OffsetY;
+    
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
+    BOOL InputAuto;
+    CPoint TipOffset;
+    BOOL CcdMode;
 public:
     /*¨ê·s*/
     afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -101,6 +106,8 @@ public:
     //³]¸m
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
+    
+    afx_msg void OnBnClickedButton1();
 };
 
 

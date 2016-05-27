@@ -195,6 +195,7 @@
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
     <ClInclude Include="Default.h" />
+    <ClInclude Include="Model.h" />
     <ClInclude Include="MoveButton.h" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="Resource.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
     <ClCompile Include="Default.cpp" />
+    <ClCompile Include="Model.cpp" />
     <ClCompile Include="MoveButton.cpp" />
     <ClCompile Include="Order.cpp" />
     <ClCompile Include="stdafx.cpp">

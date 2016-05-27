@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include "CommandTest.h"
 #include "Order.h"
 
 
@@ -50,8 +49,11 @@ BOOL COrder::Run()
             //狀態初始化
             DecideInit();
             //載入所有檔案名
-            ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*.Model"));
-
+            ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*年*月*日*時*分*秒*.mod"));
+            //出膠控制器模式
+            m_Action.g_bIsDispend = TRUE;
+            //針頭模式 不減offset
+            VisionSet.ModifyMode = FALSE;
             wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
             g_pThread = AfxBeginThread(Thread, (LPVOID)this);
         }  
@@ -70,7 +72,6 @@ BOOL COrder::Stop()
         {
             g_pThread->ResumeThread();//啟動線程
             m_Action.g_bIsStop = TRUE;
-            RunData.RunStatus = 0;//狀態設為未運行
             #ifdef MOVE
                 MO_STOP();//立即停止運動指令
             #endif
@@ -82,7 +83,6 @@ BOOL COrder::Stop()
         else
         {
             m_Action.g_bIsStop = TRUE;
-            RunData.RunStatus = 0;//狀態設為未運行
             #ifdef MOVE
                 MO_STOP();//立即停止運動指令
             #endif
@@ -124,6 +124,66 @@ BOOL COrder::Continue()
     {
         return FALSE;
     }
+}
+/*原點賦歸*/
+BOOL COrder::Home(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ)
+{
+    if (!g_pThread)
+    {
+        GoHome.Speed1 = lSpeed1;
+        GoHome.Speed2 = lSpeed2;
+        GoHome.Axis = lAxis;
+        GoHome.MoveX = lMoveX;
+        GoHome.MoveY = lMoveY;
+        GoHome.MoveZ = lMoveZ;
+        GoHome.Status = FALSE;
+        g_pThread = AfxBeginThread(HomeThread, (LPVOID)this);
+        return TRUE;
+    }
+    else
+        return FALSE;
+}
+/*View查看*/
+BOOL COrder::View(BOOL mode)
+{
+    if (!g_pThread) {
+        Commanding = _T("Start");
+        if (!CommandMemory.empty())
+        {
+            if (CommandMemory.at(CommandMemory.size() - 1) != _T("End"))
+            {
+                CommandMemory.push_back(_T("End"));
+            }
+            //參數設定為預設
+            ParameterDefult();
+            //劃分主副程序
+            MainSubProgramSeparate();
+            //狀態初始化
+            DecideInit();
+            //載入所有檔案名
+            ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*年*月*日*時*分*秒*.mod"));
+            //出膠控制器模式
+            m_Action.g_bIsDispend = FALSE;
+            //針頭模式 不減offset 或 CCD模式 減offset
+            VisionSet.ModifyMode = mode;
+
+            wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            g_pThread = AfxBeginThread(Thread, (LPVOID)this);
+        }
+        return TRUE;
+    }
+    else {
+        return FALSE;
+    }
+    return 0;
+}
+/*原點賦歸執行緒*/
+UINT COrder::HomeThread(LPVOID pParam)
+{
+    ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+    ((COrder*)pParam)->GoHome.Status = TRUE;
+    g_pThread = NULL;
+    return 0;
 }
 /*主執行緒*/
 UINT COrder::Thread(LPVOID pParam)
@@ -191,7 +251,6 @@ UINT COrder::Thread(LPVOID pParam)
                         ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
                         ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
                         ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
-                        
                     }
                 }
                 //標籤清除
@@ -219,6 +278,7 @@ UINT COrder::Thread(LPVOID pParam)
     LineGotoActionJudge(pParam);
     //((COrder*)pParam)->m_Action.DecideInitializationMachine(20000,1000,7,50000,10000,0);
     ((COrder*)pParam)->DecideClear();
+    ((COrder*)pParam)->RunData.RunStatus = 0;//狀態設為未運行
     g_pThread = NULL;
     return 0;
 }
@@ -573,12 +633,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         LineGotoActionJudge(pParam);
         ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
         ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        //VisionModify(pParam);
-#ifdef VI
-        VI_CorrectLocation(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-            ((COrder*)pParam)->VisionOffset.Contraposition.X, ((COrder*)pParam)->VisionOffset.Contraposition.Y,
-            ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY, ((COrder*)pParam)->VisionOffset.Angle);
-#endif
+        VisionModify(pParam);
         ((COrder*)pParam)->m_Action.DecidePointGlue(
             //_ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + ((COrder*)pParam)->VisionOffset.OffsetX,
             //_ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + ((COrder*)pParam)->VisionOffset.OffsetY,
@@ -1038,12 +1093,24 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         ((COrder*)pParam)->FindMark.FocusDistance = _ttol(CommandResolve(Command, 5));
         if (((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
         {
-            VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
+            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4)))))//判斷檔案是否存在
+            {
+                VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
+                ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
+            }
+            else
+            {
+                AfxMessageBox(_T("沒有此編號的檔案!"));
+            }
+        }
+        else
+        {
+            AfxMessageBox(_T("沒有此編號的檔案!"));
         }
     }
     if (CommandResolve(Command, 0) == L"FindMarkAdjust")
     {     
-        if (((COrder*)pParam)->FindMark.Point.Status)
+        if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
         {
             #ifdef MOVE
             ((COrder*)pParam)->m_Action.DecideVirtualPoint(
@@ -1057,10 +1124,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
             VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 360);
             VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!VI_FindMask(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+            if (!VI_FindMark(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
             {
-                AfxMessageBox(_T("沒有找到!"));
+                //沒有找到
+                ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
+                ((COrder*)pParam)->VisionFindMarkError(pParam);
             }
+        }
+        else
+        {
+            AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
         }
     }
     if (CommandResolve(Command, 0) == L"FiducialMark")
@@ -1075,9 +1148,21 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));
                 ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4));
                 ((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));
-                if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())
+                if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
                 {
-                    VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                    if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4)))))//判斷檔案是否存在
+                    {
+                        VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                        ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
+                    }
+                    else
+                    {
+                        AfxMessageBox(_T("沒有此編號的檔案!"));
+                    }
+                }
+                else
+                {
+                    AfxMessageBox(_T("沒有此編號的檔案!"));
                 }
             }
             else
@@ -1090,9 +1175,22 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->FiducialMark2.Point.Z = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->FiducialMark2.LoadModelNum = _ttol(CommandResolve(Command, 4));
                     ((COrder*)pParam)->FiducialMark2.FocusDistance = _ttol(CommandResolve(Command, 5));
-                    if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())
+                    if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
                     {
-                        VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                        if (FileExist(((COrder*)pParam)->VisionFile.ModelPath +((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4)))))//判斷檔案是否存在
+                        {
+                            VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                            ((COrder*)pParam)->VisionTrigger.Trigger1Switch = FALSE;
+                            ((COrder*)pParam)->VisionTrigger.Trigger2Switch = TRUE;
+                        } 
+                        else
+                        {
+                            AfxMessageBox(_T("沒有此編號的檔案!"));
+                        }
+                    }
+                    else
+                    {
+                        AfxMessageBox(_T("沒有此編號的檔案!"));
                     }
                 }
                 else
@@ -1103,9 +1201,22 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4));
                     ((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));
-                    if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())
+                    if (_ttol(CommandResolve(Command, 4)) < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
                     {
-                        VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                        if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4)))))//判斷檔案是否存在
+                        {
+                            VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(_ttol(CommandResolve(Command, 4))));
+                            ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
+                            ((COrder*)pParam)->VisionTrigger.Trigger2Switch = FALSE;
+                        }  
+                        else
+                        {
+                            AfxMessageBox(_T("沒有此編號的檔案!"));
+                        }
+                    }
+                    else
+                    {
+                        AfxMessageBox(_T("沒有此編號的檔案!"));
                     }
                 }
             }
@@ -1113,7 +1224,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"FiducialMarkAdjust")
     {
-        if (((COrder*)pParam)->FiducialMark1.MilModel != 0 && ((COrder*)pParam)->FiducialMark2.MilModel != 0)
+        if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0 && *(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
         {
             //移動至第一點
 #ifdef MOVE
@@ -1125,9 +1236,12 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif
             VI_SetPatternMatch(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
             VI_SetSearchRange(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!VI_FindMask(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+            if (!VI_FindMark(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
             {
-                AfxMessageBox(_T("沒有找到!"));
+                //沒有找到
+                ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
+                ((COrder*)pParam)->VisionFindMarkError(pParam);
+
             }
             //移動至第二點
 #ifdef MOVE
@@ -1139,9 +1253,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif
             VI_SetPatternMatch(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
             VI_SetSearchRange(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!VI_FindMask(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+            if (!VI_FindMark(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
             {
-                AfxMessageBox(_T("沒有找到!"));
+                //沒有找到
+                ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
+                ((COrder*)pParam)->VisionFindMarkError(pParam);
             }
             //算出偏移角度
             ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
@@ -1156,12 +1272,31 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->VisionOffset.OffsetX = ((COrder*)pParam)->FiducialMark1.OffsetX;
             ((COrder*)pParam)->VisionOffset.OffsetY = ((COrder*)pParam)->FiducialMark1.OffsetY;
         }
+        else
+        {
+            AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
+        }
     }
 #endif
     if (CommandResolve(Command, 0) == L"FindFiducialAngle")
     {
         ((COrder*)pParam)->VisionSet.Startangle = _ttol(CommandResolve(Command, 1));
         ((COrder*)pParam)->VisionSet.Endangle = _ttol(CommandResolve(Command, 2));
+    }
+    if (CommandResolve(Command, 0) == L"CameraTrigger")
+    {
+        if (((COrder*)pParam)->VisionTrigger.Trigger1Switch)
+        {
+            ((COrder*)pParam)->VisionTrigger.Trigger1.push_back({ 0,_ttol(CommandResolve(Command,1)),_ttol(CommandResolve(Command,2)) ,_ttol(CommandResolve(Command,3)) });
+        }
+        else if (((COrder*)pParam)->VisionTrigger.Trigger2Switch)
+        {
+            ((COrder*)pParam)->VisionTrigger.Trigger2.push_back({ 0,_ttol(CommandResolve(Command,1)),_ttol(CommandResolve(Command,2)) ,_ttol(CommandResolve(Command,3)) });
+        }  
+        else
+        {
+
+        }
     }
     g_pSubroutineThread = NULL;
     return 0;
@@ -1209,12 +1344,85 @@ void COrder::ModifyPointOffSet(LPVOID pParam ,CString Command)
 }
 /*影像修正*/
 void COrder::VisionModify(LPVOID pParam)
-{
+{           
 #ifdef VI
     VI_CorrectLocation(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y,
         ((COrder*)pParam)->VisionOffset.Contraposition.X, ((COrder*)pParam)->VisionOffset.Contraposition.Y,
-        ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY, ((COrder*)pParam)->VisionOffset.Angle);
+        ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY, ((COrder*)pParam)->VisionOffset.Angle, ((COrder*)pParam)->VisionSet.ModifyMode);
 #endif
+}
+/*影像沒找到處理方法*/
+void COrder::VisionFindMarkError(LPVOID pParam)
+{
+    switch (((COrder*)pParam)->VisionSet.SearchError)
+    {
+    case 1:
+#ifdef VI
+        if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1 || ((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
+        {
+            if (((COrder*)pParam)->VisionTrigger.Trigger1.size())//有Trigger時
+            {
+                for (int i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger1.size(); i++)
+                {
+#ifdef MOVE
+                    ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                        ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X,
+                        ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y,
+                        ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Z,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+#endif
+                    if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
+                    {
+                        if (VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+                            break;
+                    }
+                    else
+                    {
+                        if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+                            break;
+                    }
+                }
+            }
+        }
+        else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+        {
+            if (((COrder*)pParam)->VisionTrigger.Trigger2.size())//有Trigger時
+            {
+                for (int i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger2.size(); i++)
+                {
+#ifdef MOVE
+                    ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                        ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).X,
+                        ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Y,
+                        ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Z,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+#endif
+                    if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+                        break;
+                }
+            }
+        }
+        break;
+#endif  
+    case 2:                                         
+        ((COrder*)pParam)->Stop();
+        break;
+    case 3:
+        ((COrder*)pParam)->Pause();
+        break;
+    case 4:
+        if (MessageBox(_T("沒找到!\r確定要繼續下一個命令?"), _T("提示"), MB_ICONQUESTION | MB_OKCANCEL) != IDOK)
+        {
+            ((COrder*)pParam)->Stop();
+        }
+        break;
+    case 5:
+        break;
+    case 6:
+        break;
+    default:
+        break;
+    }
 }
 /*指令分解*/
 CString COrder::CommandResolve(CString Command,UINT Choose)
@@ -1235,6 +1443,7 @@ CString COrder::CommandResolve(CString Command,UINT Choose)
 }
 /*參數設為Default*/
 void COrder::ParameterDefult() {
+    //運動
     DispenseDotSet = Default.DispenseDotSet;
     DispenseDotEnd = Default.DispenseDotEnd;
     DotSpeedSet = Default.DotSpeedSet;
@@ -1243,6 +1452,10 @@ void COrder::ParameterDefult() {
     LineSpeedSet = Default.LineSpeedSet;
     ZSet = Default.ZSet;
     GlueData = Default.GlueData;
+    //影像
+    VisionSet = VisionDefault.VisionSet;
+    VisionFile = VisionDefault.VisionFile;
+
 }
 /*判斷指標初始化*/
 void COrder::DecideInit()
@@ -1290,21 +1503,21 @@ void COrder::DecideInit()
     FindMark.Point.Status = FALSE;
     FiducialMark1.Point.Status = FALSE;
     FiducialMark2.Point.Status = FALSE;
-    //影像Model 指針初始化
-    FindMark.MilModel = malloc(sizeof(char));
-    FiducialMark1.MilModel = malloc(sizeof(char));
-    FiducialMark2.MilModel = malloc(sizeof(char));
+    //影像Model 指針初始化 /**********注意記憶體分配問題*
+    FindMark.MilModel = malloc(sizeof(int));
+    FiducialMark1.MilModel = malloc(sizeof(int));
+    FiducialMark2.MilModel = malloc(sizeof(int));
     *(int*)FindMark.MilModel = 0;
     *(int*)FiducialMark1.MilModel = 0;
     *(int*)FiducialMark2.MilModel = 0;
-    //影像設定值
-    VisionSet.Accuracy = 1;
-    VisionSet.Speed = 1;
-    VisionSet.Score = 80;
-    VisionSet.width = 640;
-    VisionSet.height = 480;
     //影像Offset初始化
     VisionOffset = { {0,0,0,0},0,0,0 };
+    //影像Trigger初始化
+    VisionTrigger.AdjustStatus = 0;
+    VisionTrigger.Trigger1Switch = FALSE;
+    VisionTrigger.Trigger2Switch = FALSE;
+    VisionTrigger.Trigger1.clear();
+    VisionTrigger.Trigger2.clear();
     /****************************************************************/
     Time = 0;
 
@@ -1415,7 +1628,7 @@ BOOL COrder::ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName) {
             wsprintf(szFullPath, L"%s\\%s", szPath, FindFileData.cFileName);//將szPath和FindFileData.cFileName 字串相加放到szFullPath裡 
             VisionFile.AllModelName.push_back(FindFileData.cFileName);
             VisionFile.ModelCount++;
-            //MessageBox(szFullPath);
+            MessageBox(szFullPath);
             if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {//如果目錄下還有目錄繼續往下尋找
                 //printf("<DIR>");
                 ListAllFileInDirectory(szFullPath, szName);
@@ -1423,4 +1636,18 @@ BOOL COrder::ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName) {
         } while (FindNextFile(hListFile, &FindFileData));
     }
     return 0;
+}
+/*判斷檔案是否存在*/
+BOOL COrder::FileExist(LPCWSTR FilePathName)
+{
+    HANDLE hFile;
+    WIN32_FIND_DATA FindData;
+
+    hFile = FindFirstFile(FilePathName, &FindData);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    return TRUE;
 }

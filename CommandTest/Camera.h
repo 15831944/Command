@@ -1,5 +1,6 @@
 #pragma once
 #include "MoveButton.h"
+#include "Model.h"
 
 // CCamera 對話方塊
 
@@ -18,6 +19,9 @@ public:
 public: //變數
     CMoveButton m_Yup, m_Ydown, m_Xup, m_Xdown, m_Zup, m_Zdown;
     UINT RaiChoose;
+    void* MilModel;
+    DOUBLE PixToPulsX, PixToPulsY;
+    CDialog* m_pCModel;
     
 public:// 函數
     void MoveXYZ(int MoveX, int MoveY, int MoveZ);
@@ -32,4 +36,11 @@ protected:
     
 	DECLARE_MESSAGE_MAP()
    
+public:
+    afx_msg void OnBnClickedButton1();
+    afx_msg void OnBnClickedButton2();
+    afx_msg void OnBnClickedButton3();
+    afx_msg void OnBnClickedButton4();
+
+    virtual void OnOK();
 };
