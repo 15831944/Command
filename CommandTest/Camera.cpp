@@ -68,7 +68,7 @@ BOOL CCamera::OnInitDialog()
 	//影像開啟
 #ifdef VI
 	VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
-	VI_DrawBox(2, GetDlgItem(IDC_PIC), 150, 150);
+	VI_DrawBox(1, GetDlgItem(IDC_PIC), 150, 150);
 #endif
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX 屬性頁應傳回 FALSE
@@ -95,15 +95,15 @@ void CCamera::OnBnClickedBtnmove()
 #ifdef MOVE
 	if (GetDlgItemInt(IDC_EDITX) == 0 && GetDlgItemInt(IDC_EDITY) == 0)
 	{
-        MO_Do3DLineMove(0, 0, GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+		MO_Do3DLineMove(0, 0, GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
 	}
 	else if (GetDlgItemInt(IDC_EDITY) == 0 && GetDlgItemInt(IDC_EDITZ) == 0)
 	{
-        MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), 0, 0, 30000, 100000, 5000);
+		MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), 0, 0, 30000, 100000, 5000);
 	}
 	else if (GetDlgItemInt(IDC_EDITX) == 0 && GetDlgItemInt(IDC_EDITZ) == 0)
 	{
-        MO_Do3DLineMove(0, GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), 0, 30000, 100000, 5000);
+		MO_Do3DLineMove(0, GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), 0, 30000, 100000, 5000);
 	}
 	else
 	{
@@ -140,7 +140,7 @@ void CCamera::OnBnClickedBtnmodel()
 #ifdef VI
 	void* Model;
 	Model = malloc(sizeof(char));
-	VI_CreateModelFromBox(2, GetDlgItem(IDC_PIC), Model, 150, 150);
+	VI_CreateModelFromBox(1, GetDlgItem(IDC_PIC), Model, 150, 150);
 	VI_SaveModel(Model, path, StrBuff + _T(".mod"));
 	VI_ModelFree(Model);
 	free(Model);
@@ -183,7 +183,11 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 			|| pMsg->wParam == VK_UP || pMsg->wParam == VK_DOWN
 			|| pMsg->wParam == VK_HOME || pMsg->wParam == VK_END) {
 #ifdef MOVE
-			MO_DecSTOP();
+			CWnd* pMain = AfxGetApp()->m_pMainWnd;
+			if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+			{
+				MO_DecSTOP();
+			}
 #endif // MOVE
 			pMsg->message = WM_NULL;
 		}
@@ -193,21 +197,27 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 /*XYZ鍵盤移動*/
 void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
-	switch (RaiChoose)
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
+	if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
 	{
-	case 1:
-		MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 6000);
-		break;
-	case 2:
-		MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
-		break;
-	case 3:
-		MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
-		break;
-	default:
-		//MessageBox(_T("程式出現錯誤!"));
-		break;
+		switch (RaiChoose)
+		{
+		case 1:
+			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 6000);
+			break;
+		case 2:
+			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
+			break;
+		case 3:
+			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+			break;
+		default:
+			//MessageBox(_T("程式出現錯誤!"));
+			break;
+		}
+		//_cprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 	}
+	//_cprintf("%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif // MOVE
 }
 /*設置針頭offset*/
@@ -217,26 +227,28 @@ void CCamera::OnBnClickedButton1()
 	static LONG Point1X = 0;
 	static LONG Point1Y = 0;
 	GetDlgItemText(IDC_BUTTON1, StrBuff);
-    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
 #ifdef MOVE
 	if (StrBuff == L"SetTipToCCD")
 	{
 		Point1X = MO_ReadLogicPosition(0);
 		Point1Y = MO_ReadLogicPosition(1);
-        SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD1"));
+		SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD1"));
 	}
-    else if (StrBuff == L"SetTipToCCD1")
-    {
-        ((CCommandTestDlg*)pMain)->TipOffset.x = Point1X - MO_ReadLogicPosition(0);
-        ((CCommandTestDlg*)pMain)->TipOffset.y = Point1Y - MO_ReadLogicPosition(1);
-        SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD"));
-        StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
-        SetDlgItemText(IDC_TIPTOCCD, StrBuff);
-    }
-    else
-    {
-        SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD"));
-    }
+	else if (StrBuff == L"SetTipToCCD1")
+	{
+		((CCommandTestDlg*)pMain)->TipOffset.x = Point1X - MO_ReadLogicPosition(0);
+		((CCommandTestDlg*)pMain)->TipOffset.y = Point1Y - MO_ReadLogicPosition(1);
+		SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD"));
+		StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
+		SetDlgItemText(IDC_TIPTOCCD, StrBuff);
+		((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.AdjustOffsetX = ((CCommandTestDlg*)pMain)->TipOffset.x;
+		((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.AdjustOffsetY = ((CCommandTestDlg*)pMain)->TipOffset.y;
+	}
+	else
+	{
+		SetDlgItemText(IDC_BUTTON1, _T("SetTipToCCD"));
+	}
 #endif
 #ifdef VI
 	VI_SetCameraToTipOffset(((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
@@ -282,7 +294,7 @@ void CCamera::OnBnClickedButton3()
 			VI_ModelFree(MilModel);
 			free(MilModel);
 			SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls"));
-			VI_DrawFOVFrame(2, GetDlgItem(IDC_PIC), 150, 150);
+			VI_DrawFOVFrame(1, GetDlgItem(IDC_PIC), 150, 150);
 		}    
 	}
 	else

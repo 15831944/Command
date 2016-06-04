@@ -55,10 +55,10 @@ public:     //運動API
     CString NowOffSet(LONG lX, LONG lY, LONG lZ);
     //回傳目前位置
     CString NowLocation();
-
-
+    //CCD移動用--(點座標X,Y,Z,驅動速度,加速度,初速度)
+    void DoCCDMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //人機用函數-軟體負極限
-    void HMNegLim();
+    void HMNegLim(LONG lX, LONG lY, LONG lZ);
     //人機用函數-軟體正極限(x,y,z為最大工作範圍)
     void HMPosLim(LONG lX, LONG lY, LONG lZ);
 private:    //自行運用函數

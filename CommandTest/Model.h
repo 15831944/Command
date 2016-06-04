@@ -22,13 +22,15 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-    CListCtrl m_ModelList;
-    int ModelCount;
-    std::vector<CString> AllModelName;
+	CListCtrl m_ModelList;
+	int ModelCount;
+	std::vector<CString> AllModelName;
 public:
-    virtual BOOL OnInitDialog();
-    virtual void OnOK();
-    virtual void OnCancel();
-    BOOL ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
-    afx_msg void OnBnClickedButton1();
+	virtual BOOL OnInitDialog();
+	virtual void OnOK();
+	virtual void OnCancel();
+	BOOL ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
+	afx_msg void OnBnClickedButton1();
+	afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnDeletefile();
 };

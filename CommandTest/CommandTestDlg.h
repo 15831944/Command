@@ -5,7 +5,7 @@
 #pragma once
 #include "Order.h"
 #include "afxcmn.h"
-
+#include "afxwin.h"
 // CCommandTestDlg 對話方塊
 class CCommandTestDlg : public CDialogEx
 {
@@ -31,31 +31,34 @@ protected:
 	CString StrBuff;
 	BOOL Insert;
 	UINT InsertNum;
-    LONG OffsetX, OffsetY;
-    
+	LONG OffsetX, OffsetY;
+	
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
-    BOOL InputAuto;
-    CPoint TipOffset;
-    BOOL CcdMode;
+	BOOL InputAuto;
+	CPoint TipOffset;
+	BOOL CcdMode;
+    BOOL m_LoopRun;
+    BOOL RunSwitch;
+    int MaxRunNumber;
 public:
-    /*刷新*/
-    afx_msg void OnTimer(UINT_PTR nIDEvent);
-    /*功能*/
+	/*刷新*/
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	/*功能*/
 	afx_msg void OnBnClickedStart();
 	afx_msg void OnBnClickedPause();
 	afx_msg void OnBnClickedStop();
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedBtnhome();
-    static  UINT    Thread(LPVOID pParam);
+	static  UINT    RunThread(LPVOID pParam);
 	afx_msg void OnBnClickedBtnview();
-    /*列表*/
+	/*列表*/
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
 	afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
 	void ListRefresh(BOOL ScrollBarRefresh);
-    /*命令*/
+	/*命令*/
 	afx_msg void OnBnClickedBtncommand1();
 	afx_msg void OnBnClickedBtncommand2();
 	afx_msg void OnBnClickedBtncommand3();
@@ -103,11 +106,15 @@ public:
 	afx_msg void OnBnClickedBtncommand43();
 	afx_msg void OnBnClickedBtncommand44();
 	afx_msg void OnBnClickedBtncommand45();
-    //設置
+	//設置
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
+	
+	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedBtnmatching();
+	CString CommandResolve(CString Command, UINT Choose);
+	afx_msg void OnBnClickedButton2();
     
-    afx_msg void OnBnClickedButton1();
 };
 
 

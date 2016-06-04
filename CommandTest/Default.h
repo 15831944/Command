@@ -22,6 +22,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
+    CDialog* pQuestion;
 	CListCtrl m_ListDefault;
 	CEdit m_Edit;
 	int m_OldListRow, m_OldListColumn;
