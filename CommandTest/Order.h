@@ -70,7 +70,7 @@ private:
 		LONG MoveX;
 		LONG MoveY;
 		LONG MoveZ;
-        BOOL PrecycleInitialize;
+		BOOL PrecycleInitialize;
 	};
 	//初始化結構(點膠設置結構、點膠結束結構、點膠速度、線段設置結構、線段結束結構、線段速度、Z軸結構、排膠結構)
 	struct Default {
@@ -199,7 +199,7 @@ private:    //變數
 	//程序
 	RepeatData      RepeatData;
 	Program         Program;
-    RunData         RunData;
+	RunData         RunData;
 	//狀態
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 	

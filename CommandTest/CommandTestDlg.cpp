@@ -27,17 +27,17 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	TipOffset.x = 0;
 	TipOffset.y = 0;
 	CcdMode = FALSE;
-    MaxRunNumber = 0;
-    
+	MaxRunNumber = 0;
+	
 }
 
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
 {
-    CDialogEx::DoDataExchange(pDX);
-    DDX_Control(pDX, IDC_LIST1, m_CommandList);
-    DDX_Control(pDX, IDC_LIST2, m_ParamList);
-    DDX_Check(pDX, IDC_CHECK1, InputAuto);
-    DDX_Check(pDX, IDC_CHELOOPRUN, m_LoopRun);
+	CDialogEx::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_LIST1, m_CommandList);
+	DDX_Control(pDX, IDC_LIST2, m_ParamList);
+	DDX_Check(pDX, IDC_CHECK1, InputAuto);
+	DDX_Check(pDX, IDC_CHELOOPRUN, m_LoopRun);
 }
 
 BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
@@ -105,7 +105,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNVISION, &CCommandTestDlg::OnBnClickedBtnvision)
 	ON_BN_CLICKED(IDC_BUTTON1, &CCommandTestDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_BTNMATCHING, &CCommandTestDlg::OnBnClickedBtnmatching)
-    ON_BN_CLICKED(IDC_BUTTON2, &CCommandTestDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON2, &CCommandTestDlg::OnBnClickedButton2)
 END_MESSAGE_MAP()
 
 
@@ -212,37 +212,37 @@ HCURSOR CCommandTestDlg::OnQueryDragIcon()
 /*開始*/
 void CCommandTestDlg::OnBnClickedStart()
 {	
-    if (m_LoopRun)
-    {
-        AfxBeginThread(RunThread, (LPVOID)this);
-        RunSwitch = TRUE;
-    }
-    else
-    {
-        if ((MaxRunNumber - int(a.RunStatusRead.FinishProgramCount)) >= 0)
-        {
-            if (a.RunStatusRead.RunStatus == 0)
-            {
-                /*列表停用*/
-                m_CommandList.EnableWindow(FALSE);
-                /*列表改為單選*/
-                DWORD dwStyle = m_CommandList.GetExtendedStyle();
-                dwStyle |= LVS_SHOWSELALWAYS;
-                m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
-                                                                                     /*設置Model當前目錄*/
-                CString path;
-                GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-                path.ReleaseBuffer();
-                int pos = path.ReverseFind('\\');
-                path = path.Left(pos) + _T("\\Temp\\");
-                LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
-                lstrcpy(lpszText, path);
-                a.VisionDefault.VisionFile.ModelPath = lpszText;
-                /*運行*/
-                a.Run();
-            }
-        }
-    }
+	if (m_LoopRun)
+	{
+		AfxBeginThread(RunThread, (LPVOID)this);
+		RunSwitch = TRUE;
+	}
+	else
+	{
+		if ((MaxRunNumber - int(a.RunStatusRead.FinishProgramCount)) >= 0)
+		{
+			if (a.RunStatusRead.RunStatus == 0)
+			{
+				/*列表停用*/
+				m_CommandList.EnableWindow(FALSE);
+				/*列表改為單選*/
+				DWORD dwStyle = m_CommandList.GetExtendedStyle();
+				dwStyle |= LVS_SHOWSELALWAYS;
+				m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+																					 /*設置Model當前目錄*/
+				CString path;
+				GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+				path.ReleaseBuffer();
+				int pos = path.ReverseFind('\\');
+				path = path.Left(pos) + _T("\\Temp\\");
+				LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+				lstrcpy(lpszText, path);
+				a.VisionDefault.VisionFile.ModelPath = lpszText;
+				/*運行*/
+				a.Run();
+			}
+		}
+	}
 }
 /*暫停&繼續*/
 void CCommandTestDlg::OnBnClickedPause()
@@ -267,7 +267,7 @@ void CCommandTestDlg::OnBnClickedPause()
 /*停止*/
 void CCommandTestDlg::OnBnClickedStop()
 {
-    RunSwitch = FALSE;
+	RunSwitch = FALSE;
 	a.Stop();
 	SetDlgItemText(IDC_PAUSE, L"Pause");
 }
@@ -330,28 +330,28 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 		}    
 		m_ParamList.SetItemText(i, 1, StrBuff);
 	}
-    /*手臂與出膠狀態*/
+	/*手臂與出膠狀態*/
 	#ifdef MOVE
 		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d),GlueStatus:%d"), MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming());
 	#endif 
 	SetDlgItemText(IDC_ARMSTATUS, XYZlocation);
-    /*程序運行狀態*/
-    if (a.RunStatusRead.RunStatus == 0)
-    {
-        SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:未運行"));
-    }
+	/*程序運行狀態*/
+	if (a.RunStatusRead.RunStatus == 0)
+	{
+		SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:未運行"));
+	}
 	else if (a.RunStatusRead.RunStatus == 2)
 	{
 		SetDlgItemText(IDC_PAUSE, L"Continue");
-        SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:暫停中"));
+		SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:暫停中"));
 	}
-    else if (a.RunStatusRead.RunStatus == 1)
-    {
-        SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:運行中"));
-    }
-    /*程序計數*/
-    FinishCountBuff.Format(_T("完整程序運行次數:%d"), a.RunStatusRead.FinishProgramCount);
-    SetDlgItemText(IDC_FINISHCOUNT, FinishCountBuff);
+	else if (a.RunStatusRead.RunStatus == 1)
+	{
+		SetDlgItemText(IDC_RUNSTATUS, _T("程序運行狀態:運行中"));
+	}
+	/*程序計數*/
+	FinishCountBuff.Format(_T("完整程序運行次數:%d"), a.RunStatusRead.FinishProgramCount);
+	SetDlgItemText(IDC_FINISHCOUNT, FinishCountBuff);
 	/*綠色原點賦歸按鈕*/
 	#ifdef MOVE
 	if (MO_ReadStartBtn())
@@ -1019,42 +1019,42 @@ CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
 /*清空運行次數*/
 void CCommandTestDlg::OnBnClickedButton2()
 {
-    a.RunStatusRead.FinishProgramCount = 0;
+	a.RunStatusRead.FinishProgramCount = 0;
 }
 /*我要打10個執行緒*/
 UINT CCommandTestDlg::RunThread(LPVOID pParam)
 {
-    while (((CCommandTestDlg*)pParam)->RunSwitch)
-    {
-        _cprintf("%d", (((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)));
-        if ((((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)) >= 0)
-        {
-            if (((CCommandTestDlg*)pParam)->a.RunStatusRead.RunStatus == 0)
-            {
-                /*列表停用*/
-                ((CCommandTestDlg*)pParam)->m_CommandList.EnableWindow(FALSE);
-                /*列表改為單選*/
-                DWORD dwStyle = ((CCommandTestDlg*)pParam)->m_CommandList.GetExtendedStyle();
-                dwStyle |= LVS_SHOWSELALWAYS;
-                ((CCommandTestDlg*)pParam)->m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
-                                                                                     /*設置Model當前目錄*/
-                CString path;
-                GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-                path.ReleaseBuffer();
-                int pos = path.ReverseFind('\\');
-                path = path.Left(pos) + _T("\\Temp\\");
-                LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
-                lstrcpy(lpszText, path);
-                ((CCommandTestDlg*)pParam)->a.VisionDefault.VisionFile.ModelPath = lpszText;
-                /*運行*/
-                ((CCommandTestDlg*)pParam)->a.Run();
-            }  
-        }
-        else
-        {
-            ((CCommandTestDlg*)pParam)->RunSwitch = FALSE;
-        }
-        Sleep(10);
-    }
-    return 0;
+	while (((CCommandTestDlg*)pParam)->RunSwitch)
+	{
+		_cprintf("%d", (((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)));
+		if ((((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)) >= 0)
+		{
+			if (((CCommandTestDlg*)pParam)->a.RunStatusRead.RunStatus == 0)
+			{
+				/*列表停用*/
+				((CCommandTestDlg*)pParam)->m_CommandList.EnableWindow(FALSE);
+				/*列表改為單選*/
+				DWORD dwStyle = ((CCommandTestDlg*)pParam)->m_CommandList.GetExtendedStyle();
+				dwStyle |= LVS_SHOWSELALWAYS;
+				((CCommandTestDlg*)pParam)->m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+																					 /*設置Model當前目錄*/
+				CString path;
+				GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+				path.ReleaseBuffer();
+				int pos = path.ReverseFind('\\');
+				path = path.Left(pos) + _T("\\Temp\\");
+				LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+				lstrcpy(lpszText, path);
+				((CCommandTestDlg*)pParam)->a.VisionDefault.VisionFile.ModelPath = lpszText;
+				/*運行*/
+				((CCommandTestDlg*)pParam)->a.Run();
+			}  
+		}
+		else
+		{
+			((CCommandTestDlg*)pParam)->RunSwitch = FALSE;
+		}
+		Sleep(10);
+	}
+	return 0;
 }
