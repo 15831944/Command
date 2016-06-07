@@ -454,7 +454,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2)); 
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)) - 1);
-                }                 
+                }   
+                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                 ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
             }
             else
@@ -468,14 +469,23 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         {                 
                             if (_ttol(CommandResolve(Command, 5)) == 1)
                             {
-                                if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i) + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3))-1)))
+                                if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i) + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
+                                {
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;                                  
+                                }
+                                else if(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i))
+                                {
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE;
+                                }
+                                if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
                                 {
                                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X - _ttol(CommandResolve(Command, 1));
-                                } 
+                                }
                                 else
                                 {
                                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                                 }
+                                
                             }
                             if (_ttol(CommandResolve(Command, 5)) == 2)
                             {
@@ -497,6 +507,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         }
                         else
                         {
+                            ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
@@ -527,6 +538,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)) - 1);
                             }
+                            ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                             ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
                         }
                     }
@@ -557,6 +569,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)) - 1);
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
                 }
+                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                 ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
             }
             else
@@ -567,10 +580,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     if (((COrder*)pParam)->RepeatData.StepRepeatNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
                     {
                         if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i) > 1)/**/
-                        {
+                        {                          
                             if (_ttol(CommandResolve(Command, 5)) == 1)
                             {
                                 if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i) + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
+                                {
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;                          
+                                }          
+                                else  if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i))
+                                {
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE;                                  
+                                }
+                                if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
                                 {
                                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y - _ttol(CommandResolve(Command, 2));
                                 }
@@ -599,6 +620,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         }
                         else
                         {
+                            ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
@@ -629,6 +651,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)) - 1);
                                 /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
                             }
+                            ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                             ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
                         }
                     }
@@ -1002,13 +1025,25 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"ParkPosition")
     {
-        ModifyPointOffSet(pParam, Command);
         LineGotoActionJudge(pParam);
-        if (((COrder*)pParam)->GlueData.GlueAuto)
+        if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
         {
-            ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X,((COrder*)pParam)->GlueData.ParkPositionData.Y,((COrder*)pParam)->GlueData.ParkPositionData.Z,
-                ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime,((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            if (((COrder*)pParam)->GlueData.GlueAuto)
+            {
+                ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
+                    ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            }
         }
+        else
+        {
+            if (((COrder*)pParam)->GlueData.GlueAuto)
+            {
+                ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
+                    ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            }
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        } 
     }
     if (CommandResolve(Command, 0) == L"StopPoint")
     {
@@ -1834,6 +1869,7 @@ void COrder::DecideClear()
     RepeatData.LoopAddressNum.clear();
     RepeatData.LoopCount.clear();
     RepeatData.StepRepeatNum.clear();
+    RepeatData.SSwitch.clear();
     RepeatData.StepRepeatInitOffsetX.clear();
     RepeatData.StepRepeatInitOffsetY.clear();
     RepeatData.StepRepeatCountX.clear();

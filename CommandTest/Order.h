@@ -181,6 +181,7 @@ private:
 		std::vector<UINT> LoopAddressNum;
 		std::vector<UINT> LoopCount; 
 		BOOL StepRepeatSwitch;
+        std::vector<BOOL> SSwitch;
 		std::vector<UINT> StepRepeatNum;
 		std::vector<UINT> StepRepeatInitOffsetX;
 		std::vector<UINT> StepRepeatInitOffsetY;
