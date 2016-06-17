@@ -1,3 +1,9 @@
+/*
+*檔案名稱:Action.h(3D用)
+*內容簡述:運動命令API，詳細參數請查看excel
+*＠author 作者名稱:R
+*＠data 更新日期:2016/06/07
+*@更新內容線段z值改變時，三軸同動移動，原來的為x,y先移動再移動z軸*/
 #pragma once
 #include <vector>
 #define _USE_MATH_DEFINES
@@ -70,6 +76,7 @@ private:    //自行運用函數
     void PauseStopGlue();//暫停時停指塗膠(讀取暫停參數，當參數為1時斷膠，或點膠機關參數為0也斷膠。)
 	void GelatinizeBack(int iType, LONG lXarEnd, LONG lYarEnd, LONG lZarEnd, LONG lXarUp, LONG lYarUp, LONG lLineStop, LONG lStopZar, LONG lBackZar, LONG lLowSpeed, LONG lHighSpeed, LONG lAcceleration, LONG lInitSpeed);//返回設定
 	void LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG &lLineClose);//直線距離轉換成座標點
+	void LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG &lZClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG lZ0, LONG lZ1, LONG &lLineClose);//直線距離轉換成座標點--多載3D
 	CString TRoundCCalculation(CString Origin, CString End, CString Between);//三點計算圓心
 	LONG CStringToLong(CString csData, int iChoose);//字串轉長整數，使用的結尾一定要是"，"
     DOUBLE AngleCount(DOUBLE LocatX, DOUBLE LocatY, DOUBLE LocatX1, DOUBLE LocatY1, DOUBLE LocatX2, DOUBLE LocatY2, BOOL bRev);//三點取得角度(向量夾角)(圓心x,y座標x1,y1,座標x2,y2,正逆轉)

@@ -277,8 +277,10 @@ void CCamera::OnBnClickedButton3()
 	}
 	else if (StrBuff == L"SetPixToPuls1")
 	{
+#ifdef MOVE
 		Point1X = MO_ReadLogicPosition(0);
 		Point1Y = MO_ReadLogicPosition(1);
+#endif
 		VI_CreateModelFromBox(2, GetDlgItem(IDC_PIC),MilModel, 150, 150);
 		VI_DrawFOVFrame(3, GetDlgItem(IDC_PIC), 150, 150);
 		SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls2"));

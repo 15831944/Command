@@ -32,7 +32,6 @@ protected:
 	BOOL Insert;
 	UINT InsertNum;
 	LONG OffsetX, OffsetY;
-	
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
@@ -51,8 +50,14 @@ public:
 	afx_msg void OnBnClickedStop();
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedBtnhome();
-	static  UINT    RunThread(LPVOID pParam);
 	afx_msg void OnBnClickedBtnview();
+    static  UINT RunThread(LPVOID pParam);
+    //設置
+    afx_msg void OnBnClickedBtndefault();
+    afx_msg void OnBnClickedBtnvision();
+    afx_msg void OnBnClickedBtnmodefyz();
+    afx_msg void OnBnClickedBtnmodechange();
+    afx_msg void OnBnClickedBtncleancount();
 	/*列表*/
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
@@ -92,6 +97,7 @@ public:
 	afx_msg void OnBnClickedBtncommand29();
 	afx_msg void OnBnClickedBtncommand30();
 	afx_msg void OnBnClickedBtncommand31();
+    afx_msg void OnBnClickedBtncommand32_0();
 	afx_msg void OnBnClickedBtncommand32();
 	afx_msg void OnBnClickedBtncommand33();
 	afx_msg void OnBnClickedBtncommand34();
@@ -99,22 +105,14 @@ public:
 	afx_msg void OnBnClickedBtncommand36();
 	afx_msg void OnBnClickedBtncommand37();
 	afx_msg void OnBnClickedBtncommand38();
-	afx_msg void OnBnClickedBtncommand39();
 	afx_msg void OnBnClickedBtncommand40();
 	afx_msg void OnBnClickedBtncommand41();
 	//副程式
 	afx_msg void OnBnClickedBtncommand43();
 	afx_msg void OnBnClickedBtncommand44();
 	afx_msg void OnBnClickedBtncommand45();
-	//設置
-	afx_msg void OnBnClickedBtndefault();
-	afx_msg void OnBnClickedBtnvision();
-	
-	afx_msg void OnBnClickedButton1();
-	afx_msg void OnBnClickedBtnmatching();
-	CString CommandResolve(CString Command, UINT Choose);
-	afx_msg void OnBnClickedButton2();
-    
+    //外部函數
+    CString CommandResolve(CString Command, UINT Choose);
 };
 
 

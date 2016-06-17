@@ -61,17 +61,19 @@ void CModel::OnOK()
 	int iSelPos = m_ModelList.GetNextItem(-1, LVIS_SELECTED);
 	_cprintf("%d", iSelPos);
 #ifdef VI
-	VI_LoadModel(MilModel, lpszText, AllModelName.at(iSelPos));
-	VI_SetPatternMatch(MilModel, 1, 1, 80, 0, 360);
-	VI_FindMark(MilModel, OffsetX, OffsetY);
-	VI_ModelFree(MilModel);
-	free(MilModel);
+	if (iSelPos != -1)
+	{
+		VI_LoadModel(MilModel, lpszText, AllModelName.at(iSelPos));
+		VI_SetPatternMatch(MilModel, 1, 1, 80, 0, 360);
+		VI_FindMark(MilModel, OffsetX, OffsetY);
+		VI_ModelFree(MilModel);
+		free(MilModel);
+	}
 #endif
 #ifdef MOVE
 	MO_Do3DLineMove(OffsetX, OffsetY, 0, 30000, 100000, 6000);
 #endif
 	//CDialogEx::OnOK();
-
 }
 /*Â÷¶}*/
 void CModel::OnCancel()

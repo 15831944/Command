@@ -1,8 +1,9 @@
 /*
-*檔案名稱:Action
+*檔案名稱:Action.cpp(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/04/11	*/
+*＠data 更新日期:2016/06/07	
+*@更新內容線段z值改變時，三軸同動移動，原來的為x,y先移動再移動z軸*/
 #include "stdafx.h"
 #include "Action.h"
 /***********************************************************
@@ -104,6 +105,10 @@ void CAction::DecidePointGlue(LONG lX, LONG lY, LONG lZ, LONG lDoTime, LONG lDel
     }
     if (!bZDisType)//絕對位置
     {
+        if (lZBackDistance > lZ)
+        {
+            return;
+        }
         lZBackDistance = abs(lZBackDistance - lZ);
     }
     if (!g_bIsStop)
@@ -192,12 +197,7 @@ void CAction::DecideLineStartMove(LONG lX, LONG lY, LONG lZ, LONG lStartDelayTim
 #ifdef MOVE
     if (!g_bIsStop)
     {
-        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
-        PreventMoveError();//防止軸卡出錯
-    }
-    if (!g_bIsStop)
-    {
-        MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸先下降
+        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,z軸移動
         PreventMoveError();//防止軸卡出錯
     }
     if (g_bIsDispend == 1)
@@ -232,15 +232,10 @@ void CAction::DecideLineMidMove(LONG lX, LONG lY, LONG lZ, LONG lMidDelayTime, L
     LONG lMidDelayTime
     */
 #ifdef MOVE
-    if (!g_bIsStop)
-    {
-        MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);// z軸先下降
-        PreventMoveError();//防止軸卡出錯
-    }
     PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
     if (!g_bIsStop)
     {
-        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);// x,y軸移動
+        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);// x,y軸移動
         PreventMoveError();//防止軸卡出錯
     }
     MO_Timer(0, 0, lMidDelayTime * 1000);
@@ -316,6 +311,8 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
             }
             Sleep(1);
         }
+        MO_StopGumming();//停止出膠
+        return;
     }
     else
     {
@@ -345,13 +342,13 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
             LineGetToPoint(lXClose, lYClose, lNowX, lNowY, lX, lY, lLineClose);
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//線段點膠設定---(5)關機距離
+                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//線段點膠設定---(5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
             MO_StopGumming();//停止出膠
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);// z軸先下降
+                MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);// z軸先下降
                 PreventMoveError();//防止軸卡出錯
             }
         }
@@ -467,7 +464,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     */
 #ifdef MOVE
     LONG lNowX = 0, lNowY = 0;
-    LONG lXClose = 0, lYClose = 0, lLineClose = 0;
+    LONG lXClose = 0, lYClose = 0, lZClose = 0, lLineClose = 0;
     LONG lBuffX = 0, lBuffY = 0;
     DOUBLE dTime = 0;
     int iBuf = 0;
@@ -475,7 +472,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
     lLineClose = lStartDistance;
-    LineGetToPoint(lXClose, lYClose, lX2, lY2, lX, lY, lLineClose);
+    LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lX, lY,lZ2,lZ, lLineClose);
     lBuffX = (-(lXClose - lX)) + lX;
     lBuffY = (-(lYClose - lY)) + lY;
     iBuf = lStartDelayTime ^ lStartDistance;//互斥或移動前延遲跟設置距離 如果兩者都相同結果為0(當兩者都有值時以"移動前延遲"優先)
@@ -483,12 +480,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     {
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
-            PreventMoveError();//防止軸卡出錯
-        }
-        if (!g_bIsStop)
-        {
-            MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸先下降
+            MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,z軸移動
             PreventMoveError();//防止軸卡出錯
         }
         if (g_bIsDispend == 1)
@@ -508,7 +500,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         }
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸(移動到點2)
+            MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,z軸(移動到點2)
             PreventMoveError();//防止軸卡出錯
         }
     }
@@ -516,7 +508,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     {
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lBuffX - MO_ReadLogicPosition(0), lBuffY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸
+            MO_Do3DLineMove(lBuffX - MO_ReadLogicPosition(0), lBuffY - MO_ReadLogicPosition(1), lZClose - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸
             PreventMoveError();//防止軸卡出錯
         }
         if (!g_bIsStop)
@@ -527,7 +519,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         MO_TimerSetIntter(dTime * 1000000, LPInterrupt);//計時到跳至執行序
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸(移動到點2)
+            MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸(移動到點2)
             PreventMoveError();//防止軸卡出錯
         }
     }
@@ -571,15 +563,15 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy
     */
 #ifdef MOVE
-    LONG lNowZ = 0;
-    LONG lXClose = 0, lYClose = 0, lLineClose = 0;
+       LONG lNowZ = 0;
+    LONG lXClose = 0, lYClose = 0, lZClose = 0, lLineClose = 0;
     LONG lBuffX = 0, lBuffY = 0;
     DOUBLE dTime = 0;
     int iBuf = 0;
     dTime = (sqrt((DOUBLE)lInitVelociy*(DOUBLE)lInitVelociy + ((DOUBLE)lAcceleration*(DOUBLE)lStartDistance / 2)) - (DOUBLE)lInitVelociy) / (DOUBLE)lAcceleration;
     lNowZ = MO_ReadLogicPosition(2);
     lLineClose = lStartDistance;
-    LineGetToPoint(lXClose, lYClose, lX2, lY2, lX, lY, lLineClose);
+    LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lX, lY, lZ2, lZ, lLineClose);
     lBuffX = (-(lXClose - lX)) + lX;
     lBuffY = (-(lYClose - lY)) + lY;
     if (!bZDisType)//絕對位置
@@ -599,12 +591,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     {
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
-            PreventMoveError();//防止軸卡出錯
-        }
-        if (!g_bIsStop)
-        {
-            MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸先下降
+            MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
             PreventMoveError();//防止軸卡出錯
         }
         if (g_bIsDispend == 1)
@@ -626,23 +613,23 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
         {
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動(2)
+                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動(2)
                 PreventMoveError();//防止軸卡出錯
             }
         }
         else
         {
             lLineClose = lCloseDistance;
-            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lY2, lLineClose);
+            LineGetToPoint(lXClose, lYClose, lZClose, lX, lY, lX2, lY2, lZ, lZ2, lLineClose);
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//線段點膠設定---(5)關機距離
+                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), lZClose - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//線段點膠設定---(5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
             MO_StopGumming();//停止出膠
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
+                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2- MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,Z軸移動
                 PreventMoveError();//防止軸卡出錯
             }
         }
@@ -651,12 +638,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
     {
         if (!g_bIsStop)
         {
-            MO_Do3DLineMove(lBuffX - MO_ReadLogicPosition(0), lBuffY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
-            PreventMoveError();//防止軸卡出錯
-        }
-        if (!g_bIsStop)
-        {
-            MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸先下降
+            MO_Do3DLineMove(lBuffX - MO_ReadLogicPosition(0), lBuffY - MO_ReadLogicPosition(1), lZClose - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,Z軸移動
             PreventMoveError();//防止軸卡出錯
         }
         if (lCloseDistance == 0)//線段點膠設定---(5)關機距離
@@ -664,23 +646,23 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
             MO_TimerSetIntter(dTime * 1000000, LPInterrupt);//計時到跳至執行序
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
+                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,Z軸移動
                 PreventMoveError();//防止軸卡出錯
             }
         }
         else
         {
             lLineClose = lCloseDistance;
-            LineGetToPoint(lXClose, lYClose, lX, lY, lX2, lY2, lLineClose);
+            LineGetToPoint(lXClose, lYClose, lZClose, lX, lY, lX2, lY2, lZ, lZ2, lLineClose);
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);// 線段點膠設定-- - (5)關機距離
+                MO_Do3DLineMove(lXClose - MO_ReadLogicPosition(0), lYClose - MO_ReadLogicPosition(1), lZClose - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);// 線段點膠設定-- - (5)關機距離
                 PreventMoveError();//防止軸卡出錯
             }
             MO_StopGumming();//停止出膠
             if (!g_bIsStop)
             {
-                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
+                MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
                 PreventMoveError();//防止軸卡出錯
             }
         }
@@ -1805,6 +1787,23 @@ void CAction::LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG lX0, LONG lY0, L
             }
         }
     }
+}
+/*
+*直線距離轉換成座標點--多載
+*/
+void CAction::LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG &lZClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG lZ0, LONG lZ1, LONG &lLineClose)
+{
+    LONG lLength = 0;
+    lLength = sqrt(pow(lX0 - lX1, 2) + pow(lY0 - lY1, 2) + pow(lZ0 - lZ1, 2));
+    if (lZ0 == lZ1)
+    {
+        lZClose = lZ0;
+    }
+    else
+    {
+        lZClose = (lLineClose * (lZ1 - lZ0) / lLength) + lZ0;
+    }
+    LineGetToPoint(lXClose, lYClose, lX0, lY0, lX1, lY1, lLineClose);
 }
 /*
 *三點計算圓心
@@ -3064,7 +3063,7 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG l
     }
     if (!g_bIsStop)
     {
-        MO_Do3DLineMove(0, 0, lZ - lNowY, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸往下
+        MO_Do3DLineMove(0, 0, lZ - lNowZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸往下
         PreventMoveError();//防止軸卡出錯
     }
     for (rptIter = m_ptVec.rbegin(); rptIter != m_ptVec.rend(); rptIter++)

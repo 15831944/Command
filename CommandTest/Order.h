@@ -172,6 +172,12 @@ private:
 		BOOL GoHomeStatus;
 		UINT FinishProgramCount;
 	};
+    //阻斷控管結構
+    struct StepRepeatBlockData {
+        int BlockNumber;
+        std::vector<CString> BlockPosition;
+    };
+
 	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y)
 	/*
 	*循環開關&步驟開關(用來判別沒有此標籤時狀況)
@@ -179,20 +185,24 @@ private:
 	struct RepeatData {
 		BOOL LoopSwitch;
 		std::vector<UINT> LoopAddressNum;
-		std::vector<UINT> LoopCount; 
+		std::vector<UINT> LoopCount;
+        CString StepRepeatLabel;
+        BOOL StepRepeatLabelLock;
 		BOOL StepRepeatSwitch;
         std::vector<BOOL> SSwitch;
 		std::vector<UINT> StepRepeatNum;
 		std::vector<UINT> StepRepeatInitOffsetX;
 		std::vector<UINT> StepRepeatInitOffsetY;
-		std::vector<UINT> StepRepeatCountX;
-		std::vector<UINT> StepRepeatCountY;
+		std::vector<int> StepRepeatCountX;
+		std::vector<int> StepRepeatCountY;
+        std::vector<StepRepeatBlockData> StepRepeatBlockData;
 	};
 private:    //變數
 	HANDLE          wakeEvent;
 	//主運動物件
 	CAction         m_Action;
 	//命令
+    StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
 	CString         Commanding;
 	std::vector<CString> CommandSwap;
@@ -214,6 +224,8 @@ private:    //函數
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
 	static  void    VisionModify(LPVOID pParam);
 	void            VisionFindMarkError(LPVOID pParam);
+    static  void    BlockProcessStart(CString Command, LPVOID pParam);
+    static  void    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
 	//命令處理
 	static  CString CommandResolve(CString Command,UINT Choose);
 	//初始化處理
@@ -224,12 +236,14 @@ private:    //函數
 	//檔案處理
 	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
 	static  BOOL    FileExist(LPCWSTR FilePathName);
+  
+    
 public:     //變數
 	//動作總數
 	LONG            Time;
 	//程序陣列
 	std::vector<CString> CommandMemory;
-	//參數值
+	//運動參數值
 	Default         Default;
 
 	DispenseDotSet  DispenseDotSet;
