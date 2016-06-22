@@ -62,7 +62,7 @@ private:
 		LONG GlueTime;
 		LONG GlueStayTime;
 	};
-	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、循環是否復歸)
+	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、循環是否復歸、是否為影像賦歸)
 	struct GoHome {
 		LONG Speed1;
 		LONG Speed2;
@@ -71,6 +71,7 @@ private:
 		LONG MoveY;
 		LONG MoveZ;
 		BOOL PrecycleInitialize;
+        BOOL VisionGoHome;
 	};
 	//初始化結構(點膠設置結構、點膠結束結構、點膠速度、線段設置結構、線段結束結構、線段速度、Z軸結構、排膠結構)
 	struct Default {
@@ -172,37 +173,45 @@ private:
 		BOOL GoHomeStatus;
 		UINT FinishProgramCount;
 	};
-    //阻斷控管結構
-    struct StepRepeatBlockData {
-        int BlockNumber;
-        std::vector<CString> BlockPosition;
-    };
-
-	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y)
+	//阻斷控管結構
+	struct StepRepeatBlockData {
+		int BlockNumber;
+		std::vector<CString> BlockPosition;
+	};
+	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料)
 	/*
-	*循環開關&步驟開關(用來判別沒有此標籤時狀況)
+	*循環開關:用來判別沒有此標籤時狀況
+    *步驟跳躍標籤:用於執行迴圈時跳躍指令用
+    *增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
+    *記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
+    *記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
+    *記錄S型轉換開關:用於S型態判斷Offset需要加還減
+    *步驟地址紀錄:用於判斷指令目前的StepRepeat是屬於哪一個陣列
+    *記錄組斷資料:包含數量、阻段陣列的字串
 	*/
 	struct RepeatData {
 		BOOL LoopSwitch;
 		std::vector<UINT> LoopAddressNum;
 		std::vector<UINT> LoopCount;
-        CString StepRepeatLabel;
-        BOOL StepRepeatLabelLock;
-		BOOL StepRepeatSwitch;
-        std::vector<BOOL> SSwitch;
+		CString StepRepeatLabel;
+		BOOL StepRepeatLabelLock;
+        BOOL AddInStepRepeatSwitch;
+		int AllNewStepRepeatNum;
+		int AllDeleteStepRepeatNum;
+		std::vector<BOOL> SSwitch;
 		std::vector<UINT> StepRepeatNum;
 		std::vector<UINT> StepRepeatInitOffsetX;
 		std::vector<UINT> StepRepeatInitOffsetY;
 		std::vector<int> StepRepeatCountX;
 		std::vector<int> StepRepeatCountY;
-        std::vector<StepRepeatBlockData> StepRepeatBlockData;
+		std::vector<StepRepeatBlockData> StepRepeatBlockData;
 	};
 private:    //變數
 	HANDLE          wakeEvent;
 	//主運動物件
 	CAction         m_Action;
 	//命令
-    StepRepeatBlockData InitBlockData;
+	StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
 	CString         Commanding;
 	std::vector<CString> CommandSwap;
@@ -224,8 +233,10 @@ private:    //函數
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
 	static  void    VisionModify(LPVOID pParam);
 	void            VisionFindMarkError(LPVOID pParam);
-    static  void    BlockProcessStart(CString Command, LPVOID pParam);
-    static  void    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
+	static  void    BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus);
+	static  BOOL    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
+    static  void    BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus);
+    static  BOOL    BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount);
 	//命令處理
 	static  CString CommandResolve(CString Command,UINT Choose);
 	//初始化處理
@@ -237,7 +248,7 @@ private:    //函數
 	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
 	static  BOOL    FileExist(LPCWSTR FilePathName);
   
-    
+	
 public:     //變數
 	//動作總數
 	LONG            Time;
@@ -254,17 +265,21 @@ public:     //變數
 	ZSet            ZSet;
 	GlueData        GlueData;
 	GoHome          GoHome;
+
 	//運行程序資料
 	RunStatusRead   RunStatusRead;
+
 	//影像參數 
 	VisionDefault   VisionDefault;
 	VisionSet       VisionSet;
 	VisionFile      VisionFile;
 	VisionSerchError VisionSerchError;
+
 	//影像
 	Vision          FindMark, FiducialMark1, FiducialMark2;
 	VisionOffset    VisionOffset;
 	VisionTrigger   VisionTrigger;
+
 	//影像修正後工作座標
 	CoordinateData  FinalWorkCoordinateData;
 public:     //函數
@@ -278,8 +293,8 @@ public:     //函數
 	BOOL    Pause();
 	//繼續命令解譯(成功return 1失敗return 0)
 	BOOL    Continue();
-	//原點賦歸(成功return  1 失敗 return 0 )
-	BOOL    Home();
+	//原點賦歸(參數:模式(FALSE 針頭 TRUE CCD))(回傳值:成功return  1 失敗 return 0 )
+	BOOL    Home(BOOL mode);
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
 

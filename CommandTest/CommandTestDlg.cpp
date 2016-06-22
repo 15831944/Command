@@ -279,7 +279,7 @@ void CCommandTestDlg::OnBnClickedOk()
 /*原點賦歸*/
 void CCommandTestDlg::OnBnClickedBtnhome()
 {
-	a.Home();
+	a.Home(0);
 }
 /*View*/
 void CCommandTestDlg::OnBnClickedBtnview()
@@ -360,7 +360,7 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 	#ifdef MOVE
 	if (MO_ReadStartBtn())
 	{
-        a.Home();
+        a.Home(0);
 	}
 	#endif
 	if (a.RunStatusRead.RunStatus != 0)
@@ -826,18 +826,24 @@ void CCommandTestDlg::OnBnClickedBtncommand32_0()
 /*步驟重複X*/
 void CCommandTestDlg::OnBnClickedBtncommand32()
 {
-	StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d,%d,%d,1-1,2-2,3-3"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8));
-	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    CString Buff;
+	StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d,%d,%d,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8));
+    GetDlgItemText(IDC_EDITPARAM9,Buff);
+    StrBuff = StrBuff + Buff;
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
 /*步驟重複Y*/
 void CCommandTestDlg::OnBnClickedBtncommand33()
 {
-	StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
-	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
-	Insert = FALSE;
-	ListRefresh(NULL);
+    CString Buff;
+    StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d,%d,%d,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8));
+    GetDlgItemText(IDC_EDITPARAM9, Buff);
+    StrBuff = StrBuff + Buff;
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*查找標記*/
 void CCommandTestDlg::OnBnClickedBtncommand34()
@@ -917,7 +923,10 @@ void CCommandTestDlg::OnBnClickedBtncommand40()
 /*擴展步驟重複*/
 void CCommandTestDlg::OnBnClickedBtncommand41()
 {
-	// TODO: 在此加入控制項告知處理常式程式碼
+    StrBuff.Format(_T("Printf"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
 }
 /*開始副程式*/
 void CCommandTestDlg::OnBnClickedBtncommand43()

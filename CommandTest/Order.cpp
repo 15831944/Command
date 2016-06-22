@@ -138,14 +138,16 @@ BOOL COrder::Continue()
     }
 }
 /*原點賦歸*/
-BOOL COrder::Home()
+BOOL COrder::Home(BOOL mode)
 {
     if (!g_pThread)
-    {
+    {           
         //將停止狀態清除
         m_Action.g_bIsStop = FALSE;
         //確定GoHome參數賦值
         GoHome = Default.GoHome;
+        //回原點模式設定
+        GoHome.VisionGoHome = mode;
         //回歸狀態設為FALSE
         RunStatusRead.GoHomeStatus = FALSE;
         //出膠控制器關
@@ -195,8 +197,15 @@ BOOL COrder::View(BOOL mode)
 /*原點賦歸執行緒*/
 UINT COrder::HomeThread(LPVOID pParam)
 {
+    /*****************加入選擇影像回歸*************/
 #ifdef MOVE
     ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+    if (((COrder*)pParam)->GoHome.VisionGoHome)
+    {   
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(-(((COrder*)pParam)->VisionSet.AdjustOffsetX), -(((COrder*)pParam)->VisionSet.AdjustOffsetY), 0,
+            30000, 80000, 6000);
+            //((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+    }
 #endif
     ((COrder*)pParam)->RunStatusRead.GoHomeStatus = TRUE;
     g_pThread = NULL;
@@ -256,20 +265,6 @@ UINT COrder::Thread(LPVOID pParam)
                         ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;
                     }
                 }
-                ////執行StepRepeat，沒有此標籤時
-                //if (((COrder*)pParam)->RepeatData.StepRepeatSwitch && ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
-                //{
-                //    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.empty())
-                //    {
-                //        ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.size() - 1);
-                //        ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.size() - 1);
-                //        ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
-                //        ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
-                //        ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
-                //        ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
-                //        ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
-                //    }
-                //}
                 //標籤清除
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
@@ -279,20 +274,15 @@ UINT COrder::Thread(LPVOID pParam)
         {
             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
             {
-                _cwprintf(L"%s=%s", ((COrder*)pParam)->RepeatData.StepRepeatLabel, CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6));
+                _cwprintf(L"%s=%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel, CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6));
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabel ==
                     CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6) && 
                     (CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"StepRepeatX" ||
                     CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"StepRepeatY") )
                 {
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
-                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
-                }
-                else if (CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"End")
-                {
-                    _cwprintf(L"沒有發現其他StepRepeat\n");
-                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + ((COrder*)pParam)->RepeatData.StepRepeatLabel;
-                    ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+                    //++為了讓他執行StepRepeat
+                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
                 }
             }
             else
@@ -312,14 +302,33 @@ UINT COrder::Thread(LPVOID pParam)
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
         }
-        if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size()-1)
+
+        if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
         {
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;
+            if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == 0)
+            {
+                _cwprintf(L"沒有發現其他StepRepeat\n");
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + ((COrder*)pParam)->RepeatData.StepRepeatLabel;
+                ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+            }
+            else
+            {
+                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
+            }
         }
         else
         {
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
-        } 
+            if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1)
+            {
+                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;
+            }
+            else
+            {
+                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
+            }
+        }
+        //檢查計數用
+        //_cwprintf(L"%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
     }
     LineGotoActionJudge(pParam);
     if (((COrder*)pParam)->Commanding == _T("End"))
@@ -339,10 +348,11 @@ UINT COrder::Thread(LPVOID pParam)
 UINT COrder::SubroutineThread(LPVOID pParam) {
     HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;
     CString Command = ((COrder*)pParam)->Commanding; 
-    if (CommandResolve(Command, 0) == L"Wait Time")
+    if (CommandResolve(Command, 0) == L"Printf")
     {
-        ((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));
-        ((COrder*)pParam)->Time++;
+        _cwprintf(L"Hello\n");   
+        /*((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));
+        ((COrder*)pParam)->Time++;*/
     }
     /************************************************************程序**************************************************************/
     if (CommandResolve(Command, 0) == L"GotoLabel") 
@@ -420,20 +430,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"StepRepeatLabel")
     {
-        CString CommandBuff;
-        if (!((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
+        if (!((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//目的用於跳到StepRepeat最外層迴圈
         {
             _cwprintf(L"進入StepRepeatLabel\n");
+            CString CommandBuff;
             for (int i = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)); i < ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size(); i++)
             {
                 CommandBuff = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(i);
                 if (_ttol(CommandResolve(CommandBuff, 6)) == _ttol(CommandResolve(Command, 1)) && (CommandResolve(CommandBuff, 0) == L"StepRepeatX" || CommandResolve(CommandBuff, 0) == L"StepRepeatY"))
                 {
-                    _cwprintf(L"跳躍至StepRepeat\n");
-                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = i - 1;
+                    _cwprintf(L"跳躍至地址為%d的StepRepeat\n",i);
+                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = i + 1;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                     _cprintf("%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                    break;
                 }
             }     
         }  
@@ -490,12 +499,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         {
             if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())//都沒有RepeatXY時
             {
-                if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat
+                if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat(代表最外層)
                 {
-
-                    /*************************************************初始Offset有問題****/
                     _cwprintf(L"沒有StepRepeat時 第一次 Inside StepRepeatX\n");
-                    ((COrder*)pParam)->RepeatData.StepRepeatSwitch = TRUE;
+                    //StepRepeat新增計數總數歸零(防止出錯)
+                    ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+                    //StepRepeat刪除計數總數歸零(防止出錯)
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+                    //StepRepeat新增計數總數++
+                    ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
                     //紀錄StepRepeat地址
                     ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
                     //紀錄初始offset位置
@@ -514,17 +526,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
-                    if (_ttol(CommandResolve(Command, 7)))//有阻斷
+                    //判斷是否有阻斷
+                    if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
                     {
-                        _cwprintf(L"StepRepeatX 有阻斷\n");
+                        _cwprintf(L"StepRepeatX 處理阻斷位置:");
                         for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                         {
                             _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                         }
                         _cwprintf(L"\n");
-                        BlockProcessStart(Command, pParam);
+                        BlockProcessStart(Command, pParam, FALSE);
                     }
-                    else//無阻斷不記錄繼續往下尋找StepRepeat
+                    else//無阻斷繼續往下尋找StepRepeat
                     {
                         _cwprintf(L"StepRepeatX 沒有阻斷\n");
                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);  
@@ -532,15 +545,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 }
                 else 
                 {
-                    _cprintf("Inside2 StepRepeatX\n");
+                    _cwprintf(L"所有條件不成立\n");
                 }
             }
-            else
+            else//有StepRepeat時
             {
                 UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
                 _cwprintf(L"目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
                 for (UINT i = 0; i < StepRepeatNumSize; i++)
                 {
+                    //判斷目前遇到的StepRepeat是否在StepRepeat陣列中
                     if (((COrder*)pParam)->RepeatData.StepRepeatNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
                     {                                                                               
                         if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i) > 1)
@@ -578,9 +592,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             //阻斷開啟時
                             if (_ttol(CommandResolve(Command, 7)))
                             {
-                                BlockProcessExecute(Command, pParam, i);
+                                if (!BlockProcessExecute(Command, pParam, i))
+                                    break;
                             } 
-                            _cwprintf(L"第%d:執行%d-%d\n", i,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
                         }
                         else if(((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i) > 1)
                         {
@@ -597,13 +611,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             //阻斷開啟時
                             if (_ttol(CommandResolve(Command, 7)))
                             {
-                                BlockProcessExecute(Command, pParam, i);
-                            }
-                            _cwprintf(L"第%d:執行%d-%d\n", i,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
+                                if (!BlockProcessExecute(Command, pParam, i))
+                                    break;
+                            } 
                         }
                         else
-                        {
+                        {                      
                             _cwprintf(L"刪除所有陣列\n");
+                            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                            _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
                             ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
                             _cwprintf(L"刪除StepRepeatBlockData陣列\n");
                             ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
@@ -619,27 +635,37 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);
                             _cwprintf(L"刪除StepRepeatCountX陣列\n");
                             ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);
-                            _cwprintf(L"刪除StepRepeatCountY陣列\n");    
-                        }    
+                            _cwprintf(L"刪除StepRepeatCountY陣列\n");
+                            break;
+                        }
+                        if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum )
+                        {
+                            _cwprintf(L"進入新增內層迴圈");
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                        }
                     }
-                    else
+                    else//不再StepRepeat陣列中，新增一個StepRepeat位置
                     {
                         if (i == StepRepeatNumSize - 1)
                         {
-                            if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat
+                            if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
                             {
-                                _cwprintf(L"新增StepRepeat\n");
-                                //((COrder*)pParam)->RepeatData.StepRepeatSwitch = TRUE;
+                                _cwprintf(L"第一次新增內層StepRepeat\n");
+                                //StepRepeat計數總數++
+                                ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
                                 //紀錄StepRepeat地址
-                                ((COrder*)pParam)->RepeatData.StepRepeatNum.insert(((COrder*)pParam)->RepeatData.StepRepeatNum.begin(),((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
                                 //紀錄初始offset位置
                                 ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
                                 ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
                                 //紀錄X、Y計數
-                                ((COrder*)pParam)->RepeatData.StepRepeatCountX.insert(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin(), _ttol(CommandResolve(Command, 3)));
-                                ((COrder*)pParam)->RepeatData.StepRepeatCountY.insert(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin(), _ttol(CommandResolve(Command, 4)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
                                 //S行迴圈狀態初始化
-                                ((COrder*)pParam)->RepeatData.SSwitch.insert(((COrder*)pParam)->RepeatData.SSwitch.begin(), TRUE);
+                                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                                 //紀錄Block
                                 ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
                                 ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
@@ -647,11 +673,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 {
                                     ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                                 }
-                                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.insert(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin(), ((COrder*)pParam)->InitBlockData);
+                                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
-                                    _cwprintf(L"StepRepeatX 有阻斷\n");
-                                    BlockProcessStart(Command, pParam);
+                                    _cwprintf(L"StepRepeatX 處理阻斷位置:");
+                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    {
+                                        _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
+                                    }
+                                    _cwprintf(L"\n");
+                                    BlockProcessStart(Command, pParam, FALSE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
@@ -659,99 +690,146 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                 }
                             }
-                            //else//第二次進入StepRepeat
-                            //{
-                            //    _cwprintf(L"新增StepRepeat\n");
-                            //    _cwprintf(L"有StepRepeat 第2次 Inside StepRepeatX\n");
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatSwitch = TRUE;
-                            //    //紀錄StepRepeat地址
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                            //    //紀錄初始offset位置
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-                            //    //紀錄X、Y計數
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
-                            //    //S行迴圈狀態初始化
-                            //    ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
-                            //    //紀錄Block
-                            //    ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
-                            //    ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
-                            //    for (int i = 0; i < ((COrder*)pParam)->InitBlockData.BlockNumber; i++)
-                            //    {
-                            //        ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
-                            //    }
-                            //    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
-                            //    if (_ttol(CommandResolve(Command, 7)))//有阻斷
-                            //    {
-                            //        _cwprintf(L"StepRepeatX 有阻斷\n");
-                            //        for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
-                            //        {
-                            //            _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
-                            //        }
-                            //        _cwprintf(L"\n");
-                            //        BlockProcessStart(Command, pParam);
-                            //    }
-                            //    else//無阻斷不記錄繼續往下尋找StepRepeat
-                            //    {
-                            //        _cwprintf(L"StepRepeatX 沒有阻斷\n");
-                            //        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
-                            //    }
-                            //}
+                            else //第二次進入StepRepeat時(內層迴圈做第N次)
+                            {
+                                _cwprintf(L"第二次新增內層StepRepeat\n"); 
+                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+                                ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+                                //紀錄StepRepeat地址
+                                ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                                //紀錄初始offset位置
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
+                                //紀錄X、Y計數
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //S行迴圈狀態初始化
+                                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
+                                //紀錄Block
+                                ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
+                                ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
+                                for (int i = 0; i < ((COrder*)pParam)->InitBlockData.BlockNumber; i++)
+                                {
+                                    ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
+                                }
+                                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                if (_ttol(CommandResolve(Command, 7)))//有阻斷
+                                {
+                                    _cwprintf(L"StepRepeatX 處理阻斷位置:");
+                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    {
+                                        _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
+                                    }
+                                    _cwprintf(L"\n");
+                                    BlockProcessStart(Command, pParam , TRUE);
+                                }
+                                else//無阻斷不記錄繼續往下尋找StepRepeat
+                                {
+                                    _cwprintf(L"StepRepeatX 沒有阻斷\n");
+                                    if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
+                                    {
+                                        _cwprintf(L"進入新增內層迴圈");
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                                        ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                                        ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                                    }
+                                    else
+                                    {
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                                    }
+                                }
+                            }                      
                         }
                     }
                 }
             }
         }
-        else
+        else//當只有1-1時
         {
             
         }
     }
     if (CommandResolve(Command, 0) == L"StepRepeatY")
     {
+        _cprintf("Inside StepRepeatY\n");
+        //StepRepeat陣列是否大於1*1 && 模式是否 1or2
         if ((_ttol(CommandResolve(Command, 3)) * _ttol(CommandResolve(Command, 4))) > 1 && (_ttol(CommandResolve(Command, 5)) == 1 || _ttol(CommandResolve(Command, 5)) == 2))
         {
             if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())//都沒有RepeatXY時
             {
-                ((COrder*)pParam)->RepeatData.StepRepeatSwitch = TRUE;
-                ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                //紀錄初始offset位置
-                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
-                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-                if (_ttol(CommandResolve(Command, 4)) > 1)/**/
+                if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat(代表最外層)
                 {
-                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
-                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
-                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)) - 1);
+                    _cwprintf(L"沒有StepRepeat時 第一次 Inside StepRepeatY\n");
+                    //StepRepeat新增計數總數歸零(防止出錯)
+                    ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+                    //StepRepeat刪除計數總數歸零(防止出錯)
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+                    //StepRepeat新增計數總數++
+                    ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
+                    //紀錄StepRepeat地址
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    //紀錄初始offset位置
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
+                    //紀錄X、Y計數
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    //S行迴圈狀態初始化
+                    ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
+                    //紀錄Block
+                    ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
+                    ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
+                    for (int i = 0; i < ((COrder*)pParam)->InitBlockData.BlockNumber; i++)
+                    {
+                        ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
+                    }
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                    //判斷是否有阻斷
+                    if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
+                    {
+                        _cwprintf(L"StepRepeatY 處理阻斷位置:");
+                        for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                        {
+                            _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
+                        }
+                        _cwprintf(L"\n");
+                        /**/BlockProcessStartY(Command, pParam, FALSE);
+                    }
+                    else//無阻斷繼續往下尋找StepRepeat
+                    {
+                        _cwprintf(L"StepRepeatX 沒有阻斷\n");
+                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                    }
                 }
                 else
                 {
-                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
-                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)) - 1);
-                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    _cwprintf(L"所有條件不成立\n");
                 }
-                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
-                ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
             }
-            else
+            else//有StepRepeat時
             {
                 UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
+                _cwprintf(L"目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
                 for (UINT i = 0; i < StepRepeatNumSize; i++)
                 {
+                    //判斷目前遇到的StepRepeat是否在StepRepeat陣列中
                     if (((COrder*)pParam)->RepeatData.StepRepeatNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
                     {
                         if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i) > 1)/**/
-                        {                          
+                        {      
+                            //S型
                             if (_ttol(CommandResolve(Command, 5)) == 1)
                             {
                                 if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i) + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
                                 {
-                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;                          
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;     
+                                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
                                 }          
                                 else  if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i))
                                 {
-                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE;                                  
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE; 
+                                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
                                 }
                                 if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
                                 {
@@ -762,59 +840,165 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                                 }
                             }
+                            //N型
                             if (_ttol(CommandResolve(Command, 5)) == 2)
                             {
                                 /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                             }
                             /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i)--;
-                            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                            //阻斷開啟時
+                            if (_ttol(CommandResolve(Command, 7)))
+                            {
+                                /**/if (!BlockProcessExecuteY(Command, pParam, i))
+                                        break;
+                            }
                         }
                         else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i) > 1)/**/
                         {
-                            if (_ttol(CommandResolve(Command, 5)) == 2)//N型X回最初位置
+                            ((COrder*)pParam)->RepeatData.SSwitch.at(i) = !((COrder*)pParam)->RepeatData.SSwitch.at(i);
+                            _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+                            if (_ttol(CommandResolve(Command, 5)) == 2)//N型Y回最初位置
                             {
                                 /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             }
                             /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i) = _ttol(CommandResolve(Command, 4));
                             /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                             /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i)--;
-                            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                            //阻斷開啟時
+                            if (_ttol(CommandResolve(Command, 7)))
+                            {
+                                /**/if (!BlockProcessExecuteY(Command, pParam, i))
+                                        break;
+                            }
                         }
                         else
                         {
+                            _cwprintf(L"刪除所有陣列\n");
+                            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                            _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                            ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
+                            _cwprintf(L"刪除StepRepeatBlockData陣列\n");
                             ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
+                            _cwprintf(L"刪除SSwitch陣列\n");
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
+                            _cwprintf(L"刪除StepRepeatNum陣列\n");
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + i);
+                            _cwprintf(L"刪除StepRepeatInitOffsetX陣列\n");
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + i);
+                            _cwprintf(L"刪除StepRepeatInitOffsetY陣列\n");
                             ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);
+                            _cwprintf(L"刪除StepRepeatCountX陣列\n");
                             ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);
+                            _cwprintf(L"刪除StepRepeatCountY陣列\n");
+                            break;          
+                        }
+                        if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
+                        {
+                            _cwprintf(L"進入新增內層迴圈");
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+                            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
                         }
                     }
-                    else
+                    else//不再StepRepeat陣列中，新增一個StepRepeat位置
                     {
                         if (i == StepRepeatNumSize - 1)
                         {
-                            ((COrder*)pParam)->RepeatData.StepRepeatSwitch = TRUE;
-                            ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                            //紀錄初始offset位置
-                            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
-                            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-                            if (_ttol(CommandResolve(Command, 4)) > 1)/**/
+                            if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
                             {
-                                /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
-                                /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
-                                /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)) - 1);
+                                _cwprintf(L"第一次新增內層StepRepeat\n");
+                                //StepRepeat計數總數++
+                                ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
+                                //紀錄StepRepeat地址
+                                ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                                //紀錄初始offset位置
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
+                                //紀錄X、Y計數
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //S行迴圈狀態初始化
+                                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
+                                //紀錄Block
+                                ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
+                                ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
+                                for (int i = 0; i < ((COrder*)pParam)->InitBlockData.BlockNumber; i++)
+                                {
+                                    ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
+                                }
+                                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                if (_ttol(CommandResolve(Command, 7)))//有阻斷
+                                {
+                                    _cwprintf(L"StepRepeatX 處理阻斷位置:");
+                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    {
+                                        _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
+                                    }
+                                    _cwprintf(L"\n");
+                                    /**/BlockProcessStartY(Command, pParam, FALSE);
+                                }
+                                else//無阻斷不記錄繼續往下尋找StepRepeat
+                                {
+                                    _cwprintf(L"StepRepeatX 沒有阻斷\n");
+                                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                                }
                             }
-                            else
+                            else //第二次進入StepRepeat時(內層迴圈做第N次)
                             {
-                                /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
-                                /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)) - 1);
-                                /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                _cwprintf(L"第二次新增內層StepRepeat\n");
+                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+                                ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+                                //紀錄StepRepeat地址
+                                ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                                //紀錄初始offset位置
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
+                                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
+                                //紀錄X、Y計數
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
+                                ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //S行迴圈狀態初始化
+                                ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
+                                //紀錄Block
+                                ((COrder*)pParam)->InitBlockData.BlockPosition.clear();
+                                ((COrder*)pParam)->InitBlockData.BlockNumber = _ttol(CommandResolve(Command, 8));
+                                for (int i = 0; i < ((COrder*)pParam)->InitBlockData.BlockNumber; i++)
+                                {
+                                    ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
+                                }
+                                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                if (_ttol(CommandResolve(Command, 7)))//有阻斷
+                                {
+                                    _cwprintf(L"StepRepeatX 處理阻斷位置:");
+                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    {
+                                        _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
+                                    }
+                                    _cwprintf(L"\n");
+                                    /**/BlockProcessStartY(Command, pParam, TRUE);
+                                }
+                                else//無阻斷不記錄繼續往下尋找StepRepeat
+                                {
+                                    _cwprintf(L"StepRepeatX 沒有阻斷\n");
+                                    if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
+                                    {
+                                        _cwprintf(L"進入新增內層迴圈");
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                                        ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+                                        ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                                    }
+                                    else
+                                    {
+                                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                                    }
+                                }
                             }
-                            ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
-                            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 6);
+
                         }
                     }
                 }
@@ -1987,9 +2171,13 @@ void COrder::DecideInit()
     {
         RunData.RunCount.at(i) = 0;
     }
-    //Repeat狀態清除
+    //Repeat狀態、標籤清除
     RepeatData.LoopSwitch = FALSE;
-    RepeatData.StepRepeatSwitch = FALSE;
+    RepeatData.StepRepeatLabel = _T("");
+    RepeatData.StepRepeatLabelLock = FALSE;
+    RepeatData.AddInStepRepeatSwitch = FALSE;
+    RepeatData.AllNewStepRepeatNum = 0;
+    RepeatData.AllDeleteStepRepeatNum = 0;
     //影像狀態初始化
     FindMark.Point.Status = FALSE;
     FiducialMark1.Point.Status = FALSE;
@@ -2038,6 +2226,7 @@ void COrder::DecideClear()
     RepeatData.StepRepeatInitOffsetY.clear();
     RepeatData.StepRepeatCountX.clear();
     RepeatData.StepRepeatCountY.clear();
+    RepeatData.StepRepeatBlockData.clear();
     //影像釋放記憶體
 #ifdef VI
     if (*(int*)FindMark.MilModel != 0)
@@ -2146,44 +2335,46 @@ BOOL COrder::FileExist(LPCWSTR FilePathName)
     }
     return TRUE;
 }
-/*阻斷處理方式(加入StepRepeat時)*/
-void COrder::BlockProcessStart(CString Command, LPVOID pParam)
+/*阻斷處理方式(加入StepRepeatX時)*/
+void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus)
 {
     CString BlockBuff;
-    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.front().BlockPosition.size(); i++)//搜尋第一項阻斷陣列 是否有1-1
+    BOOL DeleteStepRepeat = FALSE;
+    int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
+    for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
     {
-        _cwprintf(_T("%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.front(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.front());
+        _cwprintf(_T("%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
         {
             //S型 阻斷編號
-            if (!((COrder*)pParam)->RepeatData.SSwitch.front())
+            if (!((COrder*)pParam)->RepeatData.SSwitch.back())
             {
-                BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.front(),
-                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.front()));
+                BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(),
+                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
                 _cwprintf(L"標籤只有Y變X正常:%s\n", BlockBuff);
             }
             else
             {
-                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.front()),
-                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.front()));
+                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
+                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
                 _cwprintf(L"標籤XY變:%s\n", BlockBuff);
             }
-            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.front().BlockPosition.at(i) == BlockBuff)
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
                 _cwprintf(L"有阻斷\n");
-                if (((COrder*)pParam)->RepeatData.StepRepeatCountX.front() > 1)
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
-                    if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.front() + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
+                    if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back() + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
                     {
-                        ((COrder*)pParam)->RepeatData.SSwitch.front() = FALSE;
+                        ((COrder*)pParam)->RepeatData.SSwitch.back() = FALSE;
                     }
-                    else if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.front())
+                    else if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back())
                     {
-                        ((COrder*)pParam)->RepeatData.SSwitch.front() = TRUE;
+                        ((COrder*)pParam)->RepeatData.SSwitch.back() = TRUE;
                     }
 
-                    if (!((COrder*)pParam)->RepeatData.SSwitch.front())
+                    if (!((COrder*)pParam)->RepeatData.SSwitch.back())
                     {
                         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X - _ttol(CommandResolve(Command, 1));
                     }
@@ -2191,26 +2382,29 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam)
                     {
                         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     }
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.front()--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()--;
                 }
-                else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.front() > 1)
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)
                 {
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.front() = _ttol(CommandResolve(Command, 3));
+                    ((COrder*)pParam)->RepeatData.SSwitch.back() = !((COrder*)pParam)->RepeatData.SSwitch.back();
+                    _cwprintf(L"最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.back() = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.front()--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()--;
                 }
                 else
                 {
-                    _cwprintf(L"刪除所有第一陣列\n");
-                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin());
-                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin());
-                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.front();
-                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.front();
-                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin());
+                    _cwprintf(L"刪除陣列\n");
+                    DeleteStepRepeat = TRUE;
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                    ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
                 }  
             }
         }
@@ -2218,47 +2412,84 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam)
         if (_ttol(CommandResolve(Command, 5)) == 2)
         {
             //N型 阻斷編號
-            BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.front()),
-                (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.front()));
-            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.front().BlockPosition.at(i) == BlockBuff)
+            BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
+                (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
                 _cwprintf(L"有阻斷\n");
-                if (((COrder*)pParam)->RepeatData.StepRepeatCountX.front() > 1)
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.front()--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()--;
                 }
-                else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.front() > 1)
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)
                 {
                     //N型X回最初位置
-                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.front();
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.front() = _ttol(CommandResolve(Command, 3));
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.back() = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.front()--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()--;
                 }
                 else
                 {
-                    _cwprintf(L"刪除所有第一陣列\n");
-                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin());
-                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin());
-                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.front();
-                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.front();
-                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin());
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin());
+                    _cwprintf(L"刪除陣列\n");
+                    DeleteStepRepeat = TRUE;                   
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                    ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();        
                 }      
             }
         }
     }
-    ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+    if (!RepeatStatus)
+    {
+        if (DeleteStepRepeat)
+        {
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+        }
+        else
+        {
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+        }
+    }  
+    else
+    {
+        if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
+        {
+            _cwprintf(L"進入新增內層迴圈\n");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+        }
+        else
+        {
+            if (DeleteStepRepeat)
+            {
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+            }
+            else
+            {
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+            }  
+        }
+    }
 }
-/*阻斷處理方式(執行中StepRepeat時)*/
-void COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
+/*阻斷處理方式(執行中StepRepeatX時)*/
+BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
 {
     CString BlockBuff;
-    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size(); i++)//搜尋最後一項阻斷陣列 是否有1-1
+    int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
+    for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
     {
         _cwprintf(L"第%d:%d-%d.StepRepeatX 檢查阻斷\n", NowCount,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
         //S型
@@ -2301,28 +2532,35 @@ void COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
+                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
                 }
                 else
                 {
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
-                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
-                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);;
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                    _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
-                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);;
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                    _cwprintf(L"第%d:刪除成功\n", NowCount);
+                    return FALSE;
                 }
             }
         }
@@ -2341,6 +2579,7 @@ void COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
@@ -2350,22 +2589,310 @@ void COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
                 }
                 else
                 {
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
-                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
-                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);;
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                    _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
-                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);;
-                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);;
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                    _cwprintf(L"第%d:刪除成功\n", NowCount);
+                    return FALSE;
                 }
             }
         }
     }
+    _cwprintf(L"結束阻斷\n");
+    return TRUE;
+}
+/*阻斷處理方式(加入StepRepeatY時)*/
+void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus)
+{
+    CString BlockBuff;
+    BOOL DeleteStepRepeat = FALSE;
+    int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
+    for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
+    {
+        _cwprintf(_T("%d-%d.StepRepeatY 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
+        //S型
+        if (_ttol(CommandResolve(Command, 5)) == 1)
+        {
+            //S型 阻斷編號
+            if (!((COrder*)pParam)->RepeatData.SSwitch.back())
+            {
+                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());/**/
+                _cwprintf(L"標籤只有X變Y正常:%s\n", BlockBuff);
+            }
+            else
+            {
+                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
+                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+                _cwprintf(L"標籤XY變:%s\n", BlockBuff);
+            }
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
+            {
+                _cwprintf(L"有阻斷\n");
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)/**/
+                {
+                    if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back() + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
+                    {
+                        ((COrder*)pParam)->RepeatData.SSwitch.back() = FALSE;
+                        _cwprintf(L"最後一個:SSwitch轉換:%d\n",((COrder*)pParam)->RepeatData.SSwitch.back());
+                    }
+                    else  if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back())
+                    {
+                        ((COrder*)pParam)->RepeatData.SSwitch.back() = TRUE;
+                        _cwprintf(L"最後一個:SSwitch轉換:%d\n",((COrder*)pParam)->RepeatData.SSwitch.back());
+                    }
+                    if (!((COrder*)pParam)->RepeatData.SSwitch.back())
+                    {
+                        /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y - _ttol(CommandResolve(Command, 2));
+                    }
+                    else
+                    {
+                        /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
+                    }
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()--;
+                }
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)/**/
+                {
+                    ((COrder*)pParam)->RepeatData.SSwitch.back() = !((COrder*)pParam)->RepeatData.SSwitch.back();
+                    _cwprintf(L"最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.back() = _ttol(CommandResolve(Command, 4));
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.back()--;
+                }
+                else
+                {
+                    _cwprintf(L"刪除陣列\n");
+                    DeleteStepRepeat = TRUE;
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                    ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                }
+            }
+        }
+        //N型
+        if (_ttol(CommandResolve(Command, 5)) == 2)
+        {
+            //N型 阻斷編號
+            BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
+                (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
+            {
+                _cwprintf(L"有阻斷\n");
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)/**/
+                {
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.back()--;
+                }
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)/**/
+                {
+                    //N型X回最初位置
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.back() = _ttol(CommandResolve(Command, 4));
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.back()--;
+                }
+                else
+                {
+                    _cwprintf(L"刪除陣列\n");
+                    DeleteStepRepeat = TRUE;
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                    ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                }
+            }
+        }
+    }
+    if (!RepeatStatus)
+    {
+        if (DeleteStepRepeat)
+        {
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+        }
+        else
+        {
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+        }
+    }
+    else
+    {
+        if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
+        {
+            _cwprintf(L"進入新增內層迴圈\n");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+        }
+        else
+        {
+            if (DeleteStepRepeat)
+            {
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+            }
+            else
+            {
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+            }
+        }
+    }
+}
+/*阻斷處理方式(執行中StepRepeatY時)*/
+BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
+{
+    CString BlockBuff;
+    int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
+    for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
+    {
+        _cwprintf(L"第%d:%d-%d.StepRepeatY 檢查阻斷\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+        //S型
+        if (_ttol(CommandResolve(Command, 5)) == 1)
+        {
+            //S型 阻斷編號
+            if (!((COrder*)pParam)->RepeatData.SSwitch.at(NowCount))
+            {
+                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));/**/
+                _cwprintf(L"第%d:標籤只有Y變X正常:%s\n", NowCount, BlockBuff);
+            }
+            else
+            {
+                BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
+                    (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+                _cwprintf(L"第%d:標籤XY變:%s\n", NowCount, BlockBuff);
+            }
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
+            {
+                _cwprintf(L"第%d:有阻斷\n", NowCount);
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)/**/
+                {
+                    if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount) + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
+                    {
+                        ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = FALSE;
+                    }
+                    else if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount))/**/
+                    {
+                        ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = TRUE;
+                    }
+
+                    if (!((COrder*)pParam)->RepeatData.SSwitch.at(NowCount))
+                    {
+                        /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y - _ttol(CommandResolve(Command, 2));
+                    }
+                    else
+                    {
+                        /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
+                    }
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                }
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
+                {
+                    ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
+                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) = _ttol(CommandResolve(Command, 4));
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                }
+                else
+                {
+                    _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                    _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                    _cwprintf(L"第%d:刪除成功\n", NowCount);
+                    return FALSE;
+                }
+            }
+        }
+        //N型
+        if (_ttol(CommandResolve(Command, 5)) == 2)
+        {
+            //N型 阻斷編號
+            BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
+                (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+            _cwprintf(L"第%d:標籤:%s\n", NowCount, BlockBuff);
+            if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
+            {
+                _cwprintf(L"第%d:有阻斷\n", NowCount);
+                if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)/**/
+                {
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                }
+                else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)/**/
+                {
+                    //N型Y回最初位置
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) = _ttol(CommandResolve(Command, 4));
+                    /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
+                    /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+                    _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                }
+                else
+                {
+                    _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+                    _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+                    _cwprintf(L"第%d:刪除成功\n", NowCount);
+                    return FALSE;
+                }
+            }
+        }
+    }
+    _cwprintf(L"結束阻斷\n");
+    return TRUE;
 }
