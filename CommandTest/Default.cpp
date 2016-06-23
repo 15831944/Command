@@ -60,9 +60,9 @@ BOOL CDefault::OnInitDialog()
 	StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
 	StrTable.Add(_T("影像尋找精度")); StrTable.Add(_T("影像尋找速度")); StrTable.Add(_T("影像比對分數"));
 	StrTable.Add(_T("影像尋找寬度")); StrTable.Add(_T("影像尋找高度")); StrTable.Add(_T("影像尋找起始角度")); StrTable.Add(_T("影像尋找結束角度")); StrTable.Add(_T("影像未搜尋到方法"));
-	StrTable.Add(_T("最大運行次數"));
+	StrTable.Add(_T("最大運行次數")); StrTable.Add(_T("循環次數"));
 	
-	for (int i = 0; i < 45; i++) {
+	for (int i = 0; i < 46; i++) {
 		m_ListDefault.InsertItem(i, NULL);
 		m_ListDefault.SetItemText(i, 0, StrTable[i]);
 	}
@@ -73,7 +73,7 @@ BOOL CDefault::OnInitDialog()
 void CDefault::ParamShow()
 {
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	LONG ParamArray[44];
+	LONG ParamArray[45];
 	ParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1;
 	ParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2;
 	ParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis;
@@ -118,8 +118,9 @@ void CDefault::ParamShow()
 	ParamArray[41] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle;
 	ParamArray[42] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle;
 	ParamArray[43] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError;
-	ParamArray[44] = ((CCommandTestDlg*)pMain)->MaxRunNumber;
-	for (int i = 0; i < 45; i++) {
+	ParamArray[44] = ((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber;
+    ParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
+	for (int i = 0; i < 46; i++) {
 		CString StrBuff;
 		StrBuff.Format(_T("%d"), ParamArray[i]);
 		m_ListDefault.SetItemText(i, 1, StrBuff);
@@ -182,11 +183,12 @@ void CDefault::ParamModify()
 	}
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion = pQuestion;
 	//最大運行次數
-	((CCommandTestDlg*)pMain)->MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
+	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
+    ((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
 }
 void CDefault::OnBnClickedButton2()
 {
-	for (int i = 0; i < 45; i++) {
+	for (int i = 0; i < 46; i++) {
 		m_ListDefault.SetItemText(i, 1, _T("0"));
 	}
 	ParamModify();

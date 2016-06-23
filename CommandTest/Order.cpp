@@ -24,9 +24,11 @@ COrder::COrder()
     VisionOffset = { { 0,0,0,0 },0,0,0 };
     VisionSet = { 0,0,0,0,0,0,0,0,0 };
     
-    RunStatusRead = { 0,0,1,0 };
+    RunStatusRead = { 0,0,1,0};
     VisionDefault.VisionSerchError.Manuallymode = FALSE;
     VisionDefault.VisionSerchError.Pausemode = FALSE;
+
+    RunLoopData = { 0,0,0,-1 };
 }
 COrder::~COrder()
 {
@@ -34,7 +36,7 @@ COrder::~COrder()
 BEGIN_MESSAGE_MAP(COrder, CWnd)
 END_MESSAGE_MAP()
 // COrder 訊息處理常式
-/**************************************************************************執行續動作區塊*************************************************************************/
+/**************************************************************************函數動作區塊***************************************************************************/
 /*開始*/
 BOOL COrder::Run()
 {
@@ -60,7 +62,26 @@ BOOL COrder::Run()
             VisionSet.ModifyMode = FALSE;
             wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
             g_pThread = AfxBeginThread(Thread, (LPVOID)this);
+            return TRUE;
         }  
+        else
+        {
+            return FALSE;
+        }    
+    }
+    else
+    {
+        return FALSE;
+    }
+}
+/*循環開始*/
+BOOL COrder::RunLoop(int LoopNumber) {
+    if (LoopNumber > 0 && !g_pRunLoopThread)
+    {
+        RunLoopData.RunSwitch = TRUE;
+        RunLoopData.LoopNumber = LoopNumber;
+        RunLoopData.LoopCount = 0;
+        g_pRunLoopThread = AfxBeginThread(RunLoopThread, (LPVOID)this);
         return TRUE;
     }
     else
@@ -71,6 +92,7 @@ BOOL COrder::Run()
 /*停止*/
 BOOL COrder::Stop()
 {
+    RunLoopData.RunSwitch = FALSE;//關閉循環
     if (g_pThread)//判斷是否有在運作
     {
         if (SuspendThread(g_pThread) != GetLastError())
@@ -96,7 +118,7 @@ BOOL COrder::Stop()
         }
     }
     else
-    {
+    {     
         return FALSE;
     }
 }
@@ -194,14 +216,52 @@ BOOL COrder::View(BOOL mode)
     }
     return 0;
 }
+/**************************************************************************執行續動作區塊*************************************************************************/
+/*重複運行執行續*/
+UINT COrder::RunLoopThread(LPVOID pParam) {
+    while (((COrder*)pParam)->RunLoopData.RunSwitch)   
+    {
+        _cprintf("%d", (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)));
+        if (((COrder*)pParam)->RunLoopData.MaxRunNumber >= 0 && (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)) > 0)
+        {
+            if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
+            {          
+                if (!((COrder*)pParam)->Run()) {
+                    ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+                }
+            }
+        }
+        else if (((COrder*)pParam)->RunLoopData.MaxRunNumber < 0 && ((COrder*)pParam)->RunLoopData.LoopCount != ((COrder*)pParam)->RunLoopData.LoopNumber)
+        {
+            if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
+            {
+                if (!((COrder*)pParam)->Run()) {
+                    ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+                }
+            }
+        }
+        else if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
+        {
+            ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+        }
+        else
+        {
+            ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+        }
+        Sleep(10);
+    }
+    g_pRunLoopThread = NULL;
+    return 0;
+}
 /*原點賦歸執行緒*/
 UINT COrder::HomeThread(LPVOID pParam)
 {
-    /*****************加入選擇影像回歸*************/
 #ifdef MOVE
     ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
-    if (((COrder*)pParam)->GoHome.VisionGoHome)
+    if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
     {   
+        ((COrder*)pParam)->VisionSet.AdjustOffsetX = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetX;
+        ((COrder*)pParam)->VisionSet.AdjustOffsetY = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetY;
         ((COrder*)pParam)->m_Action.DecideVirtualPoint(-(((COrder*)pParam)->VisionSet.AdjustOffsetX), -(((COrder*)pParam)->VisionSet.AdjustOffsetY), 0,
             30000, 80000, 6000);
             //((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
@@ -334,6 +394,10 @@ UINT COrder::Thread(LPVOID pParam)
     if (((COrder*)pParam)->Commanding == _T("End"))
     {
         ((COrder*)pParam)->RunStatusRead.FinishProgramCount++;
+        if (((COrder*)pParam)->RunLoopData.RunSwitch)
+        {
+            ((COrder*)pParam)->RunLoopData.LoopCount++;
+        }
     }
     if (((COrder*)pParam)->GoHome.PrecycleInitialize)
     {
@@ -1904,6 +1968,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     g_pSubroutineThread = NULL;
     return 0;
 }
+/**************************************************************************動作影像判斷修正區塊********************************************************************/
 /*運動狀態判斷*/
 void COrder::LineGotoActionJudge(LPVOID pParam)
 {
@@ -2095,6 +2160,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
         break;
     }
 }
+/**************************************************************************程序變數處理區塊************************************************************************/
 /*指令分解*/
 CString COrder::CommandResolve(CString Command,UINT Choose)
 {
@@ -2289,6 +2355,7 @@ void COrder::MainSubProgramSeparate()
         i++;
     }
 }
+/**************************************************************************影像檔案處理區塊************************************************************************/
 /*搜尋檔案名*/
 BOOL COrder::ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName) {
     HANDLE hListFile;
@@ -2335,6 +2402,7 @@ BOOL COrder::FileExist(LPCWSTR FilePathName)
     }
     return TRUE;
 }
+/**************************************************************************阻斷處理區塊****************************************************************************/
 /*阻斷處理方式(加入StepRepeatX時)*/
 void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus)
 {

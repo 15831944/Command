@@ -28,7 +28,7 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	TipOffset.y = 0;
 	CcdMode = FALSE;
 	MaxRunNumber = 0;
-	
+    RunLoopNumber = 0;
 }
 
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
@@ -165,8 +165,8 @@ BOOL CCommandTestDlg::OnInitDialog()
 	MO_SetHardLim(7, 1);
 	MO_SetDecOK(1);//開啟減速有效
 	MO_SetSoftLim(7, 1);
-	MO_SetCompSoft(1, -10, -10, -10);
-	MO_SetCompSoft(0, 150000, 180000, 70000); //0, 150000, 190000, 80000
+	MO_SetCompSoft(1, -60000, -17500, -8000);
+	MO_SetCompSoft(0, 140000, 170000, 70000); //0, 150000, 190000, 80000
 	OnBnClickedBtnhome();
 #endif
 #ifdef VI
@@ -213,34 +213,47 @@ void CCommandTestDlg::OnBnClickedStart()
 {	
 	if (m_LoopRun)
 	{
-		AfxBeginThread(RunThread, (LPVOID)this);
-		RunSwitch = TRUE;
+        /*列表停用*/
+        m_CommandList.EnableWindow(FALSE);
+        /*列表改為單選*/
+        DWORD dwStyle = m_CommandList.GetExtendedStyle();
+        dwStyle |= LVS_SHOWSELALWAYS;
+        m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+
+        CString path;
+        GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+        path.ReleaseBuffer();
+        int pos = path.ReverseFind('\\');
+        path = path.Left(pos) + _T("\\Temp\\");
+        LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+        lstrcpy(lpszText, path);
+        a.VisionDefault.VisionFile.ModelPath = lpszText;
+        /*循環運行*/
+        a.RunLoop(RunLoopNumber);
 	}
 	else
 	{
-		if ((MaxRunNumber - int(a.RunStatusRead.FinishProgramCount)) >= 0)
-		{
-			if (a.RunStatusRead.RunStatus == 0)
-			{
-				/*列表停用*/
-				m_CommandList.EnableWindow(FALSE);
-				/*列表改為單選*/
-				DWORD dwStyle = m_CommandList.GetExtendedStyle();
-				dwStyle |= LVS_SHOWSELALWAYS;
-				m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
-																					 /*設置Model當前目錄*/
-				CString path;
-				GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-				path.ReleaseBuffer();
-				int pos = path.ReverseFind('\\');
-				path = path.Left(pos) + _T("\\Temp\\");
-				LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
-				lstrcpy(lpszText, path);
-				a.VisionDefault.VisionFile.ModelPath = lpszText;
-				/*運行*/
-				a.Run();
-			}
-		}
+        //判斷目前運行次數是否大於 最大運行次數限制
+        if (a.RunLoopData.MaxRunNumber == -1 ||a.RunStatusRead.FinishProgramCount < a.RunLoopData.MaxRunNumber)
+        {
+            /*列表停用*/
+            m_CommandList.EnableWindow(FALSE);
+            /*列表改為單選*/
+            DWORD dwStyle = m_CommandList.GetExtendedStyle();
+            dwStyle |= LVS_SHOWSELALWAYS;
+            m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+                                                     /*設置Model當前目錄*/
+            CString path;
+            GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+            path.ReleaseBuffer();
+            int pos = path.ReverseFind('\\');
+            path = path.Left(pos) + _T("\\Temp\\");
+            LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+            lstrcpy(lpszText, path);
+            a.VisionDefault.VisionFile.ModelPath = lpszText;
+            /*運行*/
+            a.Run();
+        }
 	}
 }
 /*暫停&繼續*/
@@ -266,7 +279,6 @@ void CCommandTestDlg::OnBnClickedPause()
 /*停止*/
 void CCommandTestDlg::OnBnClickedStop()
 {
-	RunSwitch = FALSE;
 	a.Stop();
 	SetDlgItemText(IDC_PAUSE, L"Pause");
 }
@@ -279,7 +291,7 @@ void CCommandTestDlg::OnBnClickedOk()
 /*原點賦歸*/
 void CCommandTestDlg::OnBnClickedBtnhome()
 {
-	a.Home(0);
+	a.Home(CcdMode);
 }
 /*View*/
 void CCommandTestDlg::OnBnClickedBtnview()
@@ -972,20 +984,20 @@ void CCommandTestDlg::OnBnClickedBtnvision()
 void CCommandTestDlg::OnBnClickedBtnmodechange()
 {
     CString StrBuff;
-    GetDlgItemText(IDC_BUTTON1, StrBuff);
+    GetDlgItemText(IDC_BTNMODECHANGE, StrBuff);
     if (StrBuff == L"切換CCD模式")
     {
         CcdMode = TRUE;
         OffsetX = TipOffset.x;
         OffsetY = TipOffset.y;
-        SetDlgItemText(IDC_BUTTON1, _T("切換Tip模式"));
+        SetDlgItemText(IDC_BTNMODECHANGE, _T("切換Tip模式"));
     }
     else
     {
         CcdMode = FALSE;
         OffsetX = 0;
         OffsetY = 0;
-        SetDlgItemText(IDC_BUTTON1, _T("切換CCD模式"));
+        SetDlgItemText(IDC_BTNMODECHANGE, _T("切換CCD模式"));
     }
 }
 /*修改點線段Z值*/
@@ -1032,43 +1044,8 @@ CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
 		return CommandResolve(Command.Right(Command.GetLength() - iLength - 1), --Choose);
 	}
 }
-/*RunRepeat執行緒*/
-UINT CCommandTestDlg::RunThread(LPVOID pParam)
-{
-	while (((CCommandTestDlg*)pParam)->RunSwitch)
-	{
-		_cprintf("%d", (((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)));
-		if ((((CCommandTestDlg*)pParam)->MaxRunNumber - int(((CCommandTestDlg*)pParam)->a.RunStatusRead.FinishProgramCount)) >= 0)
-		{
-			if (((CCommandTestDlg*)pParam)->a.RunStatusRead.RunStatus == 0)
-			{
-				/*列表停用*/
-				((CCommandTestDlg*)pParam)->m_CommandList.EnableWindow(FALSE);
-				/*列表改為單選*/
-				DWORD dwStyle = ((CCommandTestDlg*)pParam)->m_CommandList.GetExtendedStyle();
-				dwStyle |= LVS_SHOWSELALWAYS;
-				((CCommandTestDlg*)pParam)->m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
-																					 /*設置Model當前目錄*/
-				CString path;
-				GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-				path.ReleaseBuffer();
-				int pos = path.ReverseFind('\\');
-				path = path.Left(pos) + _T("\\Temp\\");
-				LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
-				lstrcpy(lpszText, path);
-				((CCommandTestDlg*)pParam)->a.VisionDefault.VisionFile.ModelPath = lpszText;
-				/*運行*/
-				((CCommandTestDlg*)pParam)->a.Run();
-			}  
-		}
-		else
-		{
-			((CCommandTestDlg*)pParam)->RunSwitch = FALSE;
-		}
-		Sleep(10);
-	}
-	return 0;
-}
+
+
 
 
 

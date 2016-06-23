@@ -39,8 +39,8 @@ public:
 	CPoint TipOffset;
 	BOOL CcdMode;
     BOOL m_LoopRun;
-    BOOL RunSwitch;
     int MaxRunNumber;
+    int RunLoopNumber;
 public:
 	/*¨ê·s*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -51,7 +51,6 @@ public:
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedBtnhome();
 	afx_msg void OnBnClickedBtnview();
-    static  UINT RunThread(LPVOID pParam);
     //³]¸m
     afx_msg void OnBnClickedBtndefault();
     afx_msg void OnBnClickedBtnvision();

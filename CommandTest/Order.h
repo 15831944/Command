@@ -4,6 +4,7 @@
 // COrder
 static CWinThread* g_pThread = NULL;
 static CWinThread* g_pSubroutineThread = NULL;
+static CWinThread* g_pRunLoopThread = NULL;
 class COrder : public CWnd
 {
 	DECLARE_DYNAMIC(COrder)
@@ -171,9 +172,9 @@ private:
 		UINT RunStatus;
 		UINT CurrentRunCommandNum;
 		BOOL GoHomeStatus;
-		UINT FinishProgramCount;
+        UINT FinishProgramCount;
 	};
-	//阻斷控管結構
+	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
 		int BlockNumber;
 		std::vector<CString> BlockPosition;
@@ -206,6 +207,13 @@ private:
 		std::vector<int> StepRepeatCountY;
 		std::vector<StepRepeatBlockData> StepRepeatBlockData;
 	};
+    /*程序循環運行結構(控制循環開關、循環次數、最大運行次數(設 -1 =沒有限制))*/
+    struct RunLoopData {      
+        BOOL RunSwitch;
+        int LoopNumber;
+        int LoopCount;
+        int MaxRunNumber;
+    };
 private:    //變數
 	HANDLE          wakeEvent;
 	//主運動物件
@@ -222,12 +230,14 @@ private:    //變數
 	RunData         RunData;
 	//狀態
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
+   
 	
 private:    //函數
 	//執行續
 	static  UINT    HomeThread(LPVOID pParam);
 	static  UINT    Thread(LPVOID pParam);
 	static  UINT    SubroutineThread(LPVOID pParam);
+    static  UINT    RunLoopThread(LPVOID pParam);
 	//動作處理
 	static  void    LineGotoActionJudge(LPVOID pParam);
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
@@ -268,7 +278,8 @@ public:     //變數
 
 	//運行程序資料
 	RunStatusRead   RunStatusRead;
-
+    //RunLoop
+    RunLoopData     RunLoopData;
 	//影像參數 
 	VisionDefault   VisionDefault;
 	VisionSet       VisionSet;
@@ -287,6 +298,8 @@ public:     //函數
 	virtual ~COrder();
 	//開始命令解譯(成功return 1失敗return 0)
 	BOOL    Run();
+    //連續開始命令解譯(參數:循環次數)(回傳值:成功 return 1 失敗 return 0)
+    BOOL    RunLoop(int LoopNumber);
 	//立即停止命令解譯(成功return 1失敗return 0)
 	BOOL    Stop();
 	//暫停命令解譯(成功return 1失敗return 0)
