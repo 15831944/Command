@@ -590,6 +590,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                    //阻斷陣列排序
+                    BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 1, _ttol(CommandResolve(Command, 5)));
                     //判斷是否有阻斷
                     if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
                     {
@@ -738,6 +740,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                                 }
                                 ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                //阻斷陣列排序
+                                BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 1, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
@@ -777,6 +781,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                                 }
                                 ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                //阻斷陣列排序
+                                BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 1, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
@@ -849,6 +855,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                    //阻斷陣列排序
+                    /**/BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 2, _ttol(CommandResolve(Command, 5)));
                     //判斷是否有阻斷
                     if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
                     {
@@ -996,6 +1004,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                                 }
                                 ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                //阻斷陣列排序
+                                /**/BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 2, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
@@ -1035,6 +1045,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->InitBlockData.BlockPosition.push_back(CommandResolve(Command, i + 9));
                                 }
                                 ((COrder*)pParam)->RepeatData.StepRepeatBlockData.push_back(((COrder*)pParam)->InitBlockData);
+                                //阻斷陣列排序
+                                /**/BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 2, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
@@ -2963,4 +2975,139 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
     }
     _cwprintf(L"結束阻斷\n");
     return TRUE;
+} 
+/*阻斷陣列排序*/
+void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
+{
+    CString temp;
+    if (Type == 1)//StepRepeatX
+    {
+        for (int i = 0; i < BlockPosition.size(); i++)
+        {
+            for (int j = i + 1; j < BlockPosition.size(); j++)
+            {
+                if (_ttol(BlockResolve(BlockPosition.at(i), 1)) > _ttol(BlockResolve(BlockPosition.at(j), 1)))//前者Y大於後者Y
+                {
+                    //交換資料
+                    temp = BlockPosition.at(i);
+                    BlockPosition.at(i) = BlockPosition.at(j);
+                    BlockPosition.at(j) = temp;
+                }
+                else if (_ttol(BlockResolve(BlockPosition.at(i), 1)) == _ttol(BlockResolve(BlockPosition.at(j), 1)))//兩者Y等於
+                {
+                    //比較X
+                    if (mode == 1)//模式1
+                    {
+                        if ((_ttol(BlockResolve(BlockPosition.at(i), 1)) % 2))//當基數列
+                        {
+                            if (_ttol(BlockResolve(BlockPosition.at(i), 0)) > _ttol(BlockResolve(BlockPosition.at(j), 0)))//前者X大於後者X
+                            {
+                                //交換資料
+                                temp = BlockPosition.at(i);
+                                BlockPosition.at(i) = BlockPosition.at(j);
+                                BlockPosition.at(j) = temp;
+                            }
+                        }
+                        else//當偶數列
+                        {
+                            if (_ttol(BlockResolve(BlockPosition.at(i), 0)) < _ttol(BlockResolve(BlockPosition.at(j), 0)))//比較前者X小於後者X
+                            {
+                                //交換資料
+                                temp = BlockPosition.at(i);
+                                BlockPosition.at(i) = BlockPosition.at(j);
+                                BlockPosition.at(j) = temp;
+                            }
+                        }
+                    }
+                    else if (mode == 2)//模式2
+                    {
+                        if (_ttol(BlockResolve(BlockPosition.at(i), 0)) > _ttol(BlockResolve(BlockPosition.at(j), 0)))//前者X大於後者X
+                        {
+                            //交換資料                   
+                            temp = BlockPosition.at(i);
+                            BlockPosition.at(i) = BlockPosition.at(j);
+                            BlockPosition.at(j) = temp;
+                        }
+                    }            
+                }
+            }
+        }    
+        _cwprintf(L"\n");
+    }
+    else if (Type == 2)
+    {
+        for (int i = 0; i < BlockPosition.size(); i++)
+        {
+            for (int j = i + 1; j < BlockPosition.size(); j++)
+            {
+                if (_ttol(BlockResolve(BlockPosition.at(i), 0)) > _ttol(BlockResolve(BlockPosition.at(j), 0)))//前者X大於後者X
+                {
+                    //交換資料
+                    temp = BlockPosition.at(i);
+                    BlockPosition.at(i) = BlockPosition.at(j);
+                    BlockPosition.at(j) = temp;
+                }
+                else if (_ttol(BlockResolve(BlockPosition.at(i), 0)) == _ttol(BlockResolve(BlockPosition.at(j), 0)))//兩者Y等於
+                {
+                    //比較X
+                    if (mode == 1)//模式1
+                    {
+                        if ((_ttol(BlockResolve(BlockPosition.at(i), 0)) % 2))//當基數列
+                        {
+                            if (_ttol(BlockResolve(BlockPosition.at(i), 1)) > _ttol(BlockResolve(BlockPosition.at(j), 1)))//前者X大於後者X
+                            {
+                                //交換資料
+                                temp = BlockPosition.at(i);
+                                BlockPosition.at(i) = BlockPosition.at(j);
+                                BlockPosition.at(j) = temp;
+                            }
+                        }
+                        else//當偶數列
+                        {
+                            if (_ttol(BlockResolve(BlockPosition.at(i), 1)) < _ttol(BlockResolve(BlockPosition.at(j), 1)))//比較前者X小於後者X
+                            {
+                                //交換資料
+                                temp = BlockPosition.at(i);
+                                BlockPosition.at(i) = BlockPosition.at(j);
+                                BlockPosition.at(j) = temp;
+                            }
+                        }
+                    }
+                    else if (mode == 2)//模式2
+                    {
+                        if (_ttol(BlockResolve(BlockPosition.at(i), 1)) > _ttol(BlockResolve(BlockPosition.at(j), 1)))//前者X大於後者X
+                        {
+                            //交換資料                   
+                            temp = BlockPosition.at(i);
+                            BlockPosition.at(i) = BlockPosition.at(j);
+                            BlockPosition.at(j) = temp;
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+    _cwprintf(L"排序完成後:");
+    for (int i = 0; i < BlockPosition.size(); i++)
+    {
+        _cwprintf(L"%s,", BlockPosition.at(i));
+    }
+}
+/*阻斷字串處理*/
+CString COrder::BlockResolve(CString String, UINT Choose)
+{
+    int iLength = String.Find(_T('-'));
+    if (iLength <= 0)
+    {
+        iLength = String.GetLength();
+    }
+    if (Choose <= 0)
+    {
+        return String.Left(iLength);
+    }
+    else
+    {
+        return BlockResolve(String.Right(String.GetLength() - iLength - 1), --Choose);
+    }
 }

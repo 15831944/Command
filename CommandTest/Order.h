@@ -243,10 +243,13 @@ private:    //函數
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
 	static  void    VisionModify(LPVOID pParam);
 	void            VisionFindMarkError(LPVOID pParam);
+    //阻斷處理
 	static  void    BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus);
 	static  BOOL    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
     static  void    BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus);
     static  BOOL    BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount);
+    static  void    BlockSort(std::vector<CString> &BlockPosition, int Type, int mode);
+    static  CString BlockResolve(CString String, UINT Choose);
 	//命令處理
 	static  CString CommandResolve(CString Command,UINT Choose);
 	//初始化處理
