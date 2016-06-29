@@ -52,13 +52,16 @@ void CMoveButton::OnTimer(UINT_PTR nIDEvent)
     switch (((CCamera*)((CCommandTestDlg*)pMain)->m_pCameraDlg)->RaiChoose)
     {
     case 1:
-        MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 5000);
+        if(!MO_ReadIsDriving(7))
+            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 120000, 5000);
         break;
-    case 2:                                      
-        MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
+    case 2:
+        if (!MO_ReadIsDriving(7))
+            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
         break;
     case 3:
-        MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 60000, 1000);
+        if (!MO_ReadIsDriving(7))
+            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 60000, 1000);
         break;
     default:
         //MessageBox(_T("程式出現錯誤!"));

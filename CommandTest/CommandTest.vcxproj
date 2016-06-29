@@ -191,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Action.h" />
+    <ClInclude Include="Block.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
@@ -205,6 +206,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Action.cpp" />
+    <ClCompile Include="Block.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />

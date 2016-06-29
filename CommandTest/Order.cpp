@@ -2617,7 +2617,7 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
-                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
@@ -2898,7 +2898,7 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
-                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+                    _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) = _ttol(CommandResolve(Command, 4));
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;

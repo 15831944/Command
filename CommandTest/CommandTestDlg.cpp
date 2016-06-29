@@ -9,6 +9,7 @@
 #include "mcc.h"
 #include "Default.h"
 #include "Camera.h"
+#include "Block.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -29,6 +30,10 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	CcdMode = FALSE;
 	MaxRunNumber = 0;
     RunLoopNumber = 0;
+    XNumber = 0;
+    YNumber = 0;   
+    BlockCount = 0;
+    BlockStr = _T("");
 }
 
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
@@ -105,6 +110,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
     ON_BN_CLICKED(IDC_BTNMODECHANGE, &CCommandTestDlg::OnBnClickedBtnmodechange)
     ON_BN_CLICKED(IDC_BTNCLEANCOUNT, &CCommandTestDlg::OnBnClickedBtncleancount)
     ON_BN_CLICKED(IDC_BTNMODEFYZ, &CCommandTestDlg::OnBnClickedBtnmodefyz)
+    ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CCommandTestDlg::OnNMDblclkList1)
 END_MESSAGE_MAP()
 
 
@@ -424,6 +430,37 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 		StrBuff.Format(_T("%d"), a.Command.at(1).size());
 		m_CommandList.SetItemText(1, 1, StrBuff);*/
 	}
+}
+/*列表中按兩下左鍵*/
+void CCommandTestDlg::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+    LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+    CListCtrl *CList = (CListCtrl *)GetDlgItem(IDC_LIST1);
+    NM_LISTVIEW  *pEditCtrl = (NM_LISTVIEW *)pNMHDR;
+    if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0)
+    {
+        if (CommandResolve(m_CommandList.GetItemText(pEditCtrl->iItem, pEditCtrl->iSubItem),0) == L"StepRepeatX" ||
+            CommandResolve(m_CommandList.GetItemText(pEditCtrl->iItem, pEditCtrl->iSubItem), 0) == L"StepRepeatY")
+        {
+            XNumber = _ttol(CommandResolve(m_CommandList.GetItemText(pEditCtrl->iItem, pEditCtrl->iSubItem), 3));
+            YNumber = _ttol(CommandResolve(m_CommandList.GetItemText(pEditCtrl->iItem, pEditCtrl->iSubItem), 4));
+            CBlock DlgBlock;
+            if (DlgBlock.DoModal() == IDOK) {
+                CString StrBuff;
+                StrBuff.Format(_T("%d"), BlockCount);
+                a.CommandMemory.at(pEditCtrl->iItem) = CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 0) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 1) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 2) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 3) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 4) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 5) + _T(",") +
+                    CommandResolve(a.CommandMemory.at(pEditCtrl->iItem), 6) + _T(",") +
+                    _T("1,") + StrBuff + BlockStr;
+                ListRefresh(NULL);
+            }
+        }
+    }
+    *pResult = 0;
 }
 /*列表點下右鍵*/
 void CCommandTestDlg::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -839,9 +876,7 @@ void CCommandTestDlg::OnBnClickedBtncommand32_0()
 void CCommandTestDlg::OnBnClickedBtncommand32()
 {
     CString Buff;
-	StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d,%d,%d,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8));
-    GetDlgItemText(IDC_EDITPARAM9,Buff);
-    StrBuff = StrBuff + Buff;
+	StrBuff.Format(_T("StepRepeatX,%d,%d,%d,%d,%d,%d,0,0,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
@@ -850,9 +885,7 @@ void CCommandTestDlg::OnBnClickedBtncommand32()
 void CCommandTestDlg::OnBnClickedBtncommand33()
 {
     CString Buff;
-    StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d,%d,%d,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7), GetDlgItemInt(IDC_EDITPARAM8));
-    GetDlgItemText(IDC_EDITPARAM9, Buff);
-    StrBuff = StrBuff + Buff;
+    StrBuff.Format(_T("StepRepeatY,%d,%d,%d,%d,%d,%d,0,0,"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
     (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
     Insert = FALSE;
     ListRefresh(NULL);
@@ -1044,6 +1077,9 @@ CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
 		return CommandResolve(Command.Right(Command.GetLength() - iLength - 1), --Choose);
 	}
 }
+
+
+
 
 
 

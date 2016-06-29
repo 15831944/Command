@@ -53,12 +53,12 @@ BOOL CCamera::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 	/*初始化按鈕移動*/
-	m_Xup.MoveX = 5000;
-	m_Xdown.MoveX = -5000;
-	m_Yup.MoveY = 5000;
-	m_Ydown.MoveY = -5000;
-	m_Zup.MoveZ = 5000;
-	m_Zdown.MoveZ = -5000;
+	m_Xup.MoveX = 200000;
+	m_Xdown.MoveX = -200000;
+	m_Yup.MoveY = 200000;
+	m_Ydown.MoveY = -200000;
+	m_Zup.MoveZ = 200000;
+	m_Zdown.MoveZ = -200000;
 	/*初始化Radio*/
 	((CButton *)GetDlgItem(IDC_RADH))->SetCheck(TRUE);
 	RaiChoose = 1;
@@ -153,27 +153,27 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 	// TODO: 在此加入特定的程式碼和 (或) 呼叫基底類別
 	if (pMsg->message == WM_KEYDOWN) {
 		if (pMsg->wParam == VK_LEFT) {
-			MoveXYZ(-10000, 0, 0);
+			MoveXYZ(-200000, 0, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_RIGHT) {
-			MoveXYZ(10000, 0, 0);
+			MoveXYZ(200000, 0, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_UP) {
-			MoveXYZ(0, -10000, 0);
+			MoveXYZ(0, -200000, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_DOWN) {
-			MoveXYZ(0, 10000, 0);
+			MoveXYZ(0, 200000, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_HOME) {
-			MoveXYZ(0, 0, -10000);
+			MoveXYZ(0, 0, -200000);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_END) {
-			MoveXYZ(0, 0, 10000);
+			MoveXYZ(0, 0, 200000);
 			pMsg->message = WM_NULL;
 		}
 		
@@ -203,13 +203,16 @@ void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 		switch (RaiChoose)
 		{
 		case 1:
-			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 6000);
+            if (!MO_ReadIsDriving(7))
+			    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 6000);
 			break;
 		case 2:
-			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
+            if (!MO_ReadIsDriving(7))
+			    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
 			break;
 		case 3:
-			MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+            if (!MO_ReadIsDriving(7))
+			    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
 			break;
 		default:
 			//MessageBox(_T("程式出現錯誤!"));

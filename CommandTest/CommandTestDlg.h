@@ -41,6 +41,10 @@ public:
     BOOL m_LoopRun;
     int MaxRunNumber;
     int RunLoopNumber;
+
+    UINT XNumber, YNumber;
+    UINT BlockCount;
+    CString BlockStr;
 public:
 	/*刷新*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -112,6 +116,7 @@ public:
 	afx_msg void OnBnClickedBtncommand45();
     //外部函數
     CString CommandResolve(CString Command, UINT Choose);
+    afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
 };
 
 
