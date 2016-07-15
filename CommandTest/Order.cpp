@@ -22,13 +22,15 @@ COrder::COrder()
     GlueData = { {0,0,0,0},0,0,0,0 };
 
     VisionOffset = { { 0,0,0,0 },0,0,0 };
-    VisionSet = { 0,0,0,0,0,0,0,0,0 };
+    VisionSet = { 0,0,0,0,0,0,0,0,0,0};
     
     RunStatusRead = { 0,0,1,0};
     VisionDefault.VisionSerchError.Manuallymode = FALSE;
     VisionDefault.VisionSerchError.Pausemode = FALSE;
 
     RunLoopData = { 0,0,0,-1 };
+    LaserSwitch = { 0,0,0,0,0 };
+    VirtualCoordinateData = { 0,0,0,0 };
 }
 COrder::~COrder()
 {
@@ -205,7 +207,6 @@ BOOL COrder::View(BOOL mode)
             m_Action.g_bIsDispend = FALSE;
             //針頭模式 不減offset 或 CCD模式 減offset
             VisionSet.ModifyMode = mode;
-
             //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
             g_pThread = AfxBeginThread(Thread, (LPVOID)this);
         }
@@ -221,10 +222,16 @@ BOOL COrder::View(BOOL mode)
 UINT COrder::RunLoopThread(LPVOID pParam) {
     while (((COrder*)pParam)->RunLoopData.RunSwitch)   
     {
+#ifdef PRINTF
         _cprintf("%d", (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)));
+#endif
         if (((COrder*)pParam)->RunLoopData.MaxRunNumber >= 0 && (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)) > 0)
         {
-            if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
+            if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
+            {
+                ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+            }
+            else if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
             {          
                 if (!((COrder*)pParam)->Run()) {
                     ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
@@ -275,7 +282,7 @@ UINT COrder::HomeThread(LPVOID pParam)
 UINT COrder::Thread(LPVOID pParam)
 {
     ((COrder*)pParam)->RunStatusRead.RunStatus = 1;//狀態改變成運作中
-    while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->Commanding != _T("End")) {
+    while ((!((COrder*)pParam)->m_Action.g_bIsStop) /*&& ((COrder*)pParam)->Commanding != _T("End")*/ && ((COrder*)pParam)->ModelControl.Mode != 4) {//新增模式判斷
         if (((COrder*)pParam)->RunData.SubProgramName != _T(""))
         {
             for (UINT i = 1; i < ((COrder*)pParam)->Command.size(); i++)
@@ -288,7 +295,7 @@ UINT COrder::Thread(LPVOID pParam)
             }
             ((COrder*)pParam)->RunData.SubProgramName = _T("");
         }
-        if (((COrder*)pParam)->Program.LabelName != _T(""))
+        if (((COrder*)pParam)->Program.LabelName != _T(""))//普通標籤
         {
             ((COrder*)pParam)->Program.LabelCount++;
             if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
@@ -330,11 +337,16 @@ UINT COrder::Thread(LPVOID pParam)
                 ((COrder*)pParam)->Program.LabelCount = 0;
             }
         }
-        else if (((COrder*)pParam)->RepeatData.StepRepeatLabel != _T(""))
+        else if (((COrder*)pParam)->RepeatData.StepRepeatLabel != _T(""))//StepRepeat專用標籤
         {
+#ifdef PRINTF
+            _cwprintf(L"標籤%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel);
+#endif
             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
             {
+#ifdef PRINTF
                 _cwprintf(L"%s=%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel, CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6));
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabel ==
                     CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6) && 
                     (CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"StepRepeatX" ||
@@ -367,8 +379,20 @@ UINT COrder::Thread(LPVOID pParam)
         {
             if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == 0)
             {
+#ifdef PRINTF
                 _cwprintf(L"沒有發現其他StepRepeat\n");
-                ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + ((COrder*)pParam)->RepeatData.StepRepeatLabel;
+#endif
+                if (CommandResolve(((COrder*)pParam)->RepeatData.StepRepeatLabel, 0) == L"StepRepeatLabel")
+                {
+#ifdef PRINTF
+                    _cwprintf(L"發生尋找錯誤立即停止程序!\n");
+                    ((COrder*)pParam)->m_Action.g_bIsStop = TRUE;
+#endif
+                }
+                else
+                {
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + ((COrder*)pParam)->RepeatData.StepRepeatLabel;
+                }       
                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
             }
             else
@@ -388,7 +412,11 @@ UINT COrder::Thread(LPVOID pParam)
             }
         }
         //檢查計數用
+#ifdef PRINTF
         //_cwprintf(L"%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+        //_cwprintf(L"大家都進來吧!%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel);
+#endif 
+        
     }
     LineGotoActionJudge(pParam);
     if (((COrder*)pParam)->Commanding == _T("End"))
@@ -414,7 +442,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     CString Command = ((COrder*)pParam)->Commanding; 
     if (CommandResolve(Command, 0) == L"Printf")
     {
-        _cwprintf(L"Hello\n");   
+#ifdef PRINTF
+        _cwprintf(L"Hello\n");
+#endif // PRINTF    
         /*((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));
         ((COrder*)pParam)->Time++;*/
     }
@@ -444,9 +474,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         ((COrder*)pParam)->Program.SubroutineStack.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
         //新增紀錄目前機械手臂位置堆疊
         CoordinateData Buff;
-        Buff.X = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 0));
-        Buff.Y = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 1));
-        Buff.Z = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 2));
+        //模式不同取點方式不同
+        if (((COrder*)pParam)->ModelControl.Mode == 1)
+        {
+            Buff.X = ((COrder*)pParam)->VirtualCoordinateData.X;
+            Buff.Y = ((COrder*)pParam)->VirtualCoordinateData.Y;
+            Buff.Z = ((COrder*)pParam)->VirtualCoordinateData.Z;
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            Buff.X = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 0));
+            Buff.Y = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 1));
+            Buff.Z = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 2));
+        }  
         ((COrder*)pParam)->Program.SubroutinePointStack.push_back(Buff);
         //新增offset堆疊
         Buff.Status = FALSE;
@@ -472,6 +512,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
             //釋放紀錄程序位置堆疊
             ((COrder*)pParam)->Program.SubroutineStack.pop_back();
+            //TODO::可選擇是否在影像模式不移動回CallSuboutine位置
             //將機器手臂移動至呼叫時位置
             ((COrder*)pParam)->m_Action.DecideVirtualPoint(
                 ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
@@ -496,17 +537,23 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (!((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//目的用於跳到StepRepeat最外層迴圈
         {
+#ifdef PRINTF
             _cwprintf(L"進入StepRepeatLabel\n");
+#endif  
             CString CommandBuff;
-            for (int i = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)); i < ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size(); i++)
+            for (UINT i = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)); i < ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size(); i++)
             {
                 CommandBuff = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(i);
                 if (_ttol(CommandResolve(CommandBuff, 6)) == _ttol(CommandResolve(Command, 1)) && (CommandResolve(CommandBuff, 0) == L"StepRepeatX" || CommandResolve(CommandBuff, 0) == L"StepRepeatY"))
                 {
-                    _cwprintf(L"跳躍至地址為%d的StepRepeat\n",i);
+#ifdef PRINTF
+                    _cwprintf(L"跳躍至地址為%d的StepRepeat\n", i);
+#endif               
                     ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = i + 1;
-                    ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;                
+#ifdef PRINTF
                     _cprintf("%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+#endif     
                 }
             }     
         }  
@@ -557,7 +604,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"StepRepeatX")
     {
+#ifdef PRINTF
         _cprintf("Inside StepRepeatX\n");
+#endif 
         //StepRepeat陣列是否大於1*1 && 模式是否 1or2 
         if ((_ttol(CommandResolve(Command, 3)) * _ttol(CommandResolve(Command, 4))) > 1 && (_ttol(CommandResolve(Command,5)) == 1 || _ttol(CommandResolve(Command, 5)) == 2))
         {
@@ -565,7 +614,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             {
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat(代表最外層)
                 {
+#ifdef PRINTF
                     _cwprintf(L"沒有StepRepeat時 第一次 Inside StepRepeatX\n");
+#endif
                     //StepRepeat新增計數總數歸零(防止出錯)
                     ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                     //StepRepeat刪除計數總數歸零(防止出錯)
@@ -595,29 +646,39 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     //判斷是否有阻斷
                     if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
                     {
+#ifdef PRINTF
                         _cwprintf(L"StepRepeatX 處理阻斷位置:");
-                        for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                         {
                             _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                         }
                         _cwprintf(L"\n");
+#endif
                         BlockProcessStart(Command, pParam, FALSE);
+                        
                     }
                     else//無阻斷繼續往下尋找StepRepeat
                     {
+#ifdef PRINTF
                         _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif
                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);  
+                                    
                     }   
                 }
                 else 
                 {
+#ifdef PRINTF
                     _cwprintf(L"所有條件不成立\n");
+#endif
                 }
             }
             else//有StepRepeat時
             {
                 UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
+#ifdef PRINTF
                 _cwprintf(L"目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
+#endif 
                 for (UINT i = 0; i < StepRepeatNumSize; i++)
                 {
                     //判斷目前遇到的StepRepeat是否在StepRepeat陣列中
@@ -631,12 +692,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i) + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
                                 {
                                     ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;
+#ifdef PRINTF
                                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                                 }
                                 else if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i))
                                 {
                                     ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE;
+#ifdef PRINTF
                                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                                 }
 
                                 if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
@@ -665,7 +730,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         else if(((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i) > 1)
                         {
                             ((COrder*)pParam)->RepeatData.SSwitch.at(i) = !((COrder*)pParam)->RepeatData.SSwitch.at(i);
+#ifdef PRINTF
                             _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                             if (_ttol(CommandResolve(Command, 5)) == 2)//N型X回最初位置
                             {
                                 ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
@@ -683,34 +750,55 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         }
                         else
                         {                      
+#ifdef PRINTF
                             _cwprintf(L"刪除所有陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                             _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatBlockData陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除SSwitch陣列\n");
+#endif 
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatNum陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatInitOffsetX陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatInitOffsetY陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatCountX陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatCountY陣列\n");
+#endif 
                             break;
                         }
                         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum )
                         {
-                            _cwprintf(L"進入新增內層迴圈");
+#ifdef PRINTF
+                            _cwprintf(L"進入新增內層迴圈\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
                             ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                             ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                            break;
                         }
                     }
                     else//不再StepRepeat陣列中，新增一個StepRepeat位置
@@ -719,7 +807,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         {
                             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
                             {
+#ifdef PRINTF
                                 _cwprintf(L"第一次新增內層StepRepeat\n");
+#endif 
                                 //StepRepeat計數總數++
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
                                 //紀錄StepRepeat地址
@@ -744,23 +834,29 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 1, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
-                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                                     }
                                     _cwprintf(L"\n");
+#endif 
                                     BlockProcessStart(Command, pParam, FALSE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif 
                                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                 }
                             }
                             else //第二次進入StepRepeat時(內層迴圈做第N次)
                             {
+#ifdef PRINTF
                                 _cwprintf(L"第二次新增內層StepRepeat\n"); 
+#endif 
                                 ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
                                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
                                 //紀錄StepRepeat地址
@@ -785,24 +881,31 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 1, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
-                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                                     }
                                     _cwprintf(L"\n");
+#endif 
                                     BlockProcessStart(Command, pParam , TRUE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif 
                                     if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
                                     {
-                                        _cwprintf(L"進入新增內層迴圈");
+#ifdef PRINTF
+                                        _cwprintf(L"進入新增內層迴圈2");
+#endif 
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                                         ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                                        break;
                                     }
                                     else
                                     {
@@ -822,7 +925,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     }
     if (CommandResolve(Command, 0) == L"StepRepeatY")
     {
+#ifdef PRINTF
         _cprintf("Inside StepRepeatY\n");
+#endif 
         //StepRepeat陣列是否大於1*1 && 模式是否 1or2
         if ((_ttol(CommandResolve(Command, 3)) * _ttol(CommandResolve(Command, 4))) > 1 && (_ttol(CommandResolve(Command, 5)) == 1 || _ttol(CommandResolve(Command, 5)) == 2))
         {
@@ -830,7 +935,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             {
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat(代表最外層)
                 {
+#ifdef PRINTF
                     _cwprintf(L"沒有StepRepeat時 第一次 Inside StepRepeatY\n");
+#endif 
                     //StepRepeat新增計數總數歸零(防止出錯)
                     ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                     //StepRepeat刪除計數總數歸零(防止出錯)
@@ -860,29 +967,37 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     //判斷是否有阻斷
                     if (_ttol(CommandResolve(Command, 7)))//有阻斷處理阻斷
                     {
+#ifdef PRINTF
                         _cwprintf(L"StepRepeatY 處理阻斷位置:");
-                        for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                         {
                             _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                         }
                         _cwprintf(L"\n");
+#endif 
                         /**/BlockProcessStartY(Command, pParam, FALSE);
                     }
                     else//無阻斷繼續往下尋找StepRepeat
                     {
+#ifdef PRINTF
                         _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif 
                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                     }
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"所有條件不成立\n");
+#endif 
                 }
             }
             else//有StepRepeat時
             {
                 UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
+#ifdef PRINTF
                 _cwprintf(L"目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
+#endif 
                 for (UINT i = 0; i < StepRepeatNumSize; i++)
                 {
                     //判斷目前遇到的StepRepeat是否在StepRepeat陣列中
@@ -895,13 +1010,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             {
                                 if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i) + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
                                 {
-                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;     
+                                    ((COrder*)pParam)->RepeatData.SSwitch.at(i) = FALSE;    
+#ifdef PRINTF
                                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                                 }          
                                 else  if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i))
                                 {
                                     ((COrder*)pParam)->RepeatData.SSwitch.at(i) = TRUE; 
+#ifdef PRINTF
                                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                                 }
                                 if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
                                 {
@@ -929,7 +1048,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i) > 1)/**/
                         {
                             ((COrder*)pParam)->RepeatData.SSwitch.at(i) = !((COrder*)pParam)->RepeatData.SSwitch.at(i);
+#ifdef PRINTF
                             _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
+#endif 
                             if (_ttol(CommandResolve(Command, 5)) == 2)//N型Y回最初位置
                             {
                                 /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
@@ -947,34 +1068,55 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         }
                         else
                         {
+#ifdef PRINTF
                             _cwprintf(L"刪除所有陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                             _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatBlockData陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除SSwitch陣列\n");
+#endif 
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatNum陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatInitOffsetX陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatInitOffsetY陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatCountX陣列\n");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + i);
+#ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatCountY陣列\n");
+#endif 
                             break;          
                         }
                         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
                         {
+#ifdef PRINTF
                             _cwprintf(L"進入新增內層迴圈");
+#endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
                             ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                             ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                            break;
                         }
                     }
                     else//不再StepRepeat陣列中，新增一個StepRepeat位置
@@ -983,7 +1125,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         {
                             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
                             {
+#ifdef PRINTF
                                 _cwprintf(L"第一次新增內層StepRepeat\n");
+#endif 
                                 //StepRepeat計數總數++
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
                                 //紀錄StepRepeat地址
@@ -1008,23 +1152,29 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 /**/BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 2, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
-                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                                     }
                                     _cwprintf(L"\n");
+#endif 
                                     /**/BlockProcessStartY(Command, pParam, FALSE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif 
                                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                 }
                             }
                             else //第二次進入StepRepeat時(內層迴圈做第N次)
                             {
+#ifdef PRINTF
                                 _cwprintf(L"第二次新增內層StepRepeat\n");
+#endif 
                                 ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
                                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
                                 //紀錄StepRepeat地址
@@ -1049,24 +1199,31 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 /**/BlockSort(((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition, 2, _ttol(CommandResolve(Command, 5)));
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 處理阻斷位置:");
-                                    for (int i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
+                                    for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
                                     }
                                     _cwprintf(L"\n");
+#endif 
                                     /**/BlockProcessStartY(Command, pParam, TRUE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
+#ifdef PRINTF
                                     _cwprintf(L"StepRepeatX 沒有阻斷\n");
+#endif 
                                     if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
                                     {
+#ifdef PRINTF
                                         _cwprintf(L"進入新增內層迴圈");
+#endif 
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                                         ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum--;
+                                        break;
                                     }
                                     else
                                     {
@@ -1080,6 +1237,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 }
             }
         }
+        else //當只有1-1時
+        {   
+        }
     }
     if (CommandResolve(Command, 0) == L"CallSubProgram")
     {
@@ -1092,636 +1252,967 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         ((COrder*)pParam)->RunData.StackingCount--; 
         ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//上次執行過後有+1所以要減回來
     }
+
+    if (CommandResolve(Command, 0) == L"End") 
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 1 )
+        {
+            ((COrder*)pParam)->ModelControl.Mode = 2;
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)
+        {
+            ((COrder*)pParam)->ModelControl.Mode = 3;
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            ((COrder*)pParam)->ModelControl.Mode = 4;
+        }
+    }
     /************************************************************動作**************************************************************/
 #ifdef MOVE
     if (CommandResolve(Command, 0) == L"Dot")
     {
-        ((COrder*)pParam)->Time++;
-        ModifyPointOffSet(pParam, Command);
-        LineGotoActionJudge(pParam);
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        ((COrder*)pParam)->m_Action.DecidePointGlue(
-            //_ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + ((COrder*)pParam)->VisionOffset.OffsetX,
-            //_ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + ((COrder*)pParam)->VisionOffset.OffsetY,
-            ((COrder*)pParam)->FinalWorkCoordinateData.X,
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-            _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-           ((COrder*)pParam)->DispenseDotSet.GlueOpenTime, ((COrder*)pParam)->DispenseDotSet.GlueCloseTime,
-           ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
-           ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed,6000);
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+        }
+#ifdef LA
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+            if (!((COrder*)pParam)->LaserSwitch.LaserSkip)//雷射跳過未開啟
+            {
+                if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserAdjust)//模式二
+                {
+                    ChooseVisionModify(pParam);//選擇影像Offset      
+                    ModifyPointOffSet(pParam, Command);//CallSubutine用
+                    LineGotoActionJudge(pParam);//線段動作判斷
+                    ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                    ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                    VisionModify(pParam);
+
+                    ((COrder*)pParam)->m_Action.LA_Dot3D(
+                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                        ((COrder*)pParam)->LaserData.LaserMeasureHeight,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+
+                    //紀錄測量高度至雷射修正表
+                    ((COrder*)pParam)->LaserCount++;
+                    ((COrder*)pParam)->LaserAdjust.push_back({ ((COrder*)pParam)->LaserData.LaserMeasureHeight });            
+                }
+#ifdef PRINTF
+                _cwprintf(L"點加入雷射表\n");
+#endif // PRINTF 
+                RecordCorrectionTable(pParam);//寫入修正表
+            }
+        }
+#endif
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ChooseLaserModify(pParam);//選擇雷射高度
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            LaserModify(pParam);//雷射修正
+            ((COrder*)pParam)->m_Action.DecidePointGlue(
+                //_ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + ((COrder*)pParam)->VisionOffset.OffsetX,
+                //_ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + ((COrder*)pParam)->VisionOffset.OffsetY,
+                //_ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z + ((COrder*)pParam)->VisionOffset.OffsetZ,
+                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->DispenseDotSet.GlueOpenTime, ((COrder*)pParam)->DispenseDotSet.GlueCloseTime,
+                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        }   
     }
     if (CommandResolve(Command, 0) == L"LineStart")
     {
-        ((COrder*)pParam)->Time++;
-        ModifyPointOffSet(pParam, Command);
-        LineGotoActionJudge(pParam);
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
-        //((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        //((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
-        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 1;
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正 
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ChooseLaserModify(pParam);//選擇雷射高度
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            LaserModify(pParam);//雷射修正
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+            //((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            //((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            //((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
+            ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 1;
+        }    
     }
     if (CommandResolve(Command, 0) == L"LinePassing")
     {
-        ((COrder*)pParam)->Time++;
-        ModifyPointOffSet(pParam, Command);
-        if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
             ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
             ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            VisionModify(pParam);
-            if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS存在尚未執行過LP
-            {    
-                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫LS 
-                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //呼叫ARC
-                    ((COrder*)pParam)->m_Action.DecideArc(
-                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-                    //清除完成動作弧
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫LS
-                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //呼叫Circle
-                    ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-                    //呼叫LP
-                    ((COrder*)pParam)->m_Action.DecideLineMidMove(
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //清除完成動作圓
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else
-                {
-                    //呼叫LS-LP
-                    ((COrder*)pParam)->m_Action.DecideLineSToP(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance, ((COrder*)pParam)->DispenseLineSet.NodeTime,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                }
-            }
-            else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
-            {
-                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫ARC
-                    ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-                    //清除完成動作弧
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫Circle
-                    ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
-                    //呼叫LP
-                    ((COrder*)pParam)->m_Action.DecideLineMidMove(
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //清除完成動作圓
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else
-                {
-                    //呼叫LP
-                    ((COrder*)pParam)->m_Action.DecideLineMidMove(
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                }
-            }
-            ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
         }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ChooseLaserModify(pParam);//選擇雷射高度
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+            {
+                ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+                VisionModify(pParam);//影像修正
+                LaserModify(pParam);//雷射修正
+                if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS存在尚未執行過LP
+                {
+                    if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫LS 
+                        ((COrder*)pParam)->m_Action.DecideLineStartMove(
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //呼叫ARC
+                        ((COrder*)pParam)->m_Action.DecideArc(
+                            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                        //清除完成動作弧
+                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫LS
+                        ((COrder*)pParam)->m_Action.DecideLineStartMove(
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //呼叫Circle
+                        ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                        //呼叫LP
+                        ((COrder*)pParam)->m_Action.DecideLineMidMove(
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                            ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //清除完成動作圓
+                        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else
+                    {
+                        //呼叫LS-LP
+                        ((COrder*)pParam)->m_Action.DecideLineSToP(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance, ((COrder*)pParam)->DispenseLineSet.NodeTime,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    }
+                }
+                else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
+                {
+                    if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫ARC
+                        ((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                        //清除完成動作弧
+                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫Circle
+                        ((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                        //呼叫LP
+                        ((COrder*)pParam)->m_Action.DecideLineMidMove(
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //清除完成動作圓
+                        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else
+                    {
+                        //呼叫LP
+                        ((COrder*)pParam)->m_Action.DecideLineMidMove(
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                            ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    }
+                }
+                ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;
+            }
+        }    
     }
     if (CommandResolve(Command, 0) == L"LineEnd")
     {
-        ((COrder*)pParam)->Time++;
-        ModifyPointOffSet(pParam, Command);
-        if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
             ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
             ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            VisionModify(pParam);
-            if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)
-            {  
-                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ChooseLaserModify(pParam);//選擇雷射高度
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            if (((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+            {
+                ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+                VisionModify(pParam);//影像修正
+                LaserModify(pParam);//雷射修正
+                if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)
                 {
-                    //呼叫一個LS
-                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //再呼叫一個ARC-LE
-                    ((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
-                    //清除完成動作弧
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫一個LS
+                        ((COrder*)pParam)->m_Action.DecideLineStartMove(
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //再呼叫一個ARC-LE
+                        ((COrder*)pParam)->m_Action.DecideArcleToEnd(
+                            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                        //清除完成動作弧
+                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫LS
+                        ((COrder*)pParam)->m_Action.DecideLineStartMove(
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                        //呼叫Circle-LE
+                        ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                        //清除完成動作圓
+                        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else
+                    {
+                        //呼叫LS-LE
+                        ((COrder*)pParam)->m_Action.DecideLineSToE(
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    }
                 }
-                else if(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)
                 {
-                    //呼叫LS
-                    ((COrder*)pParam)->m_Action.DecideLineStartMove(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    //呼叫Circle-LE
-                    ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
-                    //清除完成動作圓
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else
-                {
-                    //呼叫LS-LE
-                    ((COrder*)pParam)->m_Action.DecideLineSToE(
-                        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, 
-                        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫ARC-LE
+                        ((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                        //清除完成動作弧
+                        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
+                    {
+                        //呼叫Circle-LE
+                        ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                        //清除完成動作圓
+                        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+                    }
+                    else
+                    {
+                        //呼叫LE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(
+                            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                            //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                            ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                            ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                            ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                    }
                 }
             }
-            else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)
-            {
-                if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫ARC-LE
-                    ((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
-                    //清除完成動作弧
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-                {
-                    //呼叫Circle-LE
-                    ((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, 
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
-                    //清除完成動作圓
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                }
-                else
-                {
-                    //呼叫LE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(
-                        //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                        //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.X,
-                        ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-                        _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                        ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-                        ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                }
-            }   
-        }
-        ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-        ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+            ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+        }   
     }
     if (CommandResolve(Command, 0) == L"ArcPoint")
     {
-        ModifyPointOffSet(pParam, Command);
-        if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+            RecordCorrectionTable(pParam);//寫入修正表
         }
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
-        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
-        //((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        //((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            if (((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)//限定圓弧和圓只能存在一個
+            {
+                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+            }
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+            //((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            //((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+        }   
     }
     if (CommandResolve(Command, 0) == L"CirclePoint")
     {
-        ModifyPointOffSet(pParam, Command);
-        if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+            RecordCorrectionTable(pParam);//寫入修正表
         }
-        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status == TRUE)//限定圓弧和圓只能存在一個
+            {
+                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+            }
+            //圓第一點
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+            //圓第二點
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            VisionModify(pParam);//影像修正
+            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 
-        
-        //((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        //((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-        //((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        //((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            //((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            //((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            //((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            //((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+        }
     }
     if (CommandResolve(Command, 0) == L"GoHome")
     {
-        LineGotoActionJudge(pParam);
-        if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+            ((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0 };//紀錄移動虛擬座標
         }
-        else
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
         {
-            ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
-            ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
         }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
+            {
+                ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+            }
+            else
+            {
+                ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+                ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            }
+        }       
     }
     if (CommandResolve(Command, 0) == L"VirtualPoint")
     {
-        ModifyPointOffSet(pParam, Command);
-        LineGotoActionJudge(pParam);
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        if (_ttol(CommandResolve(Command, 4)) == 1)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            VisionModify(pParam);
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 4)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            //LaserModify(pParam);
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
         }
-        ((COrder*)pParam)->m_Action.DecideVirtualPoint(
-            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-            ((COrder*)pParam)->FinalWorkCoordinateData.X,
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-            _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 4)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        }   
     }
     if (CommandResolve(Command, 0) == L"WaitPoint")
     {
-        ModifyPointOffSet(pParam, Command);
-        LineGotoActionJudge(pParam);
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        if (_ttol(CommandResolve(Command, 5)) == 1)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            VisionModify(pParam);
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 5)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            //LaserModify(pParam);
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
         }
-        ((COrder*)pParam)->m_Action.DecideWaitPoint(
-            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-            ((COrder*)pParam)->FinalWorkCoordinateData.X,
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-            _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-            _ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 5)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            ((COrder*)pParam)->m_Action.DecideWaitPoint(
+                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                _ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+        }    
     }
     if (CommandResolve(Command, 0) == L"ParkPosition")
     {
-        LineGotoActionJudge(pParam);
-        if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            if (((COrder*)pParam)->GlueData.GlueAuto)
-            {
-                ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
-                    ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-            }
+            ((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z };//紀錄移動虛擬座標
         }
-        else
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
         {
-            if (((COrder*)pParam)->GlueData.GlueAuto)
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
             {
-                ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
-                    ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+                if (((COrder*)pParam)->GlueData.GlueAuto)
+                {
+                    ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
+                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+                }
             }
-            ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-        } 
+            else
+            {
+                if (((COrder*)pParam)->GlueData.GlueAuto)
+                {
+                    ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
+                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+                }
+                ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            }
+        }     
     }
     if (CommandResolve(Command, 0) == L"StopPoint")
     {
-        ModifyPointOffSet(pParam, Command);
-        LineGotoActionJudge(pParam);
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        if (_ttol(CommandResolve(Command, 4)) == 1)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            VisionModify(pParam);
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 4)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            //LaserModify(pParam);
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
         }
-        ((COrder*)pParam)->m_Action.DecideVirtualPoint(
-            //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-            //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-            ((COrder*)pParam)->FinalWorkCoordinateData.X,
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y,
-            _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-        ((COrder*)pParam)->Pause();
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            if (_ttol(CommandResolve(Command, 4)) == 1)
+            {
+                VisionModify(pParam);//影像修正
+            }
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+            ((COrder*)pParam)->Pause();
+        }     
     }
     if (CommandResolve(Command, 0) == L"FillArea")
     {
-        CString CommandBuff;
-        CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
-        ModifyPointOffSet(pParam, CommandBuff);
-        LineGotoActionJudge(pParam);
-        //填充修正
-        LONG FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint2X, FillAreaPoint2Y;
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        FillAreaPoint1X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        FillAreaPoint1Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
-        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        VisionModify(pParam);
-        FillAreaPoint2X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
-        FillAreaPoint2Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+            RecordCorrectionTable(pParam);//寫入修正表
+            ((COrder*)pParam)->Time++;
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            //LaserModify(pParam);
+            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            CString CommandBuff;
+            CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
+            ChooseVisionModify(pParam);//選擇影像Offset
+            ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
+            LineGotoActionJudge(pParam);//判斷動作狀態
+            //填充修正
+            LONG FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z, FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            //LaserModify(pParam);//雷射修正
+            FillAreaPoint1X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            FillAreaPoint1Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+            FillAreaPoint1Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
 
-        ((COrder*)pParam)->m_Action.DecideFill(
-            //_ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-            //_ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-            FillAreaPoint1X, FillAreaPoint1Y,
-            _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-            //_ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-            //_ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-            FillAreaPoint2X, FillAreaPoint2Y,
-            _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-            _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
-            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            VisionModify(pParam);//影像修正
+            //LaserModify(pParam);//雷射修正
+            FillAreaPoint2X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+            FillAreaPoint2Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+            FillAreaPoint2Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
+
+            ((COrder*)pParam)->m_Action.DecideFill(
+                //_ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                //_ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                //_ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z,
+                //_ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                //_ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                //_ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z,
+                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
+                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+        }   
     }
     if (CommandResolve(Command, 0) == L"Output")
     {
-        ((COrder*)pParam)->m_Action.DecideOutPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->m_Action.DecideOutPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)));
+        }    
     }
     if (CommandResolve(Command, 0) == L"Input")
     {
-        if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) && _ttol(CommandResolve(Command, 3)))
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
-            //((COrder*)pParam)->RunData.RunCount = _ttol(CommandResolve(Command, 3)) - 2;//跳到地址
         }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) /*&& _ttol(CommandResolve(Command, 3))*/)
+            {
+                ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
+                                                                                                 //((COrder*)pParam)->RunData.RunCount = _ttol(CommandResolve(Command, 3)) - 2;//跳到地址
+            }
+        }    
     }
 #endif
     /************************************************************運動參數***********************************************************/
     if (CommandResolve(Command, 0) == L"DispenseDotSet")
     {
-        ((COrder*)pParam)->DispenseDotSet.GlueOpenTime = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->DispenseDotSet.GlueCloseTime = _ttol(CommandResolve(Command, 2));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DispenseDotSet.GlueOpenTime = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->DispenseDotSet.GlueCloseTime = _ttol(CommandResolve(Command, 2));
+        }     
     }
     if (CommandResolve(Command, 0) == L"DispenseDotEnd")
     {
-        ((COrder*)pParam)->DispenseDotEnd.RiseDistance = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed = _ttol(CommandResolve(Command, 2));
-        ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed = _ttol(CommandResolve(Command, 3));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DispenseDotEnd.RiseDistance = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed = _ttol(CommandResolve(Command, 2));
+            ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed = _ttol(CommandResolve(Command, 3));
+        }    
     }
     if (CommandResolve(Command, 0) == L"DotSpeedSet")
     {
-        ((COrder*)pParam)->DotSpeedSet.EndSpeed = _ttol(CommandResolve(Command, 1));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DotSpeedSet.EndSpeed = _ttol(CommandResolve(Command, 1));
+        }        
     }
     if (CommandResolve(Command, 0) == L"DotAccPercent")
     {
-        ((COrder*)pParam)->DotSpeedSet.AccSpeed = ((COrder*)pParam)->DotSpeedSet.AccSpeed * _ttol(CommandResolve(Command, 1)) / 100;
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DotSpeedSet.AccSpeed = ((COrder*)pParam)->DotSpeedSet.AccSpeed * _ttol(CommandResolve(Command, 1)) / 100;
+        }
     }
     if (CommandResolve(Command, 0) == L"DispenseLineSet")
     {
-        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance = _ttol(CommandResolve(Command, 2));
-        ((COrder*)pParam)->DispenseLineSet.NodeTime = _ttol(CommandResolve(Command, 3));
-        ((COrder*)pParam)->DispenseLineSet.StayTime = _ttol(CommandResolve(Command, 4));
-        ((COrder*)pParam)->DispenseLineSet.ShutdownDistance = _ttol(CommandResolve(Command, 5));
-        ((COrder*)pParam)->DispenseLineSet.ShutdownDelay = _ttol(CommandResolve(Command, 6));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance = _ttol(CommandResolve(Command, 2));
+            ((COrder*)pParam)->DispenseLineSet.NodeTime = _ttol(CommandResolve(Command, 3));
+            ((COrder*)pParam)->DispenseLineSet.StayTime = _ttol(CommandResolve(Command, 4));
+            ((COrder*)pParam)->DispenseLineSet.ShutdownDistance = _ttol(CommandResolve(Command, 5));
+            ((COrder*)pParam)->DispenseLineSet.ShutdownDelay = _ttol(CommandResolve(Command, 6));
+        }    
     }
     if (CommandResolve(Command, 0) == L"DispenseLineEnd")
     {
-        ((COrder*)pParam)->DispenseLineEnd.Type = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->DispenseLineEnd.LowSpeed = _ttol(CommandResolve(Command, 2));
-        ((COrder*)pParam)->DispenseLineEnd.Height = _ttol(CommandResolve(Command, 3));
-        ((COrder*)pParam)->DispenseLineEnd.Width = _ttol(CommandResolve(Command, 4));
-        ((COrder*)pParam)->DispenseLineEnd.HighSpeed = _ttol(CommandResolve(Command, 5));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->DispenseLineEnd.Type = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->DispenseLineEnd.LowSpeed = _ttol(CommandResolve(Command, 2));
+            ((COrder*)pParam)->DispenseLineEnd.Height = _ttol(CommandResolve(Command, 3));
+            ((COrder*)pParam)->DispenseLineEnd.Width = _ttol(CommandResolve(Command, 4));
+            ((COrder*)pParam)->DispenseLineEnd.HighSpeed = _ttol(CommandResolve(Command, 5));
+        }    
     }
     if (CommandResolve(Command, 0) == L"LineSpeedSet")
     {
-        ((COrder*)pParam)->LineSpeedSet.EndSpeed = _ttol(CommandResolve(Command, 1));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->LineSpeedSet.EndSpeed = _ttol(CommandResolve(Command, 1));
+        } 
     }
     if (CommandResolve(Command, 0) == L"ZGoBack")
     {
-        ((COrder*)pParam)->ZSet.ZBackHeight = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->ZSet.ZBackType = _ttol(CommandResolve(Command, 2));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->ZSet.ZBackHeight = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->ZSet.ZBackType = _ttol(CommandResolve(Command, 2));
+        }  
     }
     if (CommandResolve(Command, 0) == L"DispenseAccSet") 
     {
-        if (_ttol(CommandResolve(Command, 1)) == 0)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
         {
-            ((COrder*)pParam)->DotSpeedSet.AccSpeed = _ttol(CommandResolve(Command, 2));
         }
-        else
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
         {
-            ((COrder*)pParam)->LineSpeedSet.AccSpeed = _ttol(CommandResolve(Command, 2));
-        }   
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            if (_ttol(CommandResolve(Command, 1)) == 0)
+            {
+                ((COrder*)pParam)->DotSpeedSet.AccSpeed = _ttol(CommandResolve(Command, 2));
+            }
+            else
+            {
+                ((COrder*)pParam)->LineSpeedSet.AccSpeed = _ttol(CommandResolve(Command, 2));
+            }
+        }    
     }
     if (CommandResolve(Command, 0) == L"Initialize")
     { 
-        ((COrder*)pParam)->ParameterDefult();
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->ParameterDefult();
+        }      
     }
     if (CommandResolve(Command, 0) == L"DispenserSwitch")
     {
-        ((COrder*)pParam)->m_Action.g_bIsDispend = _ttol(CommandResolve(Command, 1));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->m_Action.g_bIsDispend = _ttol(CommandResolve(Command, 1));
+        }  
     }
     if (CommandResolve(Command, 0) == L"DispenserSwitchSet")
     {
-        ((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+        {
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+        {
+            ((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
+        }      
     }
     /************************************************************影像***************************************************************/
 #ifdef VI
     if (CommandResolve(Command, 0) == L"FindMark")
     {
-        ModifyPointOffSet(pParam, Command);
-        ((COrder*)pParam)->FindMark.Point.Status = TRUE;
-        ((COrder*)pParam)->FindMark.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-        ((COrder*)pParam)->FindMark.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-        ((COrder*)pParam)->FindMark.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-        ((COrder*)pParam)->FindMark.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-        ((COrder*)pParam)->FindMark.FocusDistance = _ttol(CommandResolve(Command, 5));
-        if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//當模式1執行動作
         {
-            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum)))//判斷檔案是否存在
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            ((COrder*)pParam)->FindMark.Point.Status = TRUE;
+            ((COrder*)pParam)->FindMark.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FindMark.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FindMark.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FindMark.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+            ((COrder*)pParam)->FindMark.FocusDistance = _ttol(CommandResolve(Command, 5));
+            if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
             {
-                VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
-                ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
-            }
-            else
-            {
-                AfxMessageBox(_T("沒有此編號的檔案!"));
-            }
-        }
-        else
-        {
-            AfxMessageBox(_T("沒有此編號的檔案!"));
-        }
-    }
-    if (CommandResolve(Command, 0) == L"FindMarkAdjust")
-    {     
-        if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
-        {
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
-            {
-                //移動至查找點
-                #ifdef MOVE
-                ((COrder*)pParam)->m_Action.DoCCDMove(
-                    ((COrder*)pParam)->FindMark.Point.X,
-                    ((COrder*)pParam)->FindMark.Point.Y,
-                    ((COrder*)pParam)->FindMark.Point.Z,
-                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-                #endif  
-                _cwprintf(L"移動至查找標記\r\n");
-            }
-            VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 360);
-            VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
-            {
-                if (!VI_FindMark(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+                /*每次要載入時必須先清除Model*/
+                //影像釋放記憶體
+                if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
                 {
-                    //沒有找到
-                    _cwprintf(L"未找到\r\n");
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);     
+                    VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
                 }
-                else
+                //影像記憶體初始化
+                *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+      
+                if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum)))//判斷檔案是否存在
                 {
-                    //找到抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                }
-            }
-            else
-            {
-                if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
-                {
-                    //沒有找到
-                    _cwprintf(L"手動模式未找到\r\n");
-                    //清除手動狀態
-                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                }
-                else
-                {
-                    //清除手動狀態
-                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                    //找到抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                    _cwprintf(L"手動模式找到\r\n");
-                }
-            }    
-            //紀錄對位點
-            ((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
-            ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FindMark.Point.X;
-            ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
-        }
-        else
-        {
-            AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
-        }
-    }
-    if (CommandResolve(Command, 0) == L"FiducialMark")
-    {
-        ModifyPointOffSet(pParam, Command);
-        if (!((COrder*)pParam)->FindMark.Point.Status)
-        {
-            if (!((COrder*)pParam)->FiducialMark1.Point.Status)
-            {
-                ((COrder*)pParam)->FiducialMark1.Point.Status = TRUE;
-                ((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                ((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                ((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));
-                if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
-                {
-                    if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
-                    {
-                        VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
-                        ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
-                    }
-                    else
-                    {
-                        AfxMessageBox(_T("沒有此編號的檔案!"));
-                    }
+                    //載入影像Model
+                    VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
+                    ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
                 }
                 else
                 {
@@ -1730,35 +2221,131 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             }
             else
             {
-                if (!((COrder*)pParam)->FiducialMark2.Point.Status)
+                AfxMessageBox(_T("沒有此編號的檔案!"));
+            }
+        }
+        if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+        }
+    }
+    if (CommandResolve(Command, 0) == L"FindMarkAdjust")
+    {     
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//當模式1執行動作
+        {
+            if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+            {
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode)//手動模式未開啟時
                 {
-                    ((COrder*)pParam)->FiducialMark2.Point.Status = TRUE;
-                    ((COrder*)pParam)->FiducialMark2.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                    ((COrder*)pParam)->FiducialMark2.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                    ((COrder*)pParam)->FiducialMark2.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                    ((COrder*)pParam)->FiducialMark2.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                    ((COrder*)pParam)->FiducialMark2.FocusDistance = _ttol(CommandResolve(Command, 5));
-                    if (((COrder*)pParam)->FiducialMark2.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark2.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+                    //移動至查找點
+#ifdef MOVE
+                    ((COrder*)pParam)->m_Action.DoCCDMove(
+                        ((COrder*)pParam)->FindMark.Point.X,
+                        ((COrder*)pParam)->FindMark.Point.Y,
+                        ((COrder*)pParam)->FindMark.Point.Z,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+#endif  
+                    _cwprintf(L"移動至查找標記\r\n");
+                }
+                VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 360);
+                VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
+                {
+                    if (!VI_FindMark(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
                     {
-                        if (FileExist(((COrder*)pParam)->VisionFile.ModelPath +((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum)))//判斷檔案是否存在
-                        {
-                            VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum));
-                            ((COrder*)pParam)->VisionTrigger.Trigger1Switch = FALSE;
-                            ((COrder*)pParam)->VisionTrigger.Trigger2Switch = TRUE;
-                        } 
-                        else
-                        {
-                            AfxMessageBox(_T("沒有此編號的檔案!"));
-                        }
+                        //沒有找到
+                        _cwprintf(L"未找到\r\n");
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
                     }
                     else
                     {
-                        AfxMessageBox(_T("沒有此編號的檔案!"));
+                        //找到抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+                        //紀錄對位點
+                        ((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
+                        ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FindMark.Point.X;
+                        ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
+
+                        //紀錄影像Offset至影像修正表 
+                        ((COrder*)pParam)->VisionCount++;
+                        ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+                        //影像釋放記憶體
+                        if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+                        {
+                            VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+                        }
+                        //影像記憶體初始化
+                        *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+                        //清除對位Offset資料
+                        ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
                     }
                 }
-                else
+                else//手動模式時
                 {
-                    ((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+#if defined VI &&  defined MOVE
+                    if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+                    {
+                        //沒有找到
+                        _cwprintf(L"手動模式未找到\r\n");
+                        //清除手動狀態
+                        ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    }
+                    else
+                    {
+                        //清除手動狀態
+                        ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+                        //找到抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+
+                        _cwprintf(L"手動模式找到\r\n");
+                        //紀錄對位點
+                        ((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
+                        ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FindMark.Point.X;
+                        ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
+
+                        //紀錄影像Offset至影像修正表 
+                        ((COrder*)pParam)->VisionCount++;
+                        ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+                        //影像釋放記憶體
+                        if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+                        {
+                            VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+                        }
+                        //影像記憶體初始化
+                        *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+                        //清除對位Offset資料
+                        ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+                    }
+#endif
+                }            
+            }
+            else
+            {
+                AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
+            }
+        }
+    }
+    if (CommandResolve(Command, 0) == L"FiducialMark")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 1) //當模式1執行動作
+        {
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+           /* if (!((COrder*)pParam)->FindMark.Point.Status)//防止混用設計
+            {*/
+                if (!((COrder*)pParam)->FiducialMark1.Point.Status)
+                {
+                    ((COrder*)pParam)->FiducialMark1.Point.Status = TRUE;
                     ((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
                     ((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
                     ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
@@ -1766,12 +2353,20 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));
                     if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
                     {
+                        /*每次載入時必須清除Model*/
+                        //影像釋放記憶體
+                        if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+                        {
+                            VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+                        }  
+                        //影像記憶體初始化
+                        *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;                     
                         if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
                         {
+                            //載入影像Model
                             VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
                             ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
-                            ((COrder*)pParam)->VisionTrigger.Trigger2Switch = FALSE;
-                        }  
+                        }
                         else
                         {
                             AfxMessageBox(_T("沒有此編號的檔案!"));
@@ -1782,201 +2377,406 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         AfxMessageBox(_T("沒有此編號的檔案!"));
                     }
                 }
-            }
-        }  
+                else
+                {
+                    if (!((COrder*)pParam)->FiducialMark2.Point.Status)
+                    {
+                        ((COrder*)pParam)->FiducialMark2.Point.Status = TRUE;
+                        ((COrder*)pParam)->FiducialMark2.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                        ((COrder*)pParam)->FiducialMark2.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                        ((COrder*)pParam)->FiducialMark2.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+                        ((COrder*)pParam)->FiducialMark2.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+                        ((COrder*)pParam)->FiducialMark2.FocusDistance = _ttol(CommandResolve(Command, 5));
+                        if (((COrder*)pParam)->FiducialMark2.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark2.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+                        {
+                            /*每次載入時必須清除Model*/
+                            //影像釋放記憶體
+                            if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+                            {
+                                VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+                            }
+                            //影像記憶體初始化
+                            *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+                            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum)))//判斷檔案是否存在
+                            {
+                                //載入影像Model
+                                VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum));
+                                ((COrder*)pParam)->VisionTrigger.Trigger1Switch = FALSE;
+                                ((COrder*)pParam)->VisionTrigger.Trigger2Switch = TRUE;
+                            }
+                            else
+                            {
+                                AfxMessageBox(_T("沒有此編號的檔案!"));
+                            }
+                        }
+                        else
+                        {
+                            AfxMessageBox(_T("沒有此編號的檔案!"));
+                        }
+                    }
+                    else
+                    {
+                        ((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+                        ((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                        ((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                        ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+                        ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+                        ((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));
+                        if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+                        {
+                            /*每次載入時必須清除Model*/
+                            //影像釋放記憶體
+                            if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+                            {
+                                VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+                            }
+                            //影像記憶體初始化
+                            *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+                            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
+                            {
+                                //載入影像Model
+                                VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
+                                ((COrder*)pParam)->VisionTrigger.Trigger1Switch = TRUE;
+                                ((COrder*)pParam)->VisionTrigger.Trigger2Switch = FALSE;
+                            }
+                            else
+                            {
+                                AfxMessageBox(_T("沒有此編號的檔案!"));
+                            }
+                        }
+                        else
+                        {
+                            AfxMessageBox(_T("沒有此編號的檔案!"));
+                        }
+                    }
+                }
+            //}
+        } 
+        if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+        }
     }
     if (CommandResolve(Command, 0) == L"FiducialMarkAdjust")
     {
-        if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0 && *(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+        if (((COrder*)pParam)->ModelControl.Mode == 1) //當模式1執行動作
         {
-            //第一點處理
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
+            if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0 && *(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
             {
-                //移動至第一點
-                #ifdef MOVE
-                ((COrder*)pParam)->m_Action.DoCCDMove(
-                    ((COrder*)pParam)->FiducialMark1.Point.X,
-                    ((COrder*)pParam)->FiducialMark1.Point.Y,
-                    ((COrder*)pParam)->FiducialMark1.Point.Z,
-                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-                #endif
-                _cwprintf(L"移動至第一點\r\n");
-            }
-            VI_SetPatternMatch(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
-            VI_SetSearchRange(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
-            {
-                if (!VI_FindMark(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+                //第一點處理
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
                 {
-                    _cwprintf(L"第一點未找到\r\n");
-                    //沒有找到
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    //移動至第一點
+#ifdef MOVE
+                    ((COrder*)pParam)->m_Action.DoCCDMove(
+                        ((COrder*)pParam)->FiducialMark1.Point.X,
+                        ((COrder*)pParam)->FiducialMark1.Point.Y,
+                        ((COrder*)pParam)->FiducialMark1.Point.Z,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+#endif
+                    _cwprintf(L"移動至第一點\r\n");
                 }
-                else
+                VI_SetPatternMatch(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
+                VI_SetSearchRange(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
                 {
-                    _cwprintf(L"第一點找到\r\n");
-                    //找到抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+                    if (!VI_FindMark(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+                    {
+                        _cwprintf(L"第一點未找到\r\n");
+                        //沒有找到
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    }
+                    else
+                    {
+                        _cwprintf(L"第一點找到\r\n");
+                        //找到抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+                        ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+                    }
                 }
-            }
-            else if(((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//手動未找到
-            {
-                if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+                else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//手動未找到
                 {
-                    _cwprintf(L"手動模式第一點未找到\r\n");
-                    //沒有找到
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);
+#if defined VI &&  defined MOVE
+                    if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+                    {
+                        _cwprintf(L"手動模式第一點未找到\r\n");
+                        //沒有找到
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    }
+                    else
+                    {
+                        //找到清除手動狀態、將對位點依設置已經有Offset
+                        //找到抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+                        ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+                        ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+                        _cwprintf(L"手動模式第一點找到\r\n");
+                    }
+#endif
                 }
-                else
-                {
-                    //找到清除手動狀態、將對位點依設置已經有Offset
-                    //找到抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
-                    _cwprintf(L"手動模式第一點找到\r\n");
-                }
-            }
-            
 
-            //第二點處理
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
-            {
-                //移動至第二點
-                #ifdef MOVE
-                ((COrder*)pParam)->m_Action.DoCCDMove(
-                    ((COrder*)pParam)->FiducialMark2.Point.X,
-                    ((COrder*)pParam)->FiducialMark2.Point.Y,
-                    ((COrder*)pParam)->FiducialMark2.Point.Z,
-                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
-                #endif
-                _cwprintf(L"第一點找到移動至第二點\r\n");
-            }
-            VI_SetPatternMatch(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
-            VI_SetSearchRange(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
-            {
-                if (!VI_FindMark(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
-                {
-                    _cwprintf(L"第一點找到移動至第二點未找到\r\n");
-                    //沒有找到
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                }
-                else
-                {
-                    //找到抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
-                    _cwprintf(L"第一點找到移動至第二點找到\r\n");
-                }
-            }
-            else if(((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//如果手動模式開啟 且對位點2未找到但對位點1找到
-            {
-                if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
-                {
-                    //沒有找到
-                    _cwprintf(L"手動模式第一點找到第二點未找到\r\n");
-                    //找到清除手動狀態、將對位點依設置已經有Offset
-                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
-                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                }
-                else
-                {
-                    //找到都抬升
-                    #ifdef MOVE
-                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                        ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-                    #endif
-                    //找到清除手動狀態、將對位點依設置已經有Offset
-                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
-                    _cwprintf(L"手動模式第一點找到第二點找到\r\n");
-                }
-            }
 
-            /*都找到後處理*/
-            if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
-            {
-                //算出偏移角度
-                ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
-                    ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y,
-                    ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y,
-                    ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY,
-                    ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY);
-
-                //寫入資料
-                ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FiducialMark1.Point.X;
-                ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FiducialMark1.Point.Y;
-                ((COrder*)pParam)->VisionOffset.OffsetX = ((COrder*)pParam)->FiducialMark1.OffsetX;
-                ((COrder*)pParam)->VisionOffset.OffsetY = ((COrder*)pParam)->FiducialMark1.OffsetY;
-
-                //初始標記為未尋找
-                ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
-                ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
-                _cwprintf(L"第一點找到第二點找到Offset計算完成");
-            } 
-
-            /*判斷暫停模式是否開啟*/
-            if (((COrder*)pParam)->VisionSerchError.Pausemode)
-            {
-                if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
+                //第二點處理
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
                 {
-                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+                    //移動至第二點
+#ifdef MOVE
+                    ((COrder*)pParam)->m_Action.DoCCDMove(
+                        ((COrder*)pParam)->FiducialMark2.Point.X,
+                        ((COrder*)pParam)->FiducialMark2.Point.Y,
+                        ((COrder*)pParam)->FiducialMark2.Point.Z,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+#endif
+                    _cwprintf(L"第一點找到移動至第二點\r\n");
                 }
-                else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+                VI_SetPatternMatch(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
+                VI_SetSearchRange(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+                if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
                 {
-                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;    
+                    if (!VI_FindMark(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+                    {
+                        _cwprintf(L"第一點找到移動至第二點未找到\r\n");
+                        //沒有找到
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    }
+                    else
+                    {
+                        //找到抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+                        ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+                        _cwprintf(L"第一點找到移動至第二點找到\r\n");
+                    }
                 }
-                ((COrder*)pParam)->VisionSerchError.Pausemode = FALSE;
+                else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//如果手動模式開啟 且對位點2未找到但對位點1找到
+                {
+#if defined VI &&  defined MOVE
+                    if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+                    {
+                        //沒有找到
+                        _cwprintf(L"手動模式第一點找到第二點未找到\r\n");
+                        //找到清除手動狀態、將對位點依設置已經有Offset
+                        ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+                        ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
+                        ((COrder*)pParam)->VisionFindMarkError(pParam);
+                    }
+                    else
+                    {
+                        //找到都抬升
+#ifdef MOVE
+                        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+                            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+#endif
+                        //找到清除手動狀態、將對位點依設置已經有Offset
+                        ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+                        ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+                        _cwprintf(L"手動模式第一點找到第二點找到\r\n");
+                    }
+#endif
+                }
+
+                /*都找到後處理*/
+                if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
+                {
+                    //算出偏移角度
+                    ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
+                        ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y,
+                        ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y,
+                        ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY,
+                        ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY);
+
+                    //寫入資料
+                    ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FiducialMark1.Point.X;
+                    ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FiducialMark1.Point.Y;
+                    ((COrder*)pParam)->VisionOffset.OffsetX = ((COrder*)pParam)->FiducialMark1.OffsetX;
+                    ((COrder*)pParam)->VisionOffset.OffsetY = ((COrder*)pParam)->FiducialMark1.OffsetY;
+
+                    //初始標記為未尋找
+                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
+                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
+                    _cwprintf(L"第一點找到第二點找到Offset計算完成");
+
+                    //紀錄影像Offset至影像修正表 
+                    ((COrder*)pParam)->VisionCount++;
+                    ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+      
+                    //影像釋放記憶體
+                    if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+                    {
+                        VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+                    }
+                    if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+                    {
+                        VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+                    }
+                    //影像記憶體初始化
+                    *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+                    *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+                    //清除對位Offset資料
+                    ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+                }
+
+                /*判斷暫停模式是否開啟*/
+                if (((COrder*)pParam)->VisionSerchError.Pausemode)
+                {
+                    if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
+                    {
+                        ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+                    }
+                    else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+                    {
+                        ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+                    }
+                    ((COrder*)pParam)->VisionSerchError.Pausemode = FALSE;
+                }
             }
-        }
-        else
-        {
-            AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
+            else
+            {
+                AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
+            }
         }
     }
 #endif
     if (CommandResolve(Command, 0) == L"FindFiducialAngle")
     {
-        ((COrder*)pParam)->VisionSet.Startangle = _ttol(CommandResolve(Command, 1));
-        ((COrder*)pParam)->VisionSet.Endangle = _ttol(CommandResolve(Command, 2));
+        if (((COrder*)pParam)->ModelControl.Mode == 1)
+        {
+            ((COrder*)pParam)->VisionSet.Startangle = _ttol(CommandResolve(Command, 1));
+            ((COrder*)pParam)->VisionSet.Endangle = _ttol(CommandResolve(Command, 2));
+        }
     }
     if (CommandResolve(Command, 0) == L"CameraTrigger")
     {
-        ModifyPointOffSet(pParam, Command);
-        if (((COrder*)pParam)->VisionTrigger.Trigger1Switch)
+        if (((COrder*)pParam)->ModelControl.Mode == 1)
         {
-            ((COrder*)pParam)->VisionTrigger.Trigger1.push_back({ 0,_ttol(CommandResolve(Command,1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                _ttol(CommandResolve(Command,2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y ,_ttol(CommandResolve(Command,3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z });
-        }
-        else if (((COrder*)pParam)->VisionTrigger.Trigger2Switch)
-        {
-            ((COrder*)pParam)->VisionTrigger.Trigger2.push_back({ 0,_ttol(CommandResolve(Command,1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                _ttol(CommandResolve(Command,2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,_ttol(CommandResolve(Command,3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z });
-        }  
-        else
-        {
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+            if (((COrder*)pParam)->VisionTrigger.Trigger1Switch)
+            {
+                ((COrder*)pParam)->VisionTrigger.Trigger1.push_back({ 0,_ttol(CommandResolve(Command,1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                    _ttol(CommandResolve(Command,2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y ,_ttol(CommandResolve(Command,3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z });
+            }
+            else if (((COrder*)pParam)->VisionTrigger.Trigger2Switch)
+            {
+                ((COrder*)pParam)->VisionTrigger.Trigger2.push_back({ 0,_ttol(CommandResolve(Command,1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                    _ttol(CommandResolve(Command,2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,_ttol(CommandResolve(Command,3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z });
+            }
+            else
+            {
 
+            }
+        }
+        if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+        }
+        
+    }
+    /************************************************************雷射****************************************************************/
+#ifdef LA
+    if (CommandResolve(Command, 0) == L"LaserHeight") { 
+        if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
+        {
+            //紀錄掃描點和開關
+            ((COrder*)pParam)->LaserSwitch.LaserHeight = _ttol(CommandResolve(Command, 1));
+            if (((COrder*)pParam)->LaserSwitch.LaserHeight)
+            {
+                ((COrder*)pParam)->LaserData.LaserHeightPoint.X = _ttol(CommandResolve(Command, 2));
+                ((COrder*)pParam)->LaserData.LaserHeightPoint.Y = _ttol(CommandResolve(Command, 3));
+            }
+            //判斷是否模式轉換
+            if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種模式都存在取消一種
+            {
+                ((COrder*)pParam)->LaserSwitch.LaserDetect = FALSE;
+            }
         }
     }
+    if (CommandResolve(Command, 0) == L"LaserPointAdjust")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
+        {
+            ((COrder*)pParam)->LaserSwitch.LaserPointAdjust = _ttol(CommandResolve(Command, 1));
+            //模式轉換
+            if (((COrder*)pParam)->LaserSwitch.LaserAdjust && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust)//兩個模式都成立取消一個
+            {
+                ((COrder*)pParam)->LaserSwitch.LaserAdjust = FALSE;
+            }
+            //開啟雷射模式
+            ((COrder*)pParam)->ModelControl.Mode = 2;
+            if (((COrder*)pParam)->LaserSwitch.LaserPointAdjust && ((COrder*)pParam)->LaserSwitch.LaserHeight)
+            {
+                /*單點測高*/
+
+                ((COrder*)pParam)->FinalWorkCoordinateData.X = ((COrder*)pParam)->LaserData.LaserHeightPoint.X + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->LaserData.LaserHeightPoint.Y + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+                VisionModify(pParam);
+                ((COrder*)pParam)->m_Action.LA_Dot3D(
+                    ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                    ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                    ((COrder*)pParam)->LaserData.LaserMeasureHeight,
+                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+
+                //紀錄測量高度至雷射修正表
+                ((COrder*)pParam)->LaserCount++;
+                ((COrder*)pParam)->LaserAdjust.push_back({ ((COrder*)pParam)->LaserData.LaserMeasureHeight });
+            }
+            else if (((COrder*)pParam)->LaserSwitch.LaserPointAdjust && ((COrder*)pParam)->LaserSwitch.LaserDetect)
+            {
+                /*線段測高*/
+            }
+        }
+    }
+    if (CommandResolve(Command, 0) == L"LaserDetect")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
+        {
+            ((COrder*)pParam)->LaserSwitch.LaserDetect = _ttol(CommandResolve(Command, 1));
+            if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種模式都存在取消一種
+            {
+                ((COrder*)pParam)->LaserSwitch.LaserHeight = FALSE;
+            }
+            if (((COrder*)pParam)->LaserSwitch.LaserDetect)
+            {
+                ((COrder*)pParam)->LaserData.LaserDetectLS.X = _ttol(CommandResolve(Command, 2));
+                ((COrder*)pParam)->LaserData.LaserDetectLS.Y = _ttol(CommandResolve(Command, 3));
+                ((COrder*)pParam)->LaserData.LaserDetectLE.X = _ttol(CommandResolve(Command, 4));
+                ((COrder*)pParam)->LaserData.LaserDetectLE.Y = _ttol(CommandResolve(Command, 5));
+            }
+        }
+    }
+    if (CommandResolve(Command, 0) == L"LaserAdjust")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
+        {
+            ((COrder*)pParam)->LaserSwitch.LaserAdjust = _ttol(CommandResolve(Command, 1));
+            if (((COrder*)pParam)->LaserSwitch.LaserAdjust && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust)//兩個模式都成立取消一個
+            {
+                ((COrder*)pParam)->LaserSwitch.LaserPointAdjust = FALSE;
+            }
+        }
+    } 
+    if (CommandResolve(Command, 0) == L"LaserSkip")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
+        {
+            ((COrder*)pParam)->LaserSwitch.LaserSkip = _ttol(CommandResolve(Command, 1));
+        }
+    }
+#endif
     g_pSubroutineThread = NULL;
     return 0;
 }
@@ -2008,18 +2808,26 @@ void COrder::ModifyPointOffSet(LPVOID pParam ,CString Command)
 {
 #ifdef MOVE
     if (!((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
-    { 
-        CString XYZOffset = ((COrder*)pParam)->m_Action.NowOffSet(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)));
+    {
+        CString XYZOffset;
+        if (((COrder*)pParam)->ModelControl.Mode == 1)
+        {
+            XYZOffset = ((COrder*)pParam)->VirtualNowOffSet(pParam, Command);
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+        {
+            XYZOffset = ((COrder*)pParam)->m_Action.NowOffSet(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)));
+        }
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(XYZOffset, 0));
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(XYZOffset, 1));
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(XYZOffset, 2));
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
         //修正完畢斷膠抬升
         ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 
+            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
             ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
-    }
+    } 
 #endif
 }
 /*影像修正*/
@@ -2048,7 +2856,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
         {
             if (((COrder*)pParam)->VisionTrigger.Trigger1.size())//有Trigger時
             {
-                for (int i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger1.size(); i++)
+                for (UINT i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger1.size(); i++)
                 {
                     #ifdef MOVE
                     ((COrder*)pParam)->m_Action.DoCCDMove(
@@ -2093,7 +2901,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
         {
             if (((COrder*)pParam)->VisionTrigger.Trigger2.size())//有Trigger時
             {
-                for (int i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger2.size(); i++)
+                for (UINT i = 0; i < ((COrder*)pParam)->VisionTrigger.Trigger2.size(); i++)
                 {
 #ifdef MOVE
                     ((COrder*)pParam)->m_Action.DecideVirtualPoint(
@@ -2171,6 +2979,152 @@ void COrder::VisionFindMarkError(LPVOID pParam)
     default:
         break;
     }
+}
+/*雷射修正*/
+void COrder::LaserModify(LPVOID pParam) 
+{
+#ifdef LA
+    if (((COrder*)pParam)->LaserData.LaserMeasureHeight != -999999999)//修正
+    {
+        ((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->LaserData.LaserMeasureHeight;
+    }
+#endif 
+}
+/*選擇影像修正*/
+void COrder::ChooseVisionModify(LPVOID pParam) {
+    CString StrBuff,Temp;
+    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
+    {
+        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
+        {
+            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
+            StrBuff = StrBuff + Temp;
+        }
+    }
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifNumber.size(); i++)
+    {
+#ifdef PRINTF
+        _cwprintf(L"PositionModifNumber:%s\n", ((COrder*)pParam)->PositionModifNumber.at(i).Address);
+#endif
+        if (((COrder*)pParam)->PositionModifNumber.at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifNumber.at(i).VisionNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifNumber.at(i).VisionNumber = 0;
+            }
+            ((COrder*)pParam)->VisionOffset = ((COrder*)pParam)->VisionAdjust.at(((COrder*)pParam)->PositionModifNumber.at(i).VisionNumber).VisionOffset;
+        }
+    }
+}
+/*選擇雷射修正*/
+void COrder::ChooseLaserModify(LPVOID pParam){
+    CString StrBuff, Temp;
+    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
+    {
+        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
+        {
+            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
+            StrBuff = StrBuff + Temp;
+        }
+    }
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifNumber.size(); i++)
+    {
+#ifdef PRINTF
+        _cwprintf(L"PositionModifNumber:%s\n", ((COrder*)pParam)->PositionModifNumber.at(i).Address);
+#endif
+        if (((COrder*)pParam)->PositionModifNumber.at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifNumber.at(i).LaserNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifNumber.at(i).LaserNumber = 0;
+            }
+            ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifNumber.at(i).LaserNumber).LaserMeasureHeight;
+        }
+    }
+}
+/*紀錄修正表*/
+void COrder::RecordCorrectionTable(LPVOID pParam) {
+    CString StrBuff,Temp;
+    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
+    {
+        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
+        {
+            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
+            StrBuff = StrBuff + Temp;
+        }
+    }
+#ifdef PRINTF
+    _cwprintf(L"Address:%s\n", StrBuff);
+#endif
+    if (((COrder*)pParam)->PositionModifNumber.size())//修正表有值
+    { 
+#ifdef PRINTF
+        _cwprintf(L"表中有值增加PositionModifNumber:%d\n", ((COrder*)pParam)->PositionModifNumber.size());
+#endif
+        for (UINT i = 0; i < ((COrder*)pParam)->PositionModifNumber.size(); i++)//判斷表中地址是否存在
+        {
+            if (((COrder*)pParam)->PositionModifNumber.at(i).Address == StrBuff)
+            {
+                if (((COrder*)pParam)->ModelControl.Mode == 1)//目前是影像模式
+                {
+                    if (((COrder*)pParam)->PositionModifNumber.at(i).VisionNumber == -1)//且此地址影像表沒有值
+                    {
+                        ((COrder*)pParam)->PositionModifNumber.at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
+                    }            
+                }
+                else if (((COrder*)pParam)->ModelControl.Mode == 2)
+                {
+                    if (((COrder*)pParam)->PositionModifNumber.at(i).LaserNumber == -1)//且此地址雷射表沒有值
+                    {
+                        ((COrder*)pParam)->PositionModifNumber.at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+                    }
+                }
+                break;
+            } 
+            else if (i == ((COrder*)pParam)->PositionModifNumber.size() - 1)//地址不存在表中
+            {
+                if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+                {
+                    ((COrder*)pParam)->PositionModifNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+                }
+                else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
+                {
+                    ((COrder*)pParam)->PositionModifNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+                }
+            }
+        }   
+    }
+    else
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+        {
+            ((COrder*)pParam)->PositionModifNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+#ifdef PRINTF
+            _cwprintf(L"進入影像模式增加PositionModifNumber");
+#endif
+        }
+        else  if (((COrder*)pParam)->ModelControl.Mode == 2)//跳過影像模式直接雷射模式
+        {
+            ((COrder*)pParam)->PositionModifNumber.push_back({ StrBuff, 0, ((COrder*)pParam)->LaserCount });
+#ifdef PRINTF
+            _cwprintf(L"跳過影像進入雷射模式增加PositionModifNumber");
+#endif
+        }
+    }
+}
+/*虛擬位置偏移*/
+CString COrder::VirtualNowOffSet(LPVOID pParam ,CString Command)
+{
+    LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+    CString csBuff = 0;
+    lNowX = ((COrder*)pParam)->VirtualCoordinateData.X;
+    lNowY = ((COrder*)pParam)->VirtualCoordinateData.Y;
+    lNowZ = ((COrder*)pParam)->VirtualCoordinateData.Z;
+    csBuff.Format(_T("%ld,%ld,%ld"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
+    return csBuff;
 }
 /**************************************************************************程序變數處理區塊************************************************************************/
 /*指令分解*/
@@ -2276,6 +3230,23 @@ void COrder::DecideInit()
     VisionTrigger.AdjustStatus = 0;
     VisionTrigger.Trigger1Switch = FALSE;
     VisionTrigger.Trigger2Switch = FALSE;
+    //雷射狀態初始化
+    LaserSwitch.LaserHeight = FALSE;
+    LaserSwitch.LaserPointAdjust = FALSE;
+    LaserSwitch.LaserDetect = FALSE;
+    LaserSwitch.LaserAdjust = FALSE;
+    LaserSwitch.LaserSkip = FALSE;
+    //模式初始化
+    ModelControl.Mode = 1;
+    ModelControl.ModeChangeAddress = 0;
+    //計數歸零
+    VisionCount = 0;
+    LaserCount = 0;
+    //影像存值初始化
+    PositionModifNumber.clear();
+    VisionAdjust.push_back({{ { 0,0,0,0 },0,0,0 } });
+    LaserAdjust.push_back( {-999999999} );
+
     /****************************************************************/
     Time = 0;
 }
@@ -2329,6 +3300,11 @@ void COrder::DecideClear()
     //影像Trigger陣列清除
     VisionTrigger.Trigger1.clear();
     VisionTrigger.Trigger2.clear();
+
+    //控制模組陣列清除    
+    PositionModifNumber.clear();
+    VisionAdjust.clear();
+    LaserAdjust.clear();
 }
 /*劃分主程式和副程式*/
 void COrder::MainSubProgramSeparate()
@@ -2423,7 +3399,9 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
     int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
     for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
     {
+#ifdef PRINTF
         _cwprintf(_T("%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
+#endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
         {
@@ -2432,17 +3410,23 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
             {
                 BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+#ifdef PRINTF
                 _cwprintf(L"標籤只有Y變X正常:%s\n", BlockBuff);
+#endif
             }
             else
             {
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+#ifdef PRINTF
                 _cwprintf(L"標籤XY變:%s\n", BlockBuff);
+#endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"有阻斷\n");
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
                     if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back() + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
@@ -2467,14 +3451,18 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.back() = !((COrder*)pParam)->RepeatData.SSwitch.back();
+#ifdef PRINTF
                     _cwprintf(L"最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.back() = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()--;
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"刪除陣列\n");
+#endif
                     DeleteStepRepeat = TRUE;
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
                     ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
@@ -2496,7 +3484,9 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
                 (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"有阻斷\n");
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
@@ -2512,7 +3502,9 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"刪除陣列\n");
+#endif
                     DeleteStepRepeat = TRUE;                   
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
                     ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
@@ -2544,7 +3536,9 @@ void COrder::BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus
     {
         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
         {
+#ifdef PRINTF
             _cwprintf(L"進入新增內層迴圈\n");
+#endif
             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
             ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
@@ -2571,7 +3565,9 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
     int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
     for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
     {
+#ifdef PRINTF
         _cwprintf(L"第%d:%d-%d.StepRepeatX 檢查阻斷\n", NowCount,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
         {
@@ -2580,17 +3576,23 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
             {
                 BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+#ifdef PRINTF
                 _cwprintf(L"第%d:標籤只有Y變X正常:%s\n", NowCount, BlockBuff);
+#endif
             }
             else
             { 
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+#ifdef PRINTF
                 _cwprintf(L"第%d:標籤XY變:%s\n", NowCount, BlockBuff);
+#endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"第%d:有阻斷\n", NowCount);
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
                     if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount) + (_ttol(CommandResolve(Command, 1))*(_ttol(CommandResolve(Command, 3)) - 1)))
@@ -2612,23 +3614,33 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
+#ifdef PRINTF
                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+#endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                     _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
@@ -2639,7 +3651,9 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除成功\n", NowCount);
+#endif
                     return FALSE;
                 }
             }
@@ -2650,16 +3664,22 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
             //N型 阻斷編號
             BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                 (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+#ifdef PRINTF
             _cwprintf(L"第%d:標籤:%s\n", NowCount, BlockBuff);
+#endif
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"第%d:有阻斷\n", NowCount);
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
@@ -2669,13 +3689,19 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+#endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                     _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
@@ -2686,13 +3712,17 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除成功\n", NowCount);
+#endif
                     return FALSE;
                 }
             }
         }
     }
-    _cwprintf(L"結束阻斷\n");
+#ifdef PRINTF
+    _cwprintf(L"結束阻斷\n"); 
+#endif
     return TRUE;
 }
 /*阻斷處理方式(加入StepRepeatY時)*/
@@ -2703,7 +3733,9 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
     int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
     for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
     {
+#ifdef PRINTF
         _cwprintf(_T("%d-%d.StepRepeatY 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
+#endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
         {
@@ -2712,28 +3744,38 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
             {
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());/**/
+#ifdef PRINTF
                 _cwprintf(L"標籤只有X變Y正常:%s\n", BlockBuff);
+#endif
             }
             else
             {
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
+#ifdef PRINTF
                 _cwprintf(L"標籤XY變:%s\n", BlockBuff);
+#endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"有阻斷\n");
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)/**/
                 {
                     if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back() + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
                     {
                         ((COrder*)pParam)->RepeatData.SSwitch.back() = FALSE;
+#ifdef PRINTF
                         _cwprintf(L"最後一個:SSwitch轉換:%d\n",((COrder*)pParam)->RepeatData.SSwitch.back());
+#endif
                     }
                     else  if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back())
                     {
                         ((COrder*)pParam)->RepeatData.SSwitch.back() = TRUE;
+#ifdef PRINTF
                         _cwprintf(L"最後一個:SSwitch轉換:%d\n",((COrder*)pParam)->RepeatData.SSwitch.back());
+#endif
                     }
                     if (!((COrder*)pParam)->RepeatData.SSwitch.back())
                     {
@@ -2748,14 +3790,18 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)/**/
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.back() = !((COrder*)pParam)->RepeatData.SSwitch.back();
+#ifdef PRINTF
                     _cwprintf(L"最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
+#endif
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.back() = _ttol(CommandResolve(Command, 4));
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.back()--;
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"刪除陣列\n");
+#endif
                     DeleteStepRepeat = TRUE;
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
                     ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
@@ -2777,7 +3823,9 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
                 (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"有阻斷\n");
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountY.back() > 1)/**/
                 {
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
@@ -2793,7 +3841,9 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"刪除陣列\n");
+#endif
                     DeleteStepRepeat = TRUE;
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
                     ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
@@ -2825,7 +3875,9 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
     {
         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
         {
+#ifdef PRINTF
             _cwprintf(L"進入新增內層迴圈\n");
+#endif
             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
             ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
@@ -2852,7 +3904,9 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
     int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
     for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
     {
+#ifdef PRINTF
         _cwprintf(L"第%d:%d-%d.StepRepeatY 檢查阻斷\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
         {
@@ -2861,17 +3915,23 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
             {
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));/**/
+#ifdef PRINTF
                 _cwprintf(L"第%d:標籤只有Y變X正常:%s\n", NowCount, BlockBuff);
+#endif
             }
             else
             {
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+#ifdef PRINTF
                 _cwprintf(L"第%d:標籤XY變:%s\n", NowCount, BlockBuff);
+#endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"第%d:有阻斷\n", NowCount);
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)/**/
                 {
                     if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y == ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount) + (_ttol(CommandResolve(Command, 2))*(_ttol(CommandResolve(Command, 4)) - 1)))/**/
@@ -2893,23 +3953,33 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     }
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
+#ifdef PRINTF
                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
+#endif
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) = _ttol(CommandResolve(Command, 4));
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+#endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                     _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
@@ -2920,7 +3990,9 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除成功\n", NowCount);
+#endif
                     return FALSE;
                 }
             }
@@ -2931,16 +4003,22 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
             //N型 阻斷編號
             BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                 (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
+#ifdef PRINTF
             _cwprintf(L"第%d:標籤:%s\n", NowCount, BlockBuff);
+#endif
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
+#ifdef PRINTF
                 _cwprintf(L"第%d:有阻斷\n", NowCount);
+#endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)/**/
                 {
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)/**/
                 {
@@ -2950,13 +4028,19 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     /**/((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X + _ttol(CommandResolve(Command, 1));
                     /**/((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
+#ifdef PRINTF
                     _cwprintf(L"第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+#endif
                 }
                 else
                 {
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除所有陣列\n", NowCount);
+#endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
+#ifdef PRINTF
                     _cwprintf(L"刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
@@ -2967,13 +4051,17 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+#ifdef PRINTF
                     _cwprintf(L"第%d:刪除成功\n", NowCount);
+#endif
                     return FALSE;
                 }
             }
         }
     }
+#ifdef PRINTF
     _cwprintf(L"結束阻斷\n");
+#endif
     return TRUE;
 } 
 /*阻斷陣列排序*/
@@ -2982,9 +4070,9 @@ void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
     CString temp;
     if (Type == 1)//StepRepeatX
     {
-        for (int i = 0; i < BlockPosition.size(); i++)
+        for (UINT i = 0; i < BlockPosition.size(); i++)
         {
-            for (int j = i + 1; j < BlockPosition.size(); j++)
+            for (UINT j = i + 1; j < BlockPosition.size(); j++)
             {
                 if (_ttol(BlockResolve(BlockPosition.at(i), 1)) > _ttol(BlockResolve(BlockPosition.at(j), 1)))//前者Y大於後者Y
                 {
@@ -3032,13 +4120,15 @@ void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
                 }
             }
         }    
+#ifdef PRINTF
         _cwprintf(L"\n");
+#endif
     }
     else if (Type == 2)
     {
-        for (int i = 0; i < BlockPosition.size(); i++)
+        for (UINT i = 0; i < BlockPosition.size(); i++)
         {
-            for (int j = i + 1; j < BlockPosition.size(); j++)
+            for (UINT j = i + 1; j < BlockPosition.size(); j++)
             {
                 if (_ttol(BlockResolve(BlockPosition.at(i), 0)) > _ttol(BlockResolve(BlockPosition.at(j), 0)))//前者X大於後者X
                 {
@@ -3088,11 +4178,13 @@ void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
             }
         }
     }
+#ifdef PRINTF
     _cwprintf(L"排序完成後:");
-    for (int i = 0; i < BlockPosition.size(); i++)
+    for (UINT i = 0; i < BlockPosition.size(); i++)
     {
         _cwprintf(L"%s,", BlockPosition.at(i));
     }
+#endif
 }
 /*阻斷字串處理*/
 CString COrder::BlockResolve(CString String, UINT Choose)

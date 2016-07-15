@@ -22,9 +22,7 @@
 
 
 #include <afxdisp.h>        // MFC Automation 類別
-#include <io.h> 
-#include <fcntl.h>
-#include <conio.h>
+
 
 
 #ifndef _AFX_NO_OLE_SUPPORT
@@ -37,12 +35,24 @@
 #include <afxcontrolbars.h>     // 功能區和控制列的 MFC 支援
 
 #define MOVE
+#define VI
+#define LA
+#define PRINTF
+
 #ifdef MOVE
 #include "mcc.h"
 #endif
-#define VI
 #ifdef VI
 #include "Vision.h"
+#endif
+#ifdef LA
+#include "Laser.h"
+#endif
+#ifdef PRINTF
+#include <io.h> 
+#include <fcntl.h>
+#include <conio.h>
+void InitConsoleWindow();
 #endif
 
 #ifdef _UNICODE
@@ -56,7 +66,7 @@
 #endif
 
 
-void InitConsoleWindow();
+
 
 
 

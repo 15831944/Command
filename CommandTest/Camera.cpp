@@ -18,6 +18,7 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 	RaiChoose = 1;
 	PixToPulsX = 0.0;
 	PixToPulsY = 0.0;
+    FocusPoint = 0;
 }
 
 CCamera::~CCamera()
@@ -45,6 +46,7 @@ BEGIN_MESSAGE_MAP(CCamera, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON2, &CCamera::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CCamera::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CCamera::OnBnClickedButton4)
+    ON_BN_CLICKED(IDC_BTNFOCUS, &CCamera::OnBnClickedBtnfocus)
 END_MESSAGE_MAP()
 
 // CCamera 訊息處理常式
@@ -65,6 +67,9 @@ BOOL CCamera::OnInitDialog()
 	CString StrBuff;
 	StrBuff.Format(_T("%.6f,%.6f"), PixToPulsX, PixToPulsY);
 	SetDlgItemText(IDC_PIXTOPULS, StrBuff);
+    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
+    SetDlgItemText(IDC_TIPTOCCD, StrBuff);
 	//影像開啟
 #ifdef VI
 	VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
@@ -150,7 +155,6 @@ void CCamera::OnBnClickedBtnmodel()
 /*鍵盤偵測*/
 BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 {
-	// TODO: 在此加入特定的程式碼和 (或) 呼叫基底類別
 	if (pMsg->message == WM_KEYDOWN) {
 		if (pMsg->wParam == VK_LEFT) {
 			MoveXYZ(-200000, 0, 0);
@@ -218,9 +222,13 @@ void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 			//MessageBox(_T("程式出現錯誤!"));
 			break;
 		}
+#ifdef PRINTF
 		//_cprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+#endif
 	}
+#ifdef PRINTF
 	//_cprintf("%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+#endif
 #endif // MOVE
 }
 /*設置針頭offset*/
@@ -307,7 +315,27 @@ void CCamera::OnBnClickedButton3()
 		SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls"));
 	}
 #endif
+}   
+//對焦點設置
+void CCamera::OnBnClickedBtnfocus()
+{
+    CString StrBuff;
+    GetDlgItemText(IDC_BTNFOCUS, StrBuff);
+    if (StrBuff == L"對焦點\r設置")
+    {
+        SetDlgItemText(IDC_BTNFOCUS, L"對焦點\r移動");
+#ifdef MOVE
+        FocusPoint = MO_ReadLogicPosition(2);
+#endif
+    }
+    else
+    {
+#ifdef MOVE
+        MO_Do3DLineMove(0, 0, FocusPoint - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+#endif
+    }
 }
+//模組管理
 void CCamera::OnBnClickedButton4()
 {
 	m_pCModel = new CModel();
@@ -326,3 +354,4 @@ void CCamera::OnOK()
 {
 	//CDialogEx::OnOK();
 }
+

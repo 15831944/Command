@@ -59,7 +59,9 @@ void CModel::OnOK()
 	LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
 	lstrcpy(lpszText, path);
 	int iSelPos = m_ModelList.GetNextItem(-1, LVIS_SELECTED);
+#ifdef PRINTF
 	_cprintf("%d", iSelPos);
+#endif
 #ifdef VI
 	if (iSelPos != -1)
 	{
@@ -71,7 +73,7 @@ void CModel::OnOK()
 	}
 #endif
 #ifdef MOVE
-	MO_Do3DLineMove(OffsetX, OffsetY, 0, 30000, 100000, 6000);
+	MO_Do3DLineMove((LONG)OffsetX, (LONG)OffsetY, 0, 30000, 100000, 6000);
 #endif
 	//CDialogEx::OnOK();
 }

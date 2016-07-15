@@ -35,16 +35,17 @@ protected:
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
+	CDialog* m_pLaserDlg;
 	BOOL InputAuto;
 	CPoint TipOffset;
 	BOOL CcdMode;
-    BOOL m_LoopRun;
-    int MaxRunNumber;
-    int RunLoopNumber;
+	BOOL m_LoopRun;
+	int MaxRunNumber;
+	int RunLoopNumber;
 
-    UINT XNumber, YNumber;
-    UINT BlockCount;
-    CString BlockStr;
+	UINT XNumber, YNumber;
+	UINT BlockCount;
+	CString BlockStr;
 public:
 	/*穝*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -55,12 +56,12 @@ public:
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedBtnhome();
 	afx_msg void OnBnClickedBtnview();
-    //砞竚
-    afx_msg void OnBnClickedBtndefault();
-    afx_msg void OnBnClickedBtnvision();
-    afx_msg void OnBnClickedBtnmodefyz();
-    afx_msg void OnBnClickedBtnmodechange();
-    afx_msg void OnBnClickedBtncleancount();
+	//砞竚
+	afx_msg void OnBnClickedBtndefault();
+	afx_msg void OnBnClickedBtnvision();
+	afx_msg void OnBnClickedBtnmodefyz();
+	afx_msg void OnBnClickedBtnmodechange();
+	afx_msg void OnBnClickedBtncleancount();
 	/**/
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
@@ -100,7 +101,7 @@ public:
 	afx_msg void OnBnClickedBtncommand29();
 	afx_msg void OnBnClickedBtncommand30();
 	afx_msg void OnBnClickedBtncommand31();
-    afx_msg void OnBnClickedBtncommand32_0();
+	afx_msg void OnBnClickedBtncommand32_0();
 	afx_msg void OnBnClickedBtncommand32();
 	afx_msg void OnBnClickedBtncommand33();
 	afx_msg void OnBnClickedBtncommand34();
@@ -114,9 +115,18 @@ public:
 	afx_msg void OnBnClickedBtncommand43();
 	afx_msg void OnBnClickedBtncommand44();
 	afx_msg void OnBnClickedBtncommand45();
-    //场ㄧ计
-    CString CommandResolve(CString Command, UINT Choose);
-    afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
+	//场ㄧ计
+	CString CommandResolve(CString Command, UINT Choose);
+	afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnBnClickedBtnlaser();
+	afx_msg void OnBnClickedBtncommand46();
+	afx_msg void OnBnClickedBtncommand47();
+	afx_msg void OnBnClickedBtncommand48();
+	afx_msg void OnBnClickedBtncommand49();
+	afx_msg void OnBnClickedBtncommand50();
+	afx_msg void OnBnClickedButton1();
+	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedButton5();
 };
 
 

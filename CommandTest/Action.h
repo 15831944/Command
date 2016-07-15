@@ -8,14 +8,29 @@
 #include <vector>
 #define _USE_MATH_DEFINES
 #include <math.h>
-static LPVOID pAction;
+#ifdef MOVE
+#include "mcc.h"
+#endif
+static LPVOID  pAction;
+static int     g_LaserErrCnt;//雷射時間切計數器(紀錄錯誤用)
+static int     g_LaserNuCnt;//雷射時間切計數器(紀錄數量用)
 class CAction
 {
 public:     //變數
     BOOL    g_bIsPause;       //暫停用
-	BOOL    g_bIsStop;
-	BOOL    g_bIsDispend;
-	UINT    g_iNumberGluePort;
+	BOOL    g_bIsStop;        //停止用
+	BOOL    g_bIsDispend;     //關閉點膠用
+    int     g_iNumberGluePort;//點膠埠啟用數量
+    LONG    g_OffSetLaserX;//雷射用x軸偏移量
+    LONG    g_OffSetLaserY;//雷射用y軸偏移量
+    LONG    g_OffSetLaserZ;//雷射用z軸偏移量
+    LONG    g_HeightLaserZero;//雷射用Z軸歸零點高度
+    LONG    g_laserBuff;//雷射用暫存值(test)
+#ifdef MOVE
+    DATA_3MOVE DATA_3Do[256];//連續切暫存
+    DATA_3MOVE DATA_3ZERO_B;//雷射歸零_針頭B點
+    DATA_3MOVE DATA_3ZERO_LA;//雷射歸零_雷射B點
+#endif
 public:     //析構函數
 	CAction();
 	virtual ~CAction();
@@ -67,6 +82,19 @@ public:     //運動API
     void HMNegLim(LONG lX, LONG lY, LONG lZ);
     //人機用函數-軟體正極限(x,y,z為最大工作範圍)
     void HMPosLim(LONG lX, LONG lY, LONG lZ);
+public:     //雷射API
+    //雷射歸零按鈕_針頭B點
+    void LA_Butt_GoBPoint();
+    //雷射歸零按鈕_雷射到針頭B點
+    void LA_Butt_GoLAtoBPoint();
+    //單點雷射取值(使用DATA_3MOVE結構)+偏移量
+    BOOL LA_Dot3D(LONG lX, LONG lY, LONG &lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    //雷射規零(下降至69999做歸零)
+    BOOL LA_SetZero();
+    //雷射設定初始化
+    void LA_SetInit();
+    //線段雷射取值(使用DATA_3MOVE結構)
+    void LA_Line3D(LONG lStartX, LONG lStartY, LONG lEndX, LONG lEndY, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 private:    //自行運用函數
 	void AttachPointMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIntt); //附屬--- 移動點動作
 	void DoGlue(LONG lTime, LONG lDelayTime, LPTHREAD_START_ROUTINE GummingTimeOutThread);//出膠，多載有延遲時間(配合執行緒使用)
@@ -89,8 +117,9 @@ private:    //自行運用函數
     void AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態6
     void AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7
 protected:  //執行緒
-	static DWORD WINAPI GummingTimeOutThread(LPVOID);
+	static DWORD WINAPI GummingTimeOutThread(LPVOID);//停膠
     static DWORD WINAPI LPInterrupt(LPVOID);//中斷
+    static DWORD WINAPI D3Inter(LPVOID);//3D中斷thread
 };
 
 

@@ -146,7 +146,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>mcc.lib;Vision.lib</AdditionalDependencies>
+      <AdditionalDependencies>mcc.lib;Vision.lib;Laser.lib;</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -196,6 +196,7 @@
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
     <ClInclude Include="Default.h" />
+    <ClInclude Include="LaserDlg.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="MoveButton.h" />
     <ClInclude Include="Order.h" />
@@ -211,6 +212,7 @@
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
     <ClCompile Include="Default.cpp" />
+    <ClCompile Include="LaserDlg.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="MoveButton.cpp" />
     <ClCompile Include="Order.cpp" />

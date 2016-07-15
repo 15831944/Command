@@ -72,7 +72,7 @@ private:
 		LONG MoveY;
 		LONG MoveZ;
 		BOOL PrecycleInitialize;
-        BOOL VisionGoHome;
+		BOOL VisionGoHome;
 	};
 	//初始化結構(點膠設置結構、點膠結束結構、點膠速度、線段設置結構、線段結束結構、線段速度、Z軸結構、排膠結構)
 	struct Default {
@@ -86,13 +86,19 @@ private:
 		GlueData        GlueData;
 		GoHome          GoHome;
 	};
+    //運動點選擇修正表
+	struct PositionModifNumber {
+		CString Address;
+		int VisionNumber;
+		int LaserNumber;
+	};
 	/************************************************************影像參數結構*******************************************************/
 	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
 	struct Vision {
 		BOOL FindMarkStatus;
 		CoordinateData Point;
 		LONG FocusDistance;
-		LONG LoadModelNum;
+		UINT LoadModelNum;
 		void* MilModel; 
 		DOUBLE OffsetX;
 		DOUBLE OffsetY;
@@ -143,6 +149,36 @@ private:
 		VisionFile VisionFile;
 		VisionSerchError VisionSerchError;
 	};
+    //影像所有Offset值紀錄
+	struct VisionAdjust {
+		VisionOffset VisionOffset;
+	};
+	/************************************************************雷射參數結構*******************************************************/ 
+    //Laser模式轉換開關
+	struct LaserSwitch {
+		BOOL LaserHeight;
+		BOOL LaserPointAdjust;
+		BOOL LaserDetect;
+		BOOL LaserAdjust;
+		BOOL LaserSkip;
+	};
+    //Laser資料紀錄
+	struct LaserData {
+		UINT LaserAddress;
+		CoordinateData LaserHeightPoint;
+		CoordinateData LaserDetectLS, LaserDetectLE;
+		LONG LaserMeasureHeight;		
+	};
+    //Laser所有測高值紀錄陣列
+	struct LaserAdjust {
+		LONG LaserMeasureHeight; 
+	};
+	/************************************************************模組參數結構*******************************************************/
+    //控管模組結構
+	struct ModelControl{
+		UINT Mode;
+		UINT ModeChangeAddress;        
+	};
 	/************************************************************程序參數結構*******************************************************/
 	//Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊)
 	struct Program {
@@ -172,7 +208,7 @@ private:
 		UINT RunStatus;
 		UINT CurrentRunCommandNum;
 		BOOL GoHomeStatus;
-        UINT FinishProgramCount;
+		int FinishProgramCount;
 	};
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
@@ -182,13 +218,13 @@ private:
 	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料)
 	/*
 	*循環開關:用來判別沒有此標籤時狀況
-    *步驟跳躍標籤:用於執行迴圈時跳躍指令用
-    *增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
-    *記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
-    *記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
-    *記錄S型轉換開關:用於S型態判斷Offset需要加還減
-    *步驟地址紀錄:用於判斷指令目前的StepRepeat是屬於哪一個陣列
-    *記錄組斷資料:包含數量、阻段陣列的字串
+	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
+	*增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
+	*記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
+	*記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
+	*記錄S型轉換開關:用於S型態判斷Offset需要加還減
+	*步驟地址紀錄:用於判斷指令目前的StepRepeat是屬於哪一個陣列
+	*記錄組斷資料:包含數量、阻段陣列的字串
 	*/
 	struct RepeatData {
 		BOOL LoopSwitch;
@@ -196,7 +232,7 @@ private:
 		std::vector<UINT> LoopCount;
 		CString StepRepeatLabel;
 		BOOL StepRepeatLabelLock;
-        BOOL AddInStepRepeatSwitch;
+		BOOL AddInStepRepeatSwitch;
 		int AllNewStepRepeatNum;
 		int AllDeleteStepRepeatNum;
 		std::vector<BOOL> SSwitch;
@@ -207,17 +243,16 @@ private:
 		std::vector<int> StepRepeatCountY;
 		std::vector<StepRepeatBlockData> StepRepeatBlockData;
 	};
-    /*程序循環運行結構(控制循環開關、循環次數、最大運行次數(設 -1 =沒有限制))*/
-    struct RunLoopData {      
-        BOOL RunSwitch;
-        int LoopNumber;
-        int LoopCount;
-        int MaxRunNumber;
-    };
+	/*程序循環運行結構(控制循環開關、循環次數、最大運行次數(設 -1 =沒有限制))*/
+	struct RunLoopData {      
+		BOOL RunSwitch;
+		int LoopNumber;
+		int LoopCount;
+		int MaxRunNumber;
+	};
+	
 private:    //變數
 	HANDLE          wakeEvent;
-	//主運動物件
-	CAction         m_Action;
 	//命令
 	StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
@@ -237,19 +272,21 @@ private:    //函數
 	static  UINT    HomeThread(LPVOID pParam);
 	static  UINT    Thread(LPVOID pParam);
 	static  UINT    SubroutineThread(LPVOID pParam);
-    static  UINT    RunLoopThread(LPVOID pParam);
+	static  UINT    RunLoopThread(LPVOID pParam);
 	//動作處理
 	static  void    LineGotoActionJudge(LPVOID pParam);
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
 	static  void    VisionModify(LPVOID pParam);
 	void            VisionFindMarkError(LPVOID pParam);
-    //阻斷處理
+	static  void    LaserModify(LPVOID pParam);
+    
+	//阻斷處理
 	static  void    BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus);
 	static  BOOL    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
-    static  void    BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus);
-    static  BOOL    BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount);
-    static  void    BlockSort(std::vector<CString> &BlockPosition, int Type, int mode);
-    static  CString BlockResolve(CString String, UINT Choose);
+	static  void    BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus);
+	static  BOOL    BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount);
+	static  void    BlockSort(std::vector<CString> &BlockPosition, int Type, int mode);
+	static  CString BlockResolve(CString String, UINT Choose);
 	//命令處理
 	static  CString CommandResolve(CString Command,UINT Choose);
 	//初始化處理
@@ -260,9 +297,16 @@ private:    //函數
 	//檔案處理
 	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
 	static  BOOL    FileExist(LPCWSTR FilePathName);
-  
+	//模組控管處理
+	static void     RecordCorrectionTable(LPVOID pParam);
+    static void     ChooseVisionModify(LPVOID pParam);
+    static void     ChooseLaserModify(LPVOID pParam);
+    //修正處理
+    static CString  VirtualNowOffSet(LPVOID pParam , CString Command);
 	
 public:     //變數
+	//主運動物件
+	CAction         m_Action;
 	//動作總數
 	LONG            Time;
 	//程序陣列
@@ -281,8 +325,8 @@ public:     //變數
 
 	//運行程序資料
 	RunStatusRead   RunStatusRead;
-    //RunLoop
-    RunLoopData     RunLoopData;
+	//RunLoop
+	RunLoopData     RunLoopData;
 	//影像參數 
 	VisionDefault   VisionDefault;
 	VisionSet       VisionSet;
@@ -293,16 +337,31 @@ public:     //變數
 	Vision          FindMark, FiducialMark1, FiducialMark2;
 	VisionOffset    VisionOffset;
 	VisionTrigger   VisionTrigger;
-
+	//雷射
+	LaserSwitch     LaserSwitch;
+	LaserData       LaserData;
 	//影像修正後工作座標
 	CoordinateData  FinalWorkCoordinateData;
+    CoordinateData  VirtualCoordinateData;
+	//模組控管
+	ModelControl    ModelControl;
+	//動作控管
+	std::vector<PositionModifNumber> PositionModifNumber;
+	//影像控管
+	std::vector<VisionAdjust> VisionAdjust;
+	//雷射控管
+	std::vector<LaserAdjust> LaserAdjust;
+	//控管計數
+	int             VisionCount;
+	int             LaserCount;
+
 public:     //函數
 	COrder();
 	virtual ~COrder();
 	//開始命令解譯(成功return 1失敗return 0)
 	BOOL    Run();
-    //連續開始命令解譯(參數:循環次數)(回傳值:成功 return 1 失敗 return 0)
-    BOOL    RunLoop(int LoopNumber);
+	//連續開始命令解譯(參數:循環次數)(回傳值:成功 return 1 失敗 return 0)
+	BOOL    RunLoop(int LoopNumber);
 	//立即停止命令解譯(成功return 1失敗return 0)
 	BOOL    Stop();
 	//暫停命令解譯(成功return 1失敗return 0)
@@ -313,7 +372,6 @@ public:     //函數
 	BOOL    Home(BOOL mode);
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
-
 protected:
 	DECLARE_MESSAGE_MAP()
 };

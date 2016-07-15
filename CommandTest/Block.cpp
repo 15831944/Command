@@ -48,9 +48,9 @@ BOOL CBlock::OnInitDialog()
 	CRect rect(10, 10, 30, 30);
 	Button = new CButton[((CCommandTestDlg*)pMain)->XNumber * ((CCommandTestDlg*)pMain)->YNumber];
 	/*·s¼W±±¥ó*/
-	for (int i = 0; i < ((CCommandTestDlg*)pMain)->YNumber; i++)
+	for (UINT i = 0; i < ((CCommandTestDlg*)pMain)->YNumber; i++)
 	{
-		for (int j = 0; j < ((CCommandTestDlg*)pMain)->XNumber; j++)
+		for (UINT j = 0; j < ((CCommandTestDlg*)pMain)->XNumber; j++)
 		{   
 			Button[TotalBlock].Create(_T(""), WS_CHILD | WS_VISIBLE, rect, this, BlockBtnNum + TotalBlock);
 			rect.left = rect.left + 25;
@@ -92,12 +92,14 @@ void CBlock::OnOK()
         GetDlgItemText(BlockBtnNum +i, StrBuff);
         if (StrBuff == _T("x"))
         {
-            StrBuff.Format(_T(",%d-%d"), (i % ((CCommandTestDlg*)pMain)->XNumber) + 1, (i / ((CCommandTestDlg*)pMain)->YNumber) + 1);
+            StrBuff.Format(_T(",%d-%d"), (i % ((CCommandTestDlg*)pMain)->XNumber) + 1, (i / ((CCommandTestDlg*)pMain)->XNumber) + 1);
             ((CCommandTestDlg*)pMain)->BlockStr = ((CCommandTestDlg*)pMain)->BlockStr + StrBuff;
             ((CCommandTestDlg*)pMain)->BlockCount++;
         }
     }
+#ifdef PRINTF
     _cwprintf(L"%s", ((CCommandTestDlg*)pMain)->BlockStr);
+#endif
 	CDialogEx::OnOK();
 }
 void CBlock::OnBlockClick(UINT uId)

@@ -4,6 +4,7 @@
 // stdafx.obj 會包含先行編譯類型資訊
 
 #include "stdafx.h"
+#ifdef PRINTF
 void InitConsoleWindow()
 {
     /*AllocConsole();
@@ -20,4 +21,5 @@ void InitConsoleWindow()
     *stdout = *fp;
     setvbuf(stdout, NULL, _IONBF, 0);
 }
+#endif
 

@@ -170,7 +170,7 @@ void CDefault::ParamModify()
 	//影像參數
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy = _ttol(m_ListDefault.GetItemText(36, 1));
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed = _ttol(m_ListDefault.GetItemText(37, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score = _ttol(m_ListDefault.GetItemText(38, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score = (BOOL)(_ttol(m_ListDefault.GetItemText(38, 1)));
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width = _ttol(m_ListDefault.GetItemText(39, 1));
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height = _ttol(m_ListDefault.GetItemText(40, 1));
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle = _ttol(m_ListDefault.GetItemText(41, 1));
