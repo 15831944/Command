@@ -15,7 +15,7 @@ IMPLEMENT_DYNAMIC(CLaserDlg, CDialogEx)
 CLaserDlg::CLaserDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG6, pParent)
 {
-    pMain = AfxGetApp()->m_pMainWnd;
+	pMain = AfxGetApp()->m_pMainWnd;
 }
 
 CLaserDlg::~CLaserDlg()
@@ -29,34 +29,55 @@ void CLaserDlg::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CLaserDlg, CDialogEx)
-    ON_BN_CLICKED(IDC_BTNZERO, &CLaserDlg::OnBnClickedBtnzero)
-    ON_BN_CLICKED(IDC_BTNLASERTOB, &CLaserDlg::OnBnClickedBtnlasertob)
-    ON_BN_CLICKED(IDC_BTNB, &CLaserDlg::OnBnClickedBtnb)
-    ON_BN_CLICKED(IDC_BTNSETLASER, &CLaserDlg::OnBnClickedBtnsetlaser)
+	ON_BN_CLICKED(IDC_BTNZERO, &CLaserDlg::OnBnClickedBtnzero)
+	ON_BN_CLICKED(IDC_BTNLASERTOB, &CLaserDlg::OnBnClickedBtnlasertob)
+	ON_BN_CLICKED(IDC_BTNB, &CLaserDlg::OnBnClickedBtnb)
+	ON_BN_CLICKED(IDC_BTNSETLASER, &CLaserDlg::OnBnClickedBtnsetlaser)
 END_MESSAGE_MAP()
 
 
 // CLaserDlg 訊息處理常式
+BOOL CLaserDlg::OnInitDialog()
+{
+    CDialogEx::OnInitDialog();
+    CString StrBuff;
+    StrBuff.Format(_T("LaserToTip:%d,%d,%d,%d"), ((CCommandTestDlg*)pMain)->LaserOffset.x, ((CCommandTestDlg*)pMain)->LaserOffset.y, ((CCommandTestDlg*)pMain)->LaserOffsetz, ((CCommandTestDlg*)pMain)->HeightLaserZero);
+    SetDlgItemText(IDC_STALASERTOTIP, StrBuff);
+    return TRUE;  // return TRUE unless you set the focus to a control
+                  // EXCEPTION: OCX 屬性頁應傳回 FALSE
+}
 /*雷射歸零*/
 void CLaserDlg::OnBnClickedBtnzero()
 {
-    ((CCommandTestDlg*)pMain)->a.m_Action.LA_SetZero();
+	((CCommandTestDlg*)pMain)->a.m_Action.LA_SetZero();
+    ((CCommandTestDlg*)pMain)->HeightLaserZero = ((CCommandTestDlg*)pMain)->a.m_Action.g_HeightLaserZero;
+    ((CCommandTestDlg*)pMain)->LaserOffsetz = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserZ;
+    CString StrBuff,StrBuff1;
+    GetDlgItemTextW(IDC_STALASERTOTIP, StrBuff);
+    StrBuff1.Format(_T(",%d,%d"), ((CCommandTestDlg*)pMain)->HeightLaserZero, ((CCommandTestDlg*)pMain)->LaserOffsetz);
+    StrBuff = StrBuff + StrBuff1;
+    SetDlgItemText(IDC_STALASERTOTIP, StrBuff);
 }
 /*雷射到B點*/
 void CLaserDlg::OnBnClickedBtnlasertob()
 {
-    ((CCommandTestDlg*)pMain)->a.m_Action.LA_Butt_GoLAtoBPoint();
-    CString StrBuff;
-    StrBuff.Format(_T("LaserToTip:%d,%d"), ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserX, ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserY);
-    SetDlgItemText(IDC_STALASERTOTIP, StrBuff);
+	((CCommandTestDlg*)pMain)->a.m_Action.LA_Butt_GoLAtoBPoint();
+    ((CCommandTestDlg*)pMain)->LaserOffset.x = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserX;
+    ((CCommandTestDlg*)pMain)->LaserOffset.y = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserY;
+	CString StrBuff;
+	StrBuff.Format(_T("LaserToTip:%d,%d"), ((CCommandTestDlg*)pMain)->LaserOffset.x, ((CCommandTestDlg*)pMain)->LaserOffset.y);
+	SetDlgItemText(IDC_STALASERTOTIP, StrBuff);
 }
 /*雷射B點*/
 void CLaserDlg::OnBnClickedBtnb()
 {
-    ((CCommandTestDlg*)pMain)->a.m_Action.LA_Butt_GoBPoint();
+	((CCommandTestDlg*)pMain)->a.m_Action.LA_Butt_GoBPoint();
 }
 /*雷射設定*/
 void CLaserDlg::OnBnClickedBtnsetlaser()
 {
-    ((CCommandTestDlg*)pMain)->a.m_Action.LA_SetInit();
+	((CCommandTestDlg*)pMain)->a.m_Action.LA_SetInit();
 }
+
+
+

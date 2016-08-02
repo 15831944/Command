@@ -2,7 +2,7 @@
 *檔案名稱:Action.h(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/06/07
+*＠data 更新日期:2016/07/21
 *@更新內容線段z值改變時，三軸同動移動，原來的為x,y先移動再移動z軸*/
 #pragma once
 #include <vector>
@@ -20,16 +20,27 @@ public:     //變數
     BOOL    g_bIsPause;       //暫停用
 	BOOL    g_bIsStop;        //停止用
 	BOOL    g_bIsDispend;     //關閉點膠用
+    BOOL    g_bIsGetLAend;     
     int     g_iNumberGluePort;//點膠埠啟用數量
     LONG    g_OffSetLaserX;//雷射用x軸偏移量
     LONG    g_OffSetLaserY;//雷射用y軸偏移量
-    LONG    g_OffSetLaserZ;//雷射用z軸偏移量
-    LONG    g_HeightLaserZero;//雷射用Z軸歸零點高度
+    LONG    g_OffSetLaserZ;//雷射用z軸偏移量(B點的Z高度到雷射歸零Z高度的位移值(+))
+    LONG    g_HeightLaserZero;//雷射用Z軸歸零完成後高度(掃描高度)
     LONG    g_laserBuff;//雷射用暫存值(test)
+	LONG    g_OffSetScan;//雷射掃描補償值
+    LONG    g_LaserAveBuffZ;//雷射用平均暫存值(絕對位置z值)
+	int     g_LaserCnt;//雷射線段計數器(掃描用)
+    BOOL    g_LaserAverage;//雷射平均(1使用/0不使用)
+    BOOL    g_interruptLock;//中斷鎖
+
+	std::vector<UINT>  LA_m_iVecSP;//主要雷射vector(SP:Scan End)
 #ifdef MOVE
+    std::vector<DATA_3MOVE> LA_m_ptVec;//雷射連續切點儲存vector
+	std::vector<DATA_2MOVE> LA_m_ptVec2D;//雷射連續切點儲存vector
     DATA_3MOVE DATA_3Do[256];//連續切暫存
     DATA_3MOVE DATA_3ZERO_B;//雷射歸零_針頭B點
     DATA_3MOVE DATA_3ZERO_LA;//雷射歸零_雷射B點
+	DATA_2MOVE DATA_2Do[128]; 
 #endif
 public:     //析構函數
 	CAction();
@@ -87,17 +98,32 @@ public:     //雷射API
     void LA_Butt_GoBPoint();
     //雷射歸零按鈕_雷射到針頭B點
     void LA_Butt_GoLAtoBPoint();
+    //雷射設定初始化
+    void LA_SetInit();
     //單點雷射取值(使用DATA_3MOVE結構)+偏移量
     BOOL LA_Dot3D(LONG lX, LONG lY, LONG &lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //雷射規零(下降至69999做歸零)
     BOOL LA_SetZero();
-    //雷射設定初始化
-    void LA_SetInit();
-    //線段雷射取值(使用DATA_3MOVE結構)
-    void LA_Line3D(LONG lStartX, LONG lStartY, LONG lEndX, LONG lEndY, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+	//2D連續差補資料輸入
+    void LA_Do2DVetor(LONG lX3, LONG lY3, LONG lX2 = 0, LONG lY2 = 0, LONG lX1 = 0, LONG lY1 = 0);//!!注意點座標順序3.2.1    
+    void LA_Do2dDataLine(LONG EndPX, LONG EndPY);
+    void LA_Do2dDataArc(LONG EndPX, LONG EndPY, LONG ArcX, LONG ArcY);
+    void LA_Do2dDataCircle(LONG EndPX, LONG EndPY, LONG CirP1X, LONG CirP1Y, LONG CirP2X, LONG CirP2Y);
+    //2D連續差補掃描
+	void LA_Line2D(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//單點雷射取值(使用DATA_2MOVE結構)+偏移量
+	//三軸連續插補
+	void LA_Line3DtoDo(int iData, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bDoAll = FALSE);
+	//雷射清除指令
+	void LA_Clear();
+    //雷射平均回傳平均z值
+    void LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &lZ);
+    //將3Dvetor值作旋轉偏移修正
+    void LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, LONG RefX = 0, LONG RefY = 0, DOUBLE OffSetX = 0, DOUBLE OffSetY = 0, DOUBLE Andgle = 0, DOUBLE CameraToTipOffsetX = 0, DOUBLE CameraToTipOffsetY = 0, BOOL Mode = 0, LONG lSubOffsetX = 0, LONG lSubOffsetY = 0);//將3Dvetor值作旋轉偏移修正
+public:     //執行續
+    static DWORD WINAPI MoInterrupt(LPVOID);//軸卡中斷thread
 private:    //自行運用函數
 	void AttachPointMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIntt); //附屬--- 移動點動作
-	void DoGlue(LONG lTime, LONG lDelayTime, LPTHREAD_START_ROUTINE GummingTimeOutThread);//出膠，多載有延遲時間(配合執行緒使用)
+	void DoGlue(LONG lTime, LONG lDelayTime, LPTHREAD_START_ROUTINE MoInterrupt =0);//出膠，多載有延遲時間(配合執行緒使用)
 	void PreventMoveError();//防止軸卡出錯
 	void PreventGlueError();//防止出膠出錯
     void PauseDoGlue();//暫停回復後重新塗膠(讀取暫停參數，當參數為0時出膠，且點膠機要為開。)
@@ -115,11 +141,15 @@ private:    //自行運用函數
     void AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態4
     void AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態5
     void AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態6
-    void AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7
-protected:  //執行緒
-	static DWORD WINAPI GummingTimeOutThread(LPVOID);//停膠
-    static DWORD WINAPI LPInterrupt(LPVOID);//中斷
-    static DWORD WINAPI D3Inter(LPVOID);//3D中斷thread
+    void AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7                                                                                                                                                                      //絕對座標轉相對座標3軸連續插補使用
+    void LA_CorrectLocation(LONG &PointX, LONG &PointY, LONG RefX, LONG RefY, DOUBLE OffSetX, DOUBLE OffSetY, DOUBLE Andgle, DOUBLE CameraToTipOffsetX, DOUBLE CameraToTipOffsetY, BOOL Mode, LONG lSubOffsetX, LONG lSubOffsetY);//雷射用旋轉平移
+#ifdef MOVE 
+    void MO_Do2dDataLine(LONG EndPX, LONG EndPY, std::vector<DATA_2MOVE> &str);//填充用兩軸連續差補(給值--直線)
+    void MO_Do2dDataCir(LONG EndPX, LONG EndPY, LONG CenX, LONG CenY, BOOL bRev, std::vector<DATA_2MOVE> &str);//填充用兩軸連續差補(給值--圓)
+    void LA_AbsToOppo3Move(std::vector<DATA_3MOVE> &str);
+    void LA_AbsToOppo2Move(std::vector<DATA_2MOVE> &str);//絕對座標轉相對座標3軸連續插補使用
+#endif
+
 };
 
 

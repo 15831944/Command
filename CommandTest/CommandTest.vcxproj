@@ -135,7 +135,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>Full</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -200,6 +200,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="MoveButton.h" />
     <ClInclude Include="Order.h" />
+    <ClInclude Include="PositionModify.h" />
     <ClInclude Include="Question.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="MoveButton.cpp" />
     <ClCompile Include="Order.cpp" />
+    <ClCompile Include="PositionModify.cpp" />
     <ClCompile Include="Question.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

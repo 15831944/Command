@@ -34,6 +34,7 @@
 
 #include <afxcontrolbars.h>     // 功能區和控制列的 MFC 支援
 
+
 #define MOVE
 #define VI
 #define LA
@@ -54,6 +55,7 @@
 #include <conio.h>
 void InitConsoleWindow();
 #endif
+CString GetCurrentPath(CString Folder);
 
 #ifdef _UNICODE
 #if defined _M_IX86

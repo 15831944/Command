@@ -73,7 +73,7 @@ BOOL CDefault::OnInitDialog()
 void CDefault::ParamShow()
 {
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	LONG ParamArray[45];
+	LONG ParamArray[46];
 	ParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1;
 	ParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2;
 	ParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis;

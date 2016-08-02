@@ -22,4 +22,15 @@ void InitConsoleWindow()
     setvbuf(stdout, NULL, _IONBF, 0);
 }
 #endif
+CString GetCurrentPath(CString Folder)
+{
+    CString path;
+    GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+    path.ReleaseBuffer();
+    int pos = path.ReverseFind('\\');
+    path = path.Left(pos) + Folder;
+    LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+    lstrcpy(lpszText, path);
+    return path;
+}
 

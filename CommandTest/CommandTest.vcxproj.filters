@@ -60,6 +60,9 @@
     <ClInclude Include="LaserDlg.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
+    <ClInclude Include="PositionModify.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandTest.cpp">
@@ -96,6 +99,9 @@
       <Filter>原始程式檔</Filter>
     </ClCompile>
     <ClCompile Include="LaserDlg.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="PositionModify.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>

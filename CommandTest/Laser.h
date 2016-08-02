@@ -20,6 +20,9 @@
 #define LAS_LONGMIN -2147483647-1
 #endif
 
+#ifndef LAS_MEASURE_RANGE
+#define LAS_MEASURE_RANGE 30000
+#endif
 
 // CLaserApp
 // 這個類別的實作請參閱 Laser.cpp
@@ -36,6 +39,10 @@ class CLaserApp : public CWinApp
 
         DECLARE_MESSAGE_MAP()
 };
+
+LAS_DLL void LAS_DllVersion(CString &dllVersion);
+LAS_DLL void LAS_DllDate(CString &dllDate);
+
 
 #ifdef KEYENCE_LKG85
 

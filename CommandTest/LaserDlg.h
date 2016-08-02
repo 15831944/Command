@@ -18,11 +18,12 @@ public:
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV ¤ä´©
-    CWnd* pMain;
+	CWnd* pMain;
 	DECLARE_MESSAGE_MAP()
 public:
-    afx_msg void OnBnClickedBtnzero();
-    afx_msg void OnBnClickedBtnlasertob();
-    afx_msg void OnBnClickedBtnb();
-    afx_msg void OnBnClickedBtnsetlaser();
+	afx_msg void OnBnClickedBtnzero();
+	afx_msg void OnBnClickedBtnlasertob();
+	afx_msg void OnBnClickedBtnb();
+	afx_msg void OnBnClickedBtnsetlaser();
+    virtual BOOL OnInitDialog();
 };

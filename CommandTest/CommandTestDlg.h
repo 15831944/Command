@@ -20,8 +20,12 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支援
 	virtual BOOL OnInitDialog();
+	virtual void OnCancel();
+	void SaveParameter();
+	void LoadParameter();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
+	void Counter();
 	DECLARE_MESSAGE_MAP()
 // 程式碼實作
 protected:
@@ -37,7 +41,9 @@ public:
 	CDialog* m_pCameraDlg;  
 	CDialog* m_pLaserDlg;
 	BOOL InputAuto;
-	CPoint TipOffset;
+	CPoint TipOffset,LaserOffset;
+	LONG LaserOffsetz;
+	LONG HeightLaserZero;
 	BOOL CcdMode;
 	BOOL m_LoopRun;
 	int MaxRunNumber;
@@ -56,12 +62,14 @@ public:
 	afx_msg void OnBnClickedOk();
 	afx_msg void OnBnClickedBtnhome();
 	afx_msg void OnBnClickedBtnview();
+	afx_msg void OnBnClickedBtnalloffset();
 	//設置
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
 	afx_msg void OnBnClickedBtnmodefyz();
 	afx_msg void OnBnClickedBtnmodechange();
 	afx_msg void OnBnClickedBtncleancount();
+	afx_msg void OnBnClickedBtnlaser();
 	/*列表*/
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
@@ -111,6 +119,12 @@ public:
 	afx_msg void OnBnClickedBtncommand38();
 	afx_msg void OnBnClickedBtncommand40();
 	afx_msg void OnBnClickedBtncommand41();
+	//雷射
+	afx_msg void OnBnClickedBtncommand46();
+	afx_msg void OnBnClickedBtncommand47();
+	afx_msg void OnBnClickedBtncommand48();
+	afx_msg void OnBnClickedBtncommand49();
+	afx_msg void OnBnClickedBtncommand50();
 	//副程式
 	afx_msg void OnBnClickedBtncommand43();
 	afx_msg void OnBnClickedBtncommand44();
@@ -118,15 +132,18 @@ public:
 	//外部函數
 	CString CommandResolve(CString Command, UINT Choose);
 	afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
-	afx_msg void OnBnClickedBtnlaser();
-	afx_msg void OnBnClickedBtncommand46();
-	afx_msg void OnBnClickedBtncommand47();
-	afx_msg void OnBnClickedBtncommand48();
-	afx_msg void OnBnClickedBtncommand49();
-	afx_msg void OnBnClickedBtncommand50();
-	afx_msg void OnBnClickedButton1();
-	afx_msg void OnBnClickedButton2();
-	afx_msg void OnBnClickedButton5();
+	
+	
+   
+	afx_msg void OnBnClickedBtncommit();
+	afx_msg void OnBnClickedBtnnocommit();
+	afx_msg void OnBnClickedBtnsave();
+	afx_msg void OnBnClickedBtnopen();
+	afx_msg void OnBnClickedBtnloaddemo();
+	afx_msg void OnBnClickedBtnprintflaser();
+	afx_msg void OnBnClickedBtnmodify();
+	afx_msg void OnBnClickedBtnprintcline();
+	
 };
 
 
