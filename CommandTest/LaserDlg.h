@@ -26,4 +26,6 @@ public:
 	afx_msg void OnBnClickedBtnb();
 	afx_msg void OnBnClickedBtnsetlaser();
     virtual BOOL OnInitDialog();
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 };

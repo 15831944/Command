@@ -179,8 +179,8 @@ private:
 	struct ModelControl{
 		UINT Mode;
 		UINT ModeChangeAddress;
-        UINT VisionModeJump;
-        UINT LaserModeJump;
+		UINT VisionModeJump;
+		UINT LaserModeJump;
 	};
 	/************************************************************程序參數結構*******************************************************/
 	//Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序控制是否修正影像)
@@ -300,7 +300,7 @@ private:    //函數
 	void            DecideInit();
 	void            DecideClear();
 	void            MainSubProgramSeparate();
-    void            DecideBeginModel();
+	void            DecideBeginModel();
 	//檔案處理
 	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
 	static  BOOL    FileExist(LPCWSTR FilePathName);
@@ -314,10 +314,10 @@ private:    //函數
 	static  CString VirtualNowOffSet(LPVOID pParam , CString Command);
 	//虛擬座標模擬
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);
-    //其他功能
-    static  void    SavePointData(LPVOID pParam);
-    
-    
+	//其他功能
+	static  void    SavePointData(LPVOID pParam);
+	
+	
 public:     //變數
 	//主運動物件
 	CAction         m_Action;
@@ -344,6 +344,7 @@ public:     //變數
 	RunLoopData     RunLoopData;
 	//影像參數 
 	VisionDefault   VisionDefault;
+
 	VisionSet       VisionSet;
 	VisionFile      VisionFile;
 	VisionSerchError VisionSerchError;
@@ -359,29 +360,34 @@ public:     //變數
 	CoordinateData  FinalWorkCoordinateData;
 	//虛擬模擬座標
 	CoordinateData  VirtualCoordinateData;
+	//未修正虛擬模擬座標
+	CoordinateData  NVMVirtualCoordinateData;
 	//模組控管
 	ModelControl    ModelControl;
+
 	//動作修正表
 	std::vector<PositionModifyNumber> PositionModifyNumber;
 	//影像資料
 	std::vector<VisionAdjust> VisionAdjust;
 	//雷射資料
 	std::vector<LaserAdjust> LaserAdjust;
+
 	//影像、雷射資料計數
 	int             VisionCount;
 	int             LaserCount;
-    //紀錄目前紀錄到表中地址
-    CString         CurrentTableAddress;
+
+	//紀錄目前紀錄到表中地址(特殊線段使用)
+	CString         CurrentTableAddress;
 	//判斷影像是否修正
 	BOOL            VisioModifyJudge;
-	//未修正虛擬模擬座標
-	CoordinateData  NVMVirtualCoordinateData;
-	//連續線段計數
+	
+	//連續線段計數(連續掃描使用)
 	LONG            ContinuousLineCount;
-	//控制是否切換連續線段
+	//控制是否切換連續線段(呼叫執行連續線段使用)
 	BOOL            ContinuousSwitch;
-    //Demo載入用判斷符號
-    BOOL            DemoTemprarilySwitch;
+
+	//Demo載入用判斷符號(DEMO 用)
+	BOOL            DemoTemprarilySwitch;
 public:     //函數
 	COrder();
 	virtual ~COrder();
@@ -400,8 +406,8 @@ public:     //函數
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
 
-    //載入檔案
-    void    LoadPointData();
+	//載入檔案
+	void    LoadPointData();
 protected:
 	DECLARE_MESSAGE_MAP()
 };

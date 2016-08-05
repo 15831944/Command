@@ -2,8 +2,8 @@
 *檔案名稱:Action.h(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/07/21
-*@更新內容線段z值改變時，三軸同動移動，原來的為x,y先移動再移動z軸*/
+*＠data 更新日期:2016/08/2
+*@更新內容三軸兩軸連續差補&雷射API*/
 #pragma once
 #include <vector>
 #define _USE_MATH_DEFINES
@@ -89,6 +89,8 @@ public:     //運動API
     CString NowLocation();
     //CCD移動用--(點座標X,Y,Z,驅動速度,加速度,初速度)
     void DoCCDMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    //原點復歸，回絕對位置(0,0,0)
+    void BackGOZero(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
     //人機用函數-軟體負極限
     void HMNegLim(LONG lX, LONG lY, LONG lZ);
     //人機用函數-軟體正極限(x,y,z為最大工作範圍)
@@ -119,6 +121,8 @@ public:     //雷射API
     void LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &lZ);
     //將3Dvetor值作旋轉偏移修正
     void LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, LONG RefX = 0, LONG RefY = 0, DOUBLE OffSetX = 0, DOUBLE OffSetY = 0, DOUBLE Andgle = 0, DOUBLE CameraToTipOffsetX = 0, DOUBLE CameraToTipOffsetY = 0, BOOL Mode = 0, LONG lSubOffsetX = 0, LONG lSubOffsetY = 0);//將3Dvetor值作旋轉偏移修正
+    //填充動作_多載(最後一點位置(EndX,EndY),線段開始X,Y,Z，線段結束X,Y,Z，Z軸距離(相對)，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm))
+    void Fill_EndPoint(LONG &lEndX, LONG &lEndY, LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, int iType, LONG lWidth, LONG lWidth2);
 public:     //執行續
     static DWORD WINAPI MoInterrupt(LPVOID);//軸卡中斷thread
 private:    //自行運用函數
@@ -143,13 +147,34 @@ private:    //自行運用函數
     void AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態6
     void AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7                                                                                                                                                                      //絕對座標轉相對座標3軸連續插補使用
     void LA_CorrectLocation(LONG &PointX, LONG &PointY, LONG RefX, LONG RefY, DOUBLE OffSetX, DOUBLE OffSetY, DOUBLE Andgle, DOUBLE CameraToTipOffsetX, DOUBLE CameraToTipOffsetY, BOOL Mode, LONG lSubOffsetX, LONG lSubOffsetY);//雷射用旋轉平移
+    //===============未使用連續插補的填充型態=========================
+    void AttachFillType2_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+        LONG lInitVelociy);//附屬--- 填充形態2-1
+    void AttachFillType3_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+        LONG lInitVelociy);//附屬--- 填充形態3
+    void AttachFillType4_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy,
+        LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態4
+    void AttachFillType5_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy,
+        LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態5
+    void AttachFillType6_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+        LONG lInitVelociy);//附屬--- 填充形態6
+    void AttachFillType7_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ,
+        LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+        LONG lInitVelociy);//附屬--- 填充形態7
+    void AttachFillType3_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWidth, LONG lWidth2);
+    void AttachFillType4_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWidth, LONG lWidth2);
+    void AttachFillType5_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lWidth, LONG lWidth2);
 #ifdef MOVE 
     void MO_Do2dDataLine(LONG EndPX, LONG EndPY, std::vector<DATA_2MOVE> &str);//填充用兩軸連續差補(給值--直線)
     void MO_Do2dDataCir(LONG EndPX, LONG EndPY, LONG CenX, LONG CenY, BOOL bRev, std::vector<DATA_2MOVE> &str);//填充用兩軸連續差補(給值--圓)
-    void LA_AbsToOppo3Move(std::vector<DATA_3MOVE> &str);
-    void LA_AbsToOppo2Move(std::vector<DATA_2MOVE> &str);//絕對座標轉相對座標3軸連續插補使用
+    void LA_AbsToOppo3Move(std::vector<DATA_3MOVE> &str);//絕對座標轉相對座標3軸連續插補使用
+    void LA_AbsToOppo2Move(std::vector<DATA_2MOVE> &str);//絕對座標轉相對座標2軸連續插補使用
 #endif
-
 };
 
 

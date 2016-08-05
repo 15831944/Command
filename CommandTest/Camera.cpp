@@ -19,6 +19,8 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 	PixToPulsX = 0.0;
 	PixToPulsY = 0.0;
 	FocusPoint = 0;
+	MilModel = malloc(sizeof(int));
+	*((int*)MilModel) = 0;
 }
 
 CCamera::~CCamera()
@@ -47,6 +49,8 @@ BEGIN_MESSAGE_MAP(CCamera, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &CCamera::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CCamera::OnBnClickedButton4)
 	ON_BN_CLICKED(IDC_BTNFOCUS, &CCamera::OnBnClickedBtnfocus)
+	ON_WM_SHOWWINDOW()
+	ON_WM_MOUSEACTIVATE()
 END_MESSAGE_MAP()
 
 // CCamera 訊息處理常式
@@ -55,12 +59,12 @@ BOOL CCamera::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 	/*初始化按鈕移動*/
-	m_Xup.MoveX = 200000;
-	m_Xdown.MoveX = -200000;
-	m_Yup.MoveY = 200000;
-	m_Ydown.MoveY = -200000;
-	m_Zup.MoveZ = 200000;
-	m_Zdown.MoveZ = -200000;
+	m_Xup.MoveX = 350000;
+	m_Xdown.MoveX = -350000;
+	m_Yup.MoveY = 340000;
+	m_Ydown.MoveY = -340000;
+	m_Zup.MoveZ = 85000;
+	m_Zdown.MoveZ = -85000;
 	/*初始化Radio*/
 	((CButton *)GetDlgItem(IDC_RADH))->SetCheck(TRUE);
 	RaiChoose = 1;
@@ -100,19 +104,19 @@ void CCamera::OnBnClickedBtnmove()
 #ifdef MOVE
 	if (GetDlgItemInt(IDC_EDITX) == 0 && GetDlgItemInt(IDC_EDITY) == 0)
 	{
-		MO_Do3DLineMove(0, 0, GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+		MO_Do3DLineMove(0, 0, GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 85000, 1000000, 5000);
 	}
 	else if (GetDlgItemInt(IDC_EDITY) == 0 && GetDlgItemInt(IDC_EDITZ) == 0)
 	{
-		MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), 0, 0, 30000, 100000, 5000);
+		MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), 0, 0, 85000, 1000000, 5000);
 	}
 	else if (GetDlgItemInt(IDC_EDITX) == 0 && GetDlgItemInt(IDC_EDITZ) == 0)
 	{
-		MO_Do3DLineMove(0, GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), 0, 30000, 100000, 5000);
+		MO_Do3DLineMove(0, GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), 0, 85000, 1000000, 5000);
 	}
 	else
 	{
-		MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+		MO_Do3DLineMove(GetDlgItemInt(IDC_EDITX) - MO_ReadLogicPosition(0), GetDlgItemInt(IDC_EDITY) - MO_ReadLogicPosition(1), GetDlgItemInt(IDC_EDITZ) - MO_ReadLogicPosition(2), 85000, 1000000, 5000);
 	}
 #endif
 
@@ -155,32 +159,34 @@ void CCamera::OnBnClickedBtnmodel()
 /*鍵盤偵測*/
 BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 {
+
 	if (pMsg->message == WM_KEYDOWN) {
+#ifdef MOVE
 		if (pMsg->wParam == VK_LEFT) {
-			MoveXYZ(-200000, 0, 0);
+			MoveXYZ(-(MO_ReadLogicPosition(0)), 0, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_RIGHT) {
-			MoveXYZ(200000, 0, 0);
+			MoveXYZ((350000 - MO_ReadLogicPosition(0)), 0, 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_UP) {
-			MoveXYZ(0, -200000, 0);
+			MoveXYZ(0, -(MO_ReadLogicPosition(1)), 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_DOWN) {
-			MoveXYZ(0, 200000, 0);
+			MoveXYZ(0, (340000 - MO_ReadLogicPosition(1)), 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_HOME) {
-			MoveXYZ(0, 0, -200000);
+			MoveXYZ(0, 0, -(MO_ReadLogicPosition(2)));
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_END) {
-			MoveXYZ(0, 0, 200000);
+			MoveXYZ(0, 0, (85000 - MO_ReadLogicPosition(2)));
 			pMsg->message = WM_NULL;
 		}
-		
+#endif
 	}
 	if (pMsg->message == WM_KEYUP) {
 		if (pMsg->wParam == VK_LEFT || pMsg->wParam == VK_RIGHT
@@ -190,7 +196,10 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 			CWnd* pMain = AfxGetApp()->m_pMainWnd;
 			if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
 			{
-				MO_DecSTOP();
+				if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+				{
+					MO_DecSTOP();
+				}
 			}
 #endif // MOVE
 			pMsg->message = WM_NULL;
@@ -202,29 +211,33 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+	if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2 )
 	{
-		switch (RaiChoose)
+		if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
 		{
-		case 1:
-			if (!MO_ReadIsDriving(7))
-				MO_Do3DLineMove(MoveX, MoveY, MoveZ, 30000, 100000, 6000);
-			break;
-		case 2:
-			if (!MO_ReadIsDriving(7))
-				MO_Do3DLineMove(MoveX, MoveY, MoveZ, 15000, 80000, 5000);
-			break;
-		case 3:
-			if (!MO_ReadIsDriving(7))
-				MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
-			break;
-		default:
-			//MessageBox(_T("程式出現錯誤!"));
-			break;
-		}
+			switch (RaiChoose)
+			{
+			case 1:
+				if (!MO_ReadIsDriving(7))
+					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
+				break;
+			case 2:
+				if (!MO_ReadIsDriving(7))
+					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
+				break;
+			case 3:
+				if (!MO_ReadIsDriving(7))
+					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+				break;
+			default:
+				//MessageBox(_T("程式出現錯誤!"));
+				break;
+			}
 #ifdef PRINTF
-		//_cprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+			//_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
+		}
+		
 	}
 #ifdef PRINTF
 	//_cprintf("%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
@@ -283,7 +296,6 @@ void CCamera::OnBnClickedButton3()
 	if (StrBuff == L"SetPixToPuls")
 	{
 		VI_DrawFOVFrame(2, GetDlgItem(IDC_PIC), 150, 150);
-		MilModel = malloc(sizeof(int));
 		SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls1"));     
 	}
 	else if (StrBuff == L"SetPixToPuls1")
@@ -305,7 +317,8 @@ void CCamera::OnBnClickedButton3()
 			StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), PixToPulsX, PixToPulsY);
 			SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 			VI_ModelFree(MilModel);
-			free(MilModel);
+			//free(MilModel);
+			*((int*)MilModel) = 0;
 			SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls"));
 			VI_DrawFOVFrame(1, GetDlgItem(IDC_PIC), 150, 150);
 		}    
@@ -347,6 +360,17 @@ void CCamera::OnCancel()
 {
 #ifdef VI
 	//VI_DisplayAlloc(NULL, 1);
+	if (*((int*)MilModel) == 0)
+	{
+		free(MilModel);
+		_cwprintf(_T("free"));
+	}
+	else
+	{
+		VI_ModelFree(MilModel);
+		free(MilModel);
+		_cwprintf(_T("VI_ModelFree"));
+	}
 #endif
 	CDialogEx::OnCancel();
 }
@@ -354,4 +378,23 @@ void CCamera::OnOK()
 {
 	//CDialogEx::OnOK();
 }
+//顯示視窗時設定
+void CCamera::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+	SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
+	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
+}
+//非活動轉活動事件
+int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
+{
+	//從非活動轉為活動改成不透明
+	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
+	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
+}
 
+BOOL CCamera::DestroyWindow()
+{
+    OnCancel();
+	return CDialogEx::DestroyWindow();
+}

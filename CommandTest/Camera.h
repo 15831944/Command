@@ -44,4 +44,7 @@ public:
 
 	virtual void OnOK();
 	afx_msg void OnBnClickedBtnfocus();
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
+    virtual BOOL DestroyWindow();
 };

@@ -22,7 +22,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-    CDialog* pQuestion;
+	CDialog* pQuestion;
 	CListCtrl m_ListDefault;
 	CEdit m_Edit;
 	int m_OldListRow, m_OldListColumn;
@@ -35,4 +35,6 @@ public:
 	afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
 	void CreateEdit(NM_LISTVIEW * pEditCtrl, CEdit * m_Edit);
 	void DistroyEdit(CListCtrl * list, CEdit * distroyedit, int & Item, int & SubItem);
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 };

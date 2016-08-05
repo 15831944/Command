@@ -441,7 +441,7 @@ UINT COrder::Thread(LPVOID pParam)
     }
     if (((COrder*)pParam)->GoHome.PrecycleInitialize)//開啟結束初始化(原點賦歸)
     {
-        ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+        ((COrder*)pParam)->m_Action.BackGOZero(120000, 1500000, 6000);
     }
     //TODO::DEMO所以加入
     if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
@@ -2007,7 +2007,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
         }     
     }
-    /***********************************目前已最後一個點當作結束點****************************************/
     if (CommandResolve(Command, 0) == L"FillArea")
     {
         if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
@@ -2017,9 +2016,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式(超高依起始點)
         {
-            CString CommandBuff;
-            CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
-            LaserDetectHandle(pParam, CommandBuff); //雷射測高
             VirtualCoordinateMove(pParam, Command, 1);//虛擬座標移動
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
@@ -2030,11 +2026,25 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ChooseLaserModify(pParam);//選擇雷射高度
             ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
             LineGotoActionJudge(pParam);//判斷動作狀態
+            
+            //紀錄CallSubroutine點(不加影像修正時的值)
+            ((COrder*)pParam)->m_Action.Fill_EndPoint(((COrder*)pParam)->NVMVirtualCoordinateData.X, ((COrder*)pParam)->NVMVirtualCoordinateData.Y,
+                _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,                
+                _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3))
+                );
+            ((COrder*)pParam)->NVMVirtualCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z; //紀錄CallSubroutine點(不加影像修正時的值)
+                                        
             //填充修正
             LONG FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z, FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z;
             ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
             ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
             ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            
             VisionModify(pParam);//影像修正
             LaserModify(pParam);//雷射修正
             FillAreaPoint1X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
@@ -2043,9 +2053,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 
             ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
             ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-            
-            ((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;          
 
             VisionModify(pParam);//影像修正
             LaserModify(pParam);//雷射修正
@@ -2066,7 +2074,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)),
                 ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
 
-            ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+            //紀錄移動虛擬座標
+            ((COrder*)pParam)->m_Action.Fill_EndPoint(((COrder*)pParam)->VirtualCoordinateData.X, ((COrder*)pParam)->VirtualCoordinateData.Y,
+                FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z,
+                FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z,
+                _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3))
+            );
+            ((COrder*)pParam)->VirtualCoordinateData.Z = FillAreaPoint2Z;
         }   
     }
     if (CommandResolve(Command, 0) == L"Output")
@@ -2358,6 +2372,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         //找到抬升
 #ifdef MOVE
+                        //TODO::對位完畢會有出膠聲音
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -2400,6 +2415,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
                         //找到抬升
 #ifdef MOVE
+                        //TODO::對位完畢會有出膠聲音
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -2591,6 +2607,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         _cwprintf(L"第一點找到\r\n");
                         //找到抬升
 #ifdef MOVE
+                        //TODO::對位完畢會有出膠聲音
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -2613,6 +2630,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         //找到清除手動狀態、將對位點依設置已經有Offset
                         //找到抬升
 #ifdef MOVE
+                        //TODO::對位完畢會有出膠聲音
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -2653,6 +2671,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         //找到抬升
 #ifdef MOVE
+                        //TODO::對位完畢會有出膠聲音
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -2898,7 +2917,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->LaserData.LaserMeasureHeight);
 
                 ((COrder*)pParam)->VirtualCoordinateData = { 0,MeasureLE.x,MeasureLE.y,((COrder*)pParam)->m_Action.g_HeightLaserZero };//紀錄移動虛擬座標
-                                                                                                                                                                                                         //紀錄測量高度至雷射修正表
+                //紀錄測量高度至雷射修正表
                 ((COrder*)pParam)->LaserCount++;
                 ((COrder*)pParam)->LaserAdjust.push_back({ ((COrder*)pParam)->LaserData.LaserMeasureHeight });
             }
@@ -3070,6 +3089,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 #ifdef VI
         //無找到抬升
         #ifdef MOVE
+        //TODO::對位完畢會有出膠聲音
         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -3154,6 +3174,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
     case 3://暫停
         //無找到抬升
         #ifdef MOVE
+        //TODO::對位完畢會有出膠聲音
         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
             ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
@@ -3505,16 +3526,52 @@ void COrder::VirtualCoordinateMove(LPVOID pParam, CString Command ,LONG type)
     }
     else if (CommandResolve(Command, 0) == L"FillArea")
     {
+        CString CommandBuff;
+        CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
         ((COrder*)pParam)->V_ActionCount++;//虛擬動作計數++
         ChooseVisionModify(pParam);//選擇影像Offset
-        ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+        ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
         ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+
+        //紀錄CallSubroutine點(不加影像修正時的值)
+        ((COrder*)pParam)->m_Action.Fill_EndPoint(((COrder*)pParam)->NVMVirtualCoordinateData.X, ((COrder*)pParam)->NVMVirtualCoordinateData.Y,
+            _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+            _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+            _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+            _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+            _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+            _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+            _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3))
+        );
+        ((COrder*)pParam)->NVMVirtualCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z; //紀錄CallSubroutine點(不加影像修正時的值)
+
+        //紀錄移動虛擬座標
+        LONG FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z, FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z;
+        ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+        ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+        ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+
+        VisionModify(pParam);//影像修正
+        FillAreaPoint1X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+        FillAreaPoint1Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+        FillAreaPoint1Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
+
         ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
         ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
         ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 9)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-        ((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
+
         VisionModify(pParam);//影像修正
-        ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+        FillAreaPoint2X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
+        FillAreaPoint2Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
+        FillAreaPoint2Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
+
+                                                                                                                                                                           //紀錄移動虛擬座標
+        ((COrder*)pParam)->m_Action.Fill_EndPoint(((COrder*)pParam)->VirtualCoordinateData.X, ((COrder*)pParam)->VirtualCoordinateData.Y,
+            FillAreaPoint1X, FillAreaPoint1Y, FillAreaPoint1Z,
+            FillAreaPoint2X, FillAreaPoint2Y, FillAreaPoint2Z,
+            _ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3))
+        );
+        ((COrder*)pParam)->VirtualCoordinateData.Z = FillAreaPoint2Z;
     }
     else
     {

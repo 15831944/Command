@@ -40,4 +40,6 @@ public:
     afx_msg void OnDelete3();
     afx_msg void OnBnClickedBtnnew();
     afx_msg void OnBnClickedBtnclear();
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 };

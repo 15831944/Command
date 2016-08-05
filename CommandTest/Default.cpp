@@ -36,6 +36,8 @@ BEGIN_MESSAGE_MAP(CDefault, CDialogEx)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CDefault::OnNMDblclkList1)
 	ON_NOTIFY(NM_CLICK, IDC_LIST1, &CDefault::OnNMClickList1)
 	ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CDefault::OnNMRClickList1)
+    ON_WM_SHOWWINDOW()
+    ON_WM_MOUSEACTIVATE()
 END_MESSAGE_MAP()
 
 
@@ -298,4 +300,18 @@ void CDefault::DistroyEdit(CListCtrl *list, CEdit *distroyedit, int &Item, int &
 	list->SetItemText(Item, SubItem, editdata); //type in 對應Item
 	distroyedit->DestroyWindow(); //銷毀
 	ParamModify();
+}
+//顯示視窗時設定
+void CDefault::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+    CDialogEx::OnShowWindow(bShow, nStatus);
+    SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
+    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
+}
+//非活動轉活動事件
+int CDefault::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
+{
+    //從非活動轉為活動改成不透明
+    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
+    return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }

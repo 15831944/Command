@@ -12,14 +12,14 @@ public:
     int MoveX;
     int MoveY;
     int MoveZ;
-	virtual ~CMoveButton();
+    virtual ~CMoveButton();
 
 protected:
 	DECLARE_MESSAGE_MAP()
 public:
     afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
-    afx_msg void OnTimer(UINT_PTR nIDEvent);
+    void MoveXYZ(int MoveX, int MoveY, int MoveZ);
 };
 
 

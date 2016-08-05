@@ -2,8 +2,8 @@
 *檔案名稱:Action.cpp(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/07/29	
-*@更新內容線段z值改變時，三軸同動移動，原來的為x,y先移動再移動z軸*/
+*＠data 更新日期:2016/08/2
+*@更新內容三軸兩軸連續差補&雷射API*/
 #include "stdafx.h"
 #include "Action.h"
 #define LA_SCANEND -99999
@@ -304,12 +304,17 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
 		}
 		lZBackDistance = abs(lZBackDistance - lZ);
 	}
-	LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+	LONG lNowX = 0, lNowY = 0, lNowZ = 0, LineLength=0;
 	LONG lLineClose = 0, lXClose = 0, lYClose = 0;
 	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
 	lNowX = MO_ReadLogicPosition(0);
 	lNowY = MO_ReadLogicPosition(1);
 	lNowZ = MO_ReadLogicPosition(2);
+    LineLength = LONG(sqrt(DOUBLE(pow(lX - lNowX, 2) + pow(lY - lNowY, 2))));
+    if (lCloseDistance != 0 && lCloseDistance > LineLength)
+    {
+        lCloseDistance = LineLength;
+    }
 	if (lHighVelocity == 0)
 	{
 		lHighVelocity = lWorkVelociy;
@@ -620,7 +625,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 #ifdef MOVE
 	   LONG lNowZ = 0;
 	LONG lXClose = 0, lYClose = 0, lZClose = 0, lLineClose = 0;
-	LONG lBuffX = 0, lBuffY = 0;
+	LONG lBuffX = 0, lBuffY = 0, LineLength=0;
 	DOUBLE dTime = 0;
 	BOOL bSame = 0;
 	dTime = (sqrt((DOUBLE)lInitVelociy*(DOUBLE)lInitVelociy + ((DOUBLE)lAcceleration*(DOUBLE)lStartDistance / 2)) - (DOUBLE)lInitVelociy) / (DOUBLE)lAcceleration;
@@ -629,6 +634,11 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 	LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lX, lY, lZ2, lZ, lLineClose);
 	lBuffX = (-(lXClose - lX)) + lX;
 	lBuffY = (-(lYClose - lY)) + lY;
+    LineLength = LONG(sqrt(DOUBLE(pow(lX2 - lX, 2) + pow(lY2 - lY, 2))));
+    if (lCloseDistance != 0 && lCloseDistance > LineLength)
+    {
+        lCloseDistance = LineLength;
+    }
 	if (!bZDisType)//絕對位置
 	{
 		if (lZBackDistance > lZ)
@@ -921,7 +931,7 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 	CString csX = 0, csY = 0;
 	CString csBuff = 0, csNowPonit = 0, csLineCircle = 0, csLineCircleEnd = 0;
 	LONG lLineClose = 0, lXClose = 0, lYClose = 0;
-	LONG lR = 0;//斷膠點與半徑
+    LONG lR = 0, LineLength = 0;//斷膠點與半徑
 	LONG lEndX = 0, lEndY = 0;
 	lNowX = MO_ReadLogicPosition(0);
 	lNowY = MO_ReadLogicPosition(1);
@@ -957,8 +967,13 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 		lZBackDistance = abs(lZBackDistance - lNowZ);
 	}
 	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
-	if (lNowX == lX3 && lNowY == lY3)//表示結束點在起始點上
+    if ((lNowX >= lX3 - 5) && (lNowX <= lX3 + 5) && (lNowY >= lY3 - 5) && (lNowY <= lY3 + 5)) //表示結束點在起始點上
 	{
+        LineLength = LONG((2 * M_PI*lR));
+        if (lCloseDistance != 0 && lCloseDistance > LineLength)
+        {
+            lCloseDistance = LineLength;
+        }
 		if (lCloseDistance == 0) //線段點膠設定---(5)關機距離
 		{
 			if (!g_bIsStop)
@@ -1010,6 +1025,11 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 	}
 	else//表示結束點不在圓上
 	{
+        LineLength = LONG(sqrt(DOUBLE(pow(lX3 - lX1, 2) + pow(lY3 - lY1, 2))));
+        if (lCloseDistance != 0 && lCloseDistance > LineLength)
+        {
+            lCloseDistance = LineLength;
+        }
 		if (!g_bIsStop)
 		{
 			MO_Do2DArcMove(0, 0, lCircleX - lNowX, lCircleY - lNowY, lInitVelociy, lWorkVelociy, bRev);//圓
@@ -1058,7 +1078,7 @@ void CAction::DecideArcleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lClo
 	CString csX = 0, csY = 0;
 	CString csBuff = 0, csNowPonit = 0, csLineCircle = 0, csLineCircleEnd = 0;
 	LONG lLineClose = 0, lXClose = 0, lYClose = 0;
-	LONG lR = 0;//斷膠點與半徑
+	LONG lR = 0, LineLength=0;//斷膠點與半徑
 	LONG lEndX = 0, lEndY = 0, lCrev = 0;
 	DOUBLE dAngl = 0;
 	lNowX = MO_ReadLogicPosition(0);
@@ -1080,6 +1100,11 @@ void CAction::DecideArcleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lClo
 	lR = LONG(sqrt(pow(lNowX - lCircleX, 2) + pow(lNowY - lCircleY, 2)));//半徑
 	dAngl = AngleCount(lCircleX, lCircleY, lX1, lY1, lX2, lY2, bRev);//角度
 	lCrev = LONG(2 * lR * M_PI * dAngl / 360);
+    LineLength = LONG((2 * M_PI*lR));
+    if (lCloseDistance != 0 && lCloseDistance > LineLength)
+    {
+        lCloseDistance = LineLength;
+    }
 	if (lHighVelocity == 0)
 	{
 		lHighVelocity = lWorkVelociy;
@@ -1295,11 +1320,25 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
 	lNowY = MO_ReadLogicPosition(1);
 	lNowZ = MO_ReadLogicPosition(2);
 
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(lX1 - lNowX, lY1 - lNowY, lZ1 - lNowZ, lWorkVelociy, lAcceleration, lInitVelociy);//回到起始點!
-		PreventMoveError();
-	}
+    if (iType == 6 || iType == 7)
+    {
+        Sleep(1);
+    }
+    else
+    {
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove(lX1 - lNowX, lY1 - lNowY, 0, lWorkVelociy,
+                lAcceleration, lInitVelociy);//回到起始點!
+            PreventMoveError();
+        }
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove(0, 0, lZ1 - lNowZ, lWorkVelociy,
+                lAcceleration, lInitVelociy);//回到起始點!
+            PreventMoveError();
+        }
+    }
 	if (!bZDisType)//絕對位置
 	{
 		if (lZBackDistance > lZ1)
@@ -1453,6 +1492,41 @@ void CAction::DoCCDMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcce
 		MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸移動
 		PreventMoveError();//防止軸卡出錯
 	}
+#endif
+}
+/*執行完畢回(0,0,0)位置*/
+void CAction::BackGOZero(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+#ifdef MOVE
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, 0 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
+        PreventMoveError();
+    }
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0 - MO_ReadLogicPosition(0), 0 - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);
+        PreventMoveError();
+    }
+#endif
+}
+//----------------------------------------------------
+//人機使用API--使用前請使用原點復歸偏移量
+//----------------------------------------------------
+//軟體負極限(x,y,z預設為-10)
+void CAction::HMNegLim(LONG lX, LONG lY, LONG lZ)
+{
+#ifdef MOVE
+    MO_SetSoftLim(7, 1);
+    MO_SetCompSoft(1, -lX, -lY, -lZ);
+#endif
+}
+//軟體正極限(x,y,z)
+void CAction::HMPosLim(LONG lX, LONG lY, LONG lZ)
+{
+#ifdef MOVE
+    MO_SetSoftLim(7, 1);
+    MO_SetCompSoft(0, lX, lY, lZ);
 #endif
 }
 /***********************************************************
@@ -1870,6 +1944,82 @@ void CAction::LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG 
     PreventMoveError();//防止驅動錯誤
 #endif
 }
+//填充選擇拿取最後一點座標(EndX,EndY)
+void CAction::Fill_EndPoint(LONG & lEndX, LONG & lEndY, LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, int iType, LONG lWidth, LONG lWidth2)
+{
+    /*線段開始(x座標，y座標，z座標，線段起始點，)
+    LONG lX1, LONG lY1, LONG lZ1
+    */
+    /*線段結束(x座標，y座標，z座標，線段結束點，)
+    LONG lX2, LONG lY2, LONG lZ2
+    */
+    /*填充命令(填充形式(1~7)，寬度(mm)，兩端寬度(mm)，)
+    int iType, LONG lWidth, LONG lWidth2
+    */
+    LONG lBufX = 0, lBufY = 0;
+    if (lZ1 == lZ2)
+    {
+        switch (iType)
+        {
+        case 0:
+        {
+            break;
+        }
+        case 1:
+        {
+            lEndX = lX2;
+            lEndY = lY2;
+            break;
+        }
+        case 2:
+        {
+            lEndX = lX2;
+            lEndY = lY2;
+            break;
+        }
+        case 3:
+        {
+            AttachFillType3_End(lBufX, lBufY, lX1, lY1, lX2, lY2, lWidth, lWidth2);
+            lEndX = lBufX;
+            lEndY = lBufY;
+            break;
+        }
+        case 4:
+        {
+            AttachFillType4_End(lBufX, lBufY, lX1, lY1, lX2, lY2, lWidth, lWidth2);
+            lEndX = lBufX;
+            lEndY = lBufY;
+            break;
+        }
+        case 5:
+        {
+            AttachFillType5_End(lBufX, lBufY, lX1, lY1, lX2, lY2, lWidth, lWidth2);
+            lEndX = lBufX;
+            lEndY = lBufY;
+            break;
+        }
+        case 6:
+        {
+            lEndX = lX1;
+            lEndY = lY1;
+            break;
+        }
+        case 7:
+        {
+            lEndX = lX1;
+            lEndY = lY1;
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    else
+    {
+        AfxMessageBox(L"Z軸高度不同，請修正");
+    }
+}
+
 /*********************************************************執行緒************************************************************/
 //3d任意路徑執行緒
 DWORD CAction::MoInterrupt(LPVOID param)
@@ -1894,6 +2044,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
 	}
 	else if (RR1U & 0x0200 && getHeightFlag) //U計時器中斷
 	{
+#ifdef LA
 		LONG lCalcData1;
 		if (LAS_GetLaserData(lCalcData1))
 		{
@@ -1918,9 +2069,11 @@ DWORD CAction::MoInterrupt(LPVOID param)
 			}
 		}
 		_cwprintf(L"%s\n", L"Get Point");
+#endif
 	}
 	else if ((RR1X & 0x0080) || (g_LaserErrCnt == 10))//原本的為((RR1X&0x0040)|| (g_LaserErrCnt == 10)) 驅動結束中斷
 	{
+#ifdef LA
 		_cwprintf(L"%s\n", L"驅動結束中斷!");
 		getHeightFlag = FALSE;
 		((CAction *)pAction)->g_bIsGetLAend = TRUE;
@@ -1953,10 +2106,11 @@ DWORD CAction::MoInterrupt(LPVOID param)
 				g_LaserNuCnt++;
 			}
 		}
-		MO_Timer(2, 1000000);//關閉計時器
+		
 		((CAction *)pAction)->DATA_3Do[g_LaserNuCnt].EndPX = LA_SCANEND;//-99999為線段結束
 		((CAction *)pAction)->DATA_3Do[g_LaserNuCnt].EndPY = LA_SCANEND;//-99999為線段結束
 		((CAction *)pAction)->DATA_3Do[g_LaserNuCnt].EndPZ = LA_SCANEND;//-99999為線段結束
+
         if (((CAction *)pAction)->g_LaserAverage == TRUE)
         {
             ((CAction *)pAction)->g_LaserAveBuffZ = LONG(round(((DOUBLE)((CAction *)pAction)->g_LaserAveBuffZ) / g_LaserNuCnt));
@@ -1966,6 +2120,8 @@ DWORD CAction::MoInterrupt(LPVOID param)
             ((CAction *)pAction)->LA_m_ptVec.push_back(((CAction *)pAction)->DATA_3Do[g_LaserNuCnt]);
             ((CAction *)pAction)->LA_m_iVecSP.push_back(((CAction *)pAction)->LA_m_ptVec.size());
         }
+#endif
+        MO_Timer(2, 1000000);//關閉計時器
 		g_LaserErrCnt = 0;
 		g_LaserNuCnt = 1;//計數初始化
 		MO_InterruptCase(1, 5);//關閉中斷
@@ -2586,8 +2742,6 @@ void CAction::ArcGetToPoint(LONG &lArcX, LONG &lArcY, LONG lDistance, LONG lX, L
 		lArcY = LONG((((DOUBLE)lX - (DOUBLE)lCenX)*sin(dAngl)) + (((DOUBLE)lY - (DOUBLE)lCenY)*cos(dAngl)) + lCenY);
 	}
 }
-
-
 /*附屬---填充形態(型態1矩形s路徑填充)
 *輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
 */
@@ -2920,7 +3074,9 @@ void CAction::AttachFillType1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, L
 /*附屬---填充形態(型態2圓形螺旋填充.由外而內)
 *輸入(起始點x1,y1,圓心x2,y2,寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
+    LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy,
+    LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****圓型螺旋功能****
@@ -3021,7 +3177,7 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG l
             MO_Do2DArcMove(DATA_2DO.at(0).EndP.x, DATA_2DO.at(0).EndP.y, DATA_2DO.at(0).CirCentP.x, DATA_2DO.at(0).CirCentP.y,
                 lInitVelociy, lWorkVelociy, DATA_2DO.at(0).CirRev);//初始半圓
             PreventMoveError();
-}
+        }
         PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
     }
 
@@ -3047,302 +3203,325 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG l
 /*附屬---填充形態(型態3矩形填充.由外而內)
 *輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+    LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+    LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****排方型內縮4點功能****
-	LONG lNowX = 0, lNowY = 0;
-	CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
-	DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
-	DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
-	std::vector<CPoint>::iterator ptIter;//迭代器
-	std::vector<CPoint> m_ptVec;
-	m_ptVec.clear();
-	cPt1.x = lX1;
-	cPt1.y = lY1;
-	cPt3.x = lX2;
-	cPt3.y = lY2;
-	dWidth = lWidth * 1000;
-	cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
-	cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
-	dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
-	if (dRadius == 0)
-	{
-		return;
-	}
-	dAngCenCos = acos(double(cPt1.x - cPtCen.x) / dRadius);
-	dAngCenSin = asin(double(cPt1.y - cPtCen.y) / dRadius);
-	dAngCenCos2 = M_PI * 2 - dAngCenCos;
-	dAngCenSin2 = M_PI - dAngCenSin;
-	if (abs(dAngCenCos - dAngCenSin) > 0.01)
-	{
-		if (abs(dAngCenCos - dAngCenSin2) < 0.01)
-		{
-			dAngCenSin = dAngCenSin2;
-		}
-		else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
-		{
-			dAngCenCos = dAngCenCos2;
-		}
-		else
-		{
-			dAngCenSin = dAngCenSin2;
-			dAngCenCos = dAngCenCos2;
-		}
-	}
-	else
-	{
-		dAngCenSin = dAngCenCos;
-	}
-	cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-	cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-	cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-	cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-	dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
-	m_ptVec.push_back(cPt1);
-	m_ptVec.push_back(cPt2);
-	m_ptVec.push_back(cPt3);
-	m_ptVec.push_back(cPt4);
-	dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
-	dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
-	if (dAngCos < 0)
-	{
-		dAngCos += M_PI * 2;
-	}
-	if (dAngSin < 0)
-	{
-		dAngSin += M_PI * 2;
-	}
-	dAngCos2 = M_PI * 2 - dAngCos;
-	dAngSin2 = M_PI - dAngSin;
-	if (abs(dAngCos - dAngSin) > 0.01)
-	{
-		if (abs(dAngCos - dAngSin2) < 0.01)
-		{
-			dAngSin = dAngSin2;
-		}
-		else if (abs(dAngCos2 - dAngSin) < 0.01)
-		{
-			dAngCos = dAngCos2;
-		}
-		else
-		{
-			dAngCos = dAngCos2;
-			dAngSin = dAngSin2;
-		}
-	}
-	else
-	{
-		dAngSin = dAngCos;
-	}
-	while (1)
-	{
-		dRadius = dRadius - dWidth*sqrt(2);
-		dDistance = dDistance - dWidth;
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
-		cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
-		m_ptVec.push_back(cPt1);
-		cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-		cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-		m_ptVec.push_back(cPt2);
-		dDistance = dDistance - dWidth;
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
-		cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
-		m_ptVec.push_back(cPt3);
-		cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-		cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-		m_ptVec.push_back(cPt4);
-	}
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0,
+        dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(double(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(double(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    while (1)
+    {
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+    }
 #pragma endregion
-	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
-	for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
-	{
-		lNowX = MO_ReadLogicPosition(0);
-		lNowY = MO_ReadLogicPosition(1);
-		if (!g_bIsStop)
-		{
-			MO_Do3DLineMove((*ptIter).x - lNowX, (*ptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
-			PreventMoveError();
-		}
-	}
-	PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
-	MO_StopGumming();//停止出膠
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
-		PreventMoveError();//防止軸卡出錯
-	}
+    std::vector<DATA_2MOVE>DATA_2DO;
+    DATA_2DO.clear();
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        MO_Do2dDataLine((*ptIter).x, (*ptIter).y, DATA_2DO);
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+    for (UINT i = 1; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i - 1] = DATA_2DO.at(i);
+    }
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size() - 1, lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
 #endif
 }
 /*附屬---填充形態(型態4矩形環)
 *輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+    LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy,
+    LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****排方型內縮4點功能****
-	LONG lNowX = 0, lNowY = 0;
-	CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
-	DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
-	DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
-	int iBuff = 0;//判斷兩端寬度用
-	std::vector<CPoint>::iterator ptIter;//迭代器
-	std::vector<CPoint> m_ptVec;
-	m_ptVec.clear();
-	cPt1.x = lX1;
-	cPt1.y = lY1;
-	cPt3.x = lX2;
-	cPt3.y = lY2;
-	dWidth = lWidth * 1000;
-	dWidth2 = lWidth2 * 1000;
-	cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
-	cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
-	dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
-	if (dRadius == 0)
-	{
-		return;
-	}
-	dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
-	dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
-	dAngCenCos2 = M_PI * 2 - dAngCenCos;
-	dAngCenSin2 = M_PI - dAngCenSin;
-	if (abs(dAngCenCos - dAngCenSin) > 0.01)
-	{
-		if (abs(dAngCenCos - dAngCenSin2) < 0.01)
-		{
-			dAngCenSin = dAngCenSin2;
-		}
-		else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
-		{
-			dAngCenCos = dAngCenCos2;
-		}
-		else
-		{
-			dAngCenSin = dAngCenSin2;
-			dAngCenCos = dAngCenCos2;
-		}
-	}
-	else
-	{
-		dAngCenSin = dAngCenCos;
-	}
-	cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-	cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-	cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-	cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-	dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
-	m_ptVec.push_back(cPt1);
-	m_ptVec.push_back(cPt2);
-	m_ptVec.push_back(cPt3);
-	m_ptVec.push_back(cPt4);
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0,
+        dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    int iBuff = 0;//判斷兩端寬度用
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    dWidth2 = lWidth2 * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
 
-	dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
-	dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
-	if (dAngCos < 0)
-	{
-		dAngCos += M_PI * 2;
-	}
-	if (dAngSin < 0)
-	{
-		dAngSin += M_PI * 2;
-	}
-	dAngCos2 = M_PI * 2 - dAngCos;
-	dAngSin2 = M_PI - dAngSin;
-	if (abs(dAngCos - dAngSin) > 0.01)
-	{
-		if (abs(dAngCos - dAngSin2) < 0.01)
-		{
-			dAngSin = dAngSin2;
-		}
-		else if (abs(dAngCos2 - dAngSin) < 0.01)
-		{
-			dAngCos = dAngCos2;
-		}
-		else
-		{
-			dAngCos = dAngCos2;
-			dAngSin = dAngSin2;
-		}
-	}
-	else
-	{
-		dAngSin = dAngCos;
-	}
-	iBuff = 1;
-	while (1)
-	{
-		if ((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
-		{
-			AfxMessageBox(L"兩端寬度過大");
-			m_ptVec.push_back(cPt1);
-			break;
-		}
-		dRadius = dRadius - dWidth*sqrt(2);
-		dDistance = dDistance - dWidth;
-		if (iBuff*dWidth >  dWidth2) //dWidth2兩端寬度
-		{
-			dDistance += dWidth;
-			cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
-			cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
-			m_ptVec.push_back(cPt1);
-			break;
-		}
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
-		cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
-		m_ptVec.push_back(cPt1);
-		cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-		cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-		m_ptVec.push_back(cPt2);
-		dDistance = dDistance - dWidth;
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
-		cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
-		m_ptVec.push_back(cPt3);
-		cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-		cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-		m_ptVec.push_back(cPt4);
-		iBuff++;
-	}
-#pragma endregion	
-	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
-	for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
-	{
-		lNowX = MO_ReadLogicPosition(0);
-		lNowY = MO_ReadLogicPosition(1);
-		if (!g_bIsStop)
-		{
-			MO_Do3DLineMove((*ptIter).x - lNowX, (*ptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
-			PreventMoveError();
-		}
-	}
-	PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
-	MO_StopGumming();//停止出膠
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
-		PreventMoveError();//防止軸卡出錯
-	}
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    iBuff = 1;
+    while (1)
+    {
+        if ((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
+        {
+            AfxMessageBox(L"兩端寬度過大");
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (iBuff*dWidth >  dWidth2)  //dWidth2兩端寬度
+        {
+            dDistance += dWidth;
+            cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+            cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+        iBuff++;
+    }
+#pragma endregion
+
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        MO_Do2dDataLine((*ptIter).x, (*ptIter).y, DATA_2DO);
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
+    for (UINT i = 1; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i - 1] = DATA_2DO.at(i);
+    }
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size() - 1, lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
 #endif
 }
 /*附屬---填充形態(型態5圓環)
 *輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
+    LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy,
+    LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****圓型螺旋功能****
@@ -3464,161 +3643,169 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG l
 /*附屬---填充形態(型態6矩形填充.由內而外)
 *輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
+    LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration,
+    LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****排方型內縮4點功能****
-	LONG lNowX = 0, lNowY = 0, lNowZ = 0;
-	CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
-	DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
-	DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
-	std::vector<CPoint>::reverse_iterator rptIter;//反向迭代器
-	std::vector<CPoint> m_ptVec;
-	m_ptVec.clear();
-	cPt1.x = lX1;
-	cPt1.y = lY1;
-	cPt3.x = lX2;
-	cPt3.y = lY2;
-	dWidth = lWidth * 1000;
-	cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
-	cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
-	dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
-	if (dRadius == 0)
-	{
-		return;
-	}
-	dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
-	dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
-	dAngCenCos2 = M_PI * 2 - dAngCenCos;
-	dAngCenSin2 = M_PI - dAngCenSin;
-	if (abs(dAngCenCos - dAngCenSin) > 0.01)
-	{
-		if (abs(dAngCenCos - dAngCenSin2) < 0.01)
-		{
-			dAngCenSin = dAngCenSin2;
-		}
-		else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
-		{
-			dAngCenCos = dAngCenCos2;
-		}
-		else
-		{
-			dAngCenSin = dAngCenSin2;
-			dAngCenCos = dAngCenCos2;
-		}
-	}
-	else
-	{
-		dAngCenSin = dAngCenCos;
-	}
-	cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-	cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-	cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-	cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-	dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
-	m_ptVec.push_back(cPt1);
-	m_ptVec.push_back(cPt2);
-	m_ptVec.push_back(cPt3);
-	m_ptVec.push_back(cPt4);
+    LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0,
+        dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    std::vector<CPoint>::reverse_iterator rptIter;//反向迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
 
-	dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
-	dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
-	if (dAngCos < 0)
-	{
-		dAngCos += M_PI * 2;
-	}
-	if (dAngSin < 0)
-	{
-		dAngSin += M_PI * 2;
-	}
-	dAngCos2 = M_PI * 2 - dAngCos;
-	dAngSin2 = M_PI - dAngSin;
-	if (abs(dAngCos - dAngSin) > 0.01)
-	{
-		if (abs(dAngCos - dAngSin2) < 0.01)
-		{
-			dAngSin = dAngSin2;
-		}
-		else if (abs(dAngCos2 - dAngSin) < 0.01)
-		{
-			dAngCos = dAngCos2;
-		}
-		else
-		{
-			dAngCos = dAngCos2;
-			dAngSin = dAngSin2;
-		}
-	}
-	else
-	{
-		dAngSin = dAngCos;
-	}
-	while (1)
-	{
-		dRadius = dRadius - dWidth*sqrt(2);
-		dDistance = dDistance - dWidth;
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
-		cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
-		m_ptVec.push_back(cPt1);
-		cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
-		cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
-		m_ptVec.push_back(cPt2);
-		dDistance = dDistance - dWidth;
-		if (dDistance < dWidth)
-		{
-			break;
-		}
-		cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
-		cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
-		m_ptVec.push_back(cPt3);
-		cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
-		cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
-		m_ptVec.push_back(cPt4);
-	}
-#pragma endregion	
-	//先抬升，移動到中心點在下降
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
-		PreventMoveError();//防止軸卡出錯
-	}
-	for (rptIter = m_ptVec.rbegin(); rptIter != m_ptVec.rend(); rptIter++)
-	{
-		lNowX = MO_ReadLogicPosition(0);
-		lNowY = MO_ReadLogicPosition(1);
-		if (!g_bIsStop)
-		{
-			MO_Do3DLineMove((*rptIter).x - lNowX, (*rptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
-			PreventMoveError();
-		}
-		if (rptIter == m_ptVec.rbegin())
-		{
-			if (!g_bIsStop)
-			{
-				lNowZ = MO_ReadLogicPosition(2);
-				MO_Do3DLineMove(0, 0, lZ - lNowZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸往下
-				PreventMoveError();//防止軸卡出錯
-			}
-			PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
-		}
-	}
-	PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
-	MO_StopGumming();//停止出膠
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
-		PreventMoveError();//防止軸卡出錯
-	}
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    while (1)
+    {
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (rptIter = m_ptVec.rbegin(); rptIter != m_ptVec.rend(); rptIter++)
+    {
+        MO_Do2dDataLine((*rptIter).x, (*rptIter).y, DATA_2DO);
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(DATA_2DO.at(0).EndP.x, DATA_2DO.at(0).EndP.y, 0, lWorkVelociy,
+            lAcceleration, lInitVelociy);//移動
+        PreventMoveError();
+    }
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸往下
+        PreventMoveError();//防止軸卡出錯
+    }
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+    for (UINT i = 1; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i - 1] = DATA_2DO.at(i);
+    }
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size() - 1, lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
 #endif
 }
 /*附屬---填充形態(型態7圓形螺旋填充.由內而外)
 *輸入(起始點x1,y1,中心點x2,y2,寬度,驅動速度,加速度,初速度)
 */
-void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
+    LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy,
+    LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
 #pragma region ****圓型螺旋功能****
@@ -3770,26 +3957,1217 @@ void CAction::LA_CorrectLocation(LONG &PointX, LONG &PointY, LONG RefX, LONG Ref
         PointY = (Y + 0.5);
     }
 }
-//----------------------------------------------------
-//人機使用API--使用前請使用原點復歸偏移量
-//----------------------------------------------------
-//軟體負極限(x,y,z預設為-10)
-void CAction::HMNegLim(LONG lX, LONG lY, LONG lZ)
+/*附屬---填充形態(型態2圓形螺旋填充.由外而內)
+*輸入(起始點x1,y1,圓心x2,y2,寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType2_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
-	MO_SetSoftLim(7, 1);
-	MO_SetCompSoft(1, -lX, -lY, -lZ);
+#pragma region ****圓型螺旋功能****
+    DOUBLE dRadius = 0, dWidth = 0, dAng0 = 0, dAng1 = 0, dAng2 = 0;
+    BOOL bRev = 1;//0逆轉/1順轉
+    LONG lLineClose = 0, lXClose = 0, lYClose = 0, lDistance = 0;
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen1 = 0, cPtCen2 = 0;
+    int iData = 0, iOdd = 0;//判斷奇偶(奇做上半圓/偶做下半圓)
+    CString csbuff = 0;
+    std::vector<CPoint>m_ptVec;
+    std::vector<CPoint>::iterator ptIter;//反向迭代器
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPtCen1.x = lCenX;
+    cPtCen1.y = lCenY;//上半圓圓心
+    dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
+    if (dRadius == 0)
+    {
+        return;
+    }
+    lDistance = LONG(dRadius);
+    dWidth = lWidth * 1000;
+    dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
+    dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
+    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    lDistance = LONG(lDistance - dWidth);
+    LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+        lDistance);
+    cPt3.x = lXClose;
+    cPt3.y = lYClose;
+    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
+    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    iData = (int)dRadius % (int)dWidth;
+    lDistance = LONG(lDistance + dWidth);
+    while (1)
+    {
+        lDistance = LONG(lDistance - dWidth);
+        if (lDistance < dWidth)
+        {
+            break;
+        }
+        LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+            lDistance);
+        cPt3.x = lXClose;
+        cPt3.y = lYClose;
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
+        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE> DATA_2DO;
+    UINT cnt = 0;
+    DATA_2DO.clear();
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        if ((iData != 0) && (cnt == m_ptVec.size() - 1))
+        {
+            MO_Do2dDataLine((*ptIter).x, (*ptIter).y, DATA_2DO);
+        }
+        else if ((iData == 0) && (cnt == m_ptVec.size() - 1))
+        {
+            MO_Do2dDataCir((*ptIter).x, (*ptIter).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);
+        }
+        else
+        {
+            if (cnt % 2 == 0)
+            {
+                MO_Do2dDataCir((*ptIter).x, (*ptIter).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);
+            }
+            else
+            {
+                MO_Do2dDataCir((*ptIter).x, (*ptIter).y, lCenX, lCenY, bRev, DATA_2DO);
+            }
+        }
+        cnt++;
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+
+    if ((iData != 0))
+    {
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove(DATA_2DO.at(0).EndP.x, DATA_2DO.at(0).EndP.y, 0, lWorkVelociy, lAcceleration, lInitVelociy);//直線移動
+            PreventMoveError();
+        }
+        PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+    }
+    else
+    {
+        if (!g_bIsStop)
+        {
+            MO_Do2DArcMove(DATA_2DO.at(0).EndP.x, DATA_2DO.at(0).EndP.y, DATA_2DO.at(0).CirCentP.x, DATA_2DO.at(0).CirCentP.y,
+                lInitVelociy, lWorkVelociy, DATA_2DO.at(0).CirRev);//初始半圓
+            PreventMoveError();
+        }
+        PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+    }
+
+    for (UINT i = 1; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i - 1] = DATA_2DO.at(i);
+    }
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size() - 1, lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
 #endif
 }
-//軟體正極限(x,y,z)
-void CAction::HMPosLim(LONG lX, LONG lY, LONG lZ)
+/*附屬---填充形態(型態3矩形填充.由外而內)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType3_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
-	MO_SetSoftLim(7, 1);
-	MO_SetCompSoft(0, lX, lY, lZ);
+#pragma region ****排方型內縮4點功能****
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(double(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(double(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    while (1)
+    {
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        lNowX = MO_ReadLogicPosition(0);
+        lNowY = MO_ReadLogicPosition(1);
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove((*ptIter).x - lNowX, (*ptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
+            PreventMoveError();
+        }
+    }
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
 #endif
 }
-/*絕對座標轉相對座標3軸連續插補使用*/
+/*附屬---填充形態(型態4矩形環)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType4_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+#ifdef MOVE
+#pragma region ****排方型內縮4點功能****
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    int iBuff = 0;//判斷兩端寬度用
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    dWidth2 = lWidth2 * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    iBuff = 1;
+    while (1)
+    {
+        if ((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
+        {
+            AfxMessageBox(L"兩端寬度過大");
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (iBuff*dWidth >  dWidth2) //dWidth2兩端寬度
+        {
+            dDistance += dWidth;
+            cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+            cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+        iBuff++;
+    }
+#pragma endregion	
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)出膠
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        lNowX = MO_ReadLogicPosition(0);
+        lNowY = MO_ReadLogicPosition(1);
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove((*ptIter).x - lNowX, (*ptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
+            PreventMoveError();
+        }
+    }
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
+#endif
+}
+/*附屬---填充形態(型態5圓環)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType5_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+#ifdef MOVE
+#pragma region ****圓型螺旋功能****
+    DOUBLE dRadius = 0, dWidth = 0, dWidth2 = 0, dAng0 = 0, dAng1 = 0, dAng2 = 0;
+    BOOL bRev = 1;//0逆轉/1順轉
+    LONG lLineClose = 0, lXClose = 0, lYClose = 0, lDistance = 0;
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen1 = 0, cPtCen2 = 0;
+    int iData = 0, iBuff = 0;//判斷是否有餘數，buff用於計數兩端寬度
+    std::vector<CPoint>m_ptVec;
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPtCen1.x = lCenX;
+    cPtCen1.y = lCenY;//上半圓圓心
+    dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
+    if (dRadius == 0)
+    {
+        return;
+    }
+    lDistance = LONG(dRadius);
+    dWidth = lWidth * 1000;
+    dWidth2 = lWidth2 * 1000;
+    dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
+    dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
+    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    lDistance = LONG(lDistance - dWidth);
+    LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+        lDistance);
+    cPt3.x = lXClose;
+    cPt3.y = lYClose;
+    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
+    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    lDistance = LONG(lDistance + dWidth);
+    iData = (int)dRadius % (int)dWidth;
+    iBuff = 1;
+    while (1)
+    {
+        if ((iBuff == 1) && (lDistance - (2 * dWidth2) < 0))
+        {
+            AfxMessageBox(L"兩端寬度過大");
+            break;
+        }
+        dRadius = dRadius - dWidth;
+        lDistance = LONG(lDistance - dWidth);
+        if (iBuff * dWidth > dWidth2)
+        {
+            lDistance += LONG(dWidth);
+            LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+                lDistance);
+            cPt3.x = lXClose;
+            cPt3.y = lYClose;
+            m_ptVec.push_back(cPt3);
+            break;
+        }
+        LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+            lDistance);
+        cPt3.x = lXClose;
+        cPt3.y = lYClose;
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        m_ptVec.push_back(cPt4);
+        iBuff++;
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (UINT i = 1; i < m_ptVec.size(); i++)
+    {
+        if (i == m_ptVec.size() - 1)
+        {
+            if (i % 2 == 0)
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen1.x, cPtCen1.y, bRev, DATA_2DO);//上半圓
+            }
+            else
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);//下半圓
+            }
+        }
+        else
+        {
+            if (i % 2 != 0)
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen1.x, cPtCen1.y, bRev, DATA_2DO);//上半圓
+            }
+            else
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);//下半圓
+            }
+        }
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+    for (UINT i = 0; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i] = DATA_2DO.at(i);
+    }
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size(), lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
+#endif
+}
+/*附屬---填充形態(型態6矩形填充.由內而外)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType6_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+#ifdef MOVE
+#pragma region ****排方型內縮4點功能****
+    LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    std::vector<CPoint>::reverse_iterator rptIter;//反向迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    while (1)
+    {
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion	
+    //先抬升，移動到中心點在下降
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
+    for (rptIter = m_ptVec.rbegin(); rptIter != m_ptVec.rend(); rptIter++)
+    {
+        lNowX = MO_ReadLogicPosition(0);
+        lNowY = MO_ReadLogicPosition(1);
+        if (!g_bIsStop)
+        {
+            MO_Do3DLineMove((*rptIter).x - lNowX, (*rptIter).y - lNowY, 0, lWorkVelociy, lAcceleration, lInitVelociy);//移動
+            PreventMoveError();
+        }
+        if (rptIter == m_ptVec.rbegin())
+        {
+            if (!g_bIsStop)
+            {
+                lNowZ = MO_ReadLogicPosition(2);
+                MO_Do3DLineMove(0, 0, lZ - lNowZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸往下
+                PreventMoveError();//防止軸卡出錯
+            }
+            PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+        }
+    }
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration, lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
+#endif
+}
+/*附屬---填充形態(型態7圓形螺旋填充.由內而外)
+*輸入(起始點x1,y1,中心點x2,y2,寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType7_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+{
+#ifdef MOVE
+#pragma region ****圓型螺旋功能****
+    DOUBLE dRadius = 0, dWidth = 0, dAng0 = 0, dAng1 = 0, dAng2 = 0;
+    BOOL bRev = 0;//0逆轉/1順轉
+    LONG lLineClose = 0, lXClose = 0, lYClose = 0, lDistance = 0;
+    LONG lNowX = 0, lNowY = 0, lNowZ = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen1 = 0, cPtCen2 = 0;
+    int iData = 0, iOdd = 0;//判斷奇偶(奇做上半圓/偶做下半圓)
+    CString csbuff = 0;
+    std::vector<CPoint>m_ptVec;
+    std::vector<CPoint>::reverse_iterator rptIter;//反向迭代器
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPtCen1.x = lCenX;
+    cPtCen1.y = lCenY;//上半圓圓心
+    dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
+    if (dRadius == 0)
+    {
+        return;
+    }
+    lDistance = LONG(dRadius);
+    dWidth = lWidth * 1000;
+    dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
+    dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
+    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    lDistance = LONG(lDistance - dWidth);
+    LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+        lDistance);
+    cPt3.x = lXClose;
+    cPt3.y = lYClose;
+    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
+    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    iData = (int)dRadius % (int)dWidth;
+    lDistance = LONG(lDistance + dWidth);
+    while (1)
+    {
+        lDistance = LONG(lDistance - dWidth);
+        if (lDistance < dWidth)
+        {
+            break;
+        }
+        LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+            lDistance);
+        cPt3.x = lXClose;
+        cPt3.y = lYClose;
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
+        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion
+    //先抬升，移動到中心點在下降
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(lCenX - MO_ReadLogicPosition(0), lCenY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration,
+            lInitVelociy);//直線移動至圓心
+        PreventMoveError();
+    }
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸往下
+        PreventMoveError();//防止軸卡出錯
+    }
+
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (rptIter = m_ptVec.rbegin(); rptIter != m_ptVec.rend(); rptIter++)
+    {
+        if ((iData != 0) && (iOdd == 0))
+        {
+            MO_Do2dDataLine((*rptIter).x, (*rptIter).y, DATA_2DO);
+        }
+        else if ((iData == 0) && (iOdd == 0))
+        {
+            MO_Do2dDataCir((*rptIter).x, (*rptIter).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);
+        }
+        else
+        {
+            if (iOdd % 2 == 0)
+            {
+                MO_Do2dDataCir((*rptIter).x, (*rptIter).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);
+            }
+            else
+            {
+                MO_Do2dDataCir((*rptIter).x, (*rptIter).y, lCenX, lCenY, bRev, DATA_2DO);
+            }
+        }
+        iOdd++;
+    }
+    LA_AbsToOppo2Move(DATA_2DO);
+    PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0) 出膠
+    for (UINT i = 0; i < DATA_2DO.size(); i++)
+    {
+        DATA_2Do[i] = DATA_2DO.at(i);
+    }
+    MO_DO2Curve(DATA_2Do, DATA_2DO.size(), lWorkVelociy);
+    PreventMoveError();//防止驅動錯誤
+    Sleep(200);
+    DATA_2DO.clear();
+
+    PauseStopGlue();//暫停時停指塗膠(g_bIsPause=1)
+    MO_StopGumming();//停止出膠
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+            lInitVelociy);//Z軸返回
+        PreventMoveError();//防止軸卡出錯
+    }
+#endif
+}
+/*附屬---填充形態(型態3矩形填充.由外而內)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType3_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWidth, LONG lWidth2)
+{
+#ifdef MOVE
+#pragma region ****排方型內縮4點功能****
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dAngCenCos = 0, dAngCenSin = 0, dAngCos = 0,
+        dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(double(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(double(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    while (1)
+    {
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE>DATA_2DO;
+    DATA_2DO.clear();
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        MO_Do2dDataLine((*ptIter).x, (*ptIter).y, DATA_2DO);
+    }
+    EndX = DATA_2DO.back().EndP.x;
+    EndY = DATA_2DO.back().EndP.y;
+    Sleep(1);
+    DATA_2DO.clear();
+#endif
+}
+/*附屬---填充形態(型態4矩形環)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType4_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lWidth, LONG lWidth2)
+{
+#ifdef MOVE
+#pragma region ****排方型內縮4點功能****
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen = 0;
+    DOUBLE dRadius = 0, dDistance = 0, dWidth = 0, dWidth2 = 0, dAngCenCos = 0,
+        dAngCenSin = 0, dAngCos = 0, dAngSin = 0;
+    DOUBLE dAngCenCos2 = 0, dAngCenSin2 = 0, dAngCos2 = 0, dAngSin2 = 0;
+    int iBuff = 0;//判斷兩端寬度用
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    std::vector<CPoint> m_ptVec;
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPt3.x = lX2;
+    cPt3.y = lY2;
+    dWidth = lWidth * 1000;
+    dWidth2 = lWidth2 * 1000;
+    cPtCen.x = cPt1.x + (cPt3.x - cPt1.x) / 2;
+    cPtCen.y = cPt1.y + (cPt3.y - cPt1.y) / 2;
+    dRadius = sqrt(pow(cPt1.x - cPtCen.x, 2) + pow(cPt1.y - cPtCen.y, 2));
+    if (dRadius == 0)
+    {
+        return;
+    }
+    dAngCenCos = acos(DOUBLE(cPt1.x - cPtCen.x) / dRadius);
+    dAngCenSin = asin(DOUBLE(cPt1.y - cPtCen.y) / dRadius);
+    dAngCenCos2 = M_PI * 2 - dAngCenCos;
+    dAngCenSin2 = M_PI - dAngCenSin;
+    if (abs(dAngCenCos - dAngCenSin) > 0.01)
+    {
+        if (abs(dAngCenCos - dAngCenSin2) < 0.01)
+        {
+            dAngCenSin = dAngCenSin2;
+        }
+        else if (abs(dAngCenCos2 - dAngCenSin) < 0.01)
+        {
+            dAngCenCos = dAngCenCos2;
+        }
+        else
+        {
+            dAngCenSin = dAngCenSin2;
+            dAngCenCos = dAngCenCos2;
+        }
+    }
+    else
+    {
+        dAngCenSin = dAngCenCos;
+    }
+    cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+    cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+    cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+    cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+    dDistance = sqrt(pow((cPt1.x - cPt4.x), 2) + pow((cPt1.y - cPt4.y), 2));
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    m_ptVec.push_back(cPt3);
+    m_ptVec.push_back(cPt4);
+
+    dAngCos = acos((cPt1.x - cPt4.x) / dDistance);
+    dAngSin = asin((cPt1.y - cPt4.y) / dDistance);
+    if (dAngCos < 0)
+    {
+        dAngCos += M_PI * 2;
+    }
+    if (dAngSin < 0)
+    {
+        dAngSin += M_PI * 2;
+    }
+    dAngCos2 = M_PI * 2 - dAngCos;
+    dAngSin2 = M_PI - dAngSin;
+    if (abs(dAngCos - dAngSin) > 0.01)
+    {
+        if (abs(dAngCos - dAngSin2) < 0.01)
+        {
+            dAngSin = dAngSin2;
+        }
+        else if (abs(dAngCos2 - dAngSin) < 0.01)
+        {
+            dAngCos = dAngCos2;
+        }
+        else
+        {
+            dAngCos = dAngCos2;
+            dAngSin = dAngSin2;
+        }
+    }
+    else
+    {
+        dAngSin = dAngCos;
+    }
+    iBuff = 1;
+    while (1)
+    {
+        if ((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
+        {
+            AfxMessageBox(L"兩端寬度過大");
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        dRadius = dRadius - dWidth*sqrt(2);
+        dDistance = dDistance - dWidth;
+        if (iBuff*dWidth >  dWidth2)  //dWidth2兩端寬度
+        {
+            dDistance += dWidth;
+            cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+            cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+            m_ptVec.push_back(cPt1);
+            break;
+        }
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt1.x = LONG(dDistance*cos(dAngCos) + cPt4.x);
+        cPt1.y = LONG(dDistance*sin(dAngSin) + cPt4.y);
+        m_ptVec.push_back(cPt1);
+        cPt2.x = LONG(dRadius*cos(dAngCenCos + M_PI_2) + cPtCen.x);
+        cPt2.y = LONG(dRadius*sin(dAngCenSin + M_PI_2) + cPtCen.y);
+        m_ptVec.push_back(cPt2);
+        dDistance = dDistance - dWidth;
+        if (dDistance < dWidth)
+        {
+            break;
+        }
+        cPt3.x = LONG(dRadius*cos(dAngCenCos + M_PI) + cPtCen.x);
+        cPt3.y = LONG(dRadius*sin(dAngCenSin + M_PI) + cPtCen.y);
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAngCenCos + M_PI_2 * 3) + cPtCen.x);
+        cPt4.y = LONG(dRadius*sin(dAngCenSin + M_PI_2 * 3) + cPtCen.y);
+        m_ptVec.push_back(cPt4);
+        iBuff++;
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (ptIter = m_ptVec.begin(); ptIter != m_ptVec.end(); ptIter++)
+    {
+        MO_Do2dDataLine((*ptIter).x, (*ptIter).y, DATA_2DO);
+    }
+    EndX = DATA_2DO.back().EndP.x;
+    EndY = DATA_2DO.back().EndP.y;
+    Sleep(1);
+    DATA_2DO.clear();
+#endif
+}
+/*附屬---填充形態(型態5圓環)
+*輸入(起始點x1,y1,結束點x2,y2,寬度,兩端寬度,驅動速度,加速度,初速度)
+*/
+void CAction::AttachFillType5_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lWidth, LONG lWidth2)
+{
+#ifdef MOVE
+#pragma region ****圓型螺旋功能****
+    DOUBLE dRadius = 0, dWidth = 0, dWidth2 = 0, dAng0 = 0, dAng1 = 0, dAng2 = 0;
+    BOOL bRev = 1;//0逆轉/1順轉
+    LONG lLineClose = 0, lXClose = 0, lYClose = 0, lDistance = 0;
+    LONG lNowX = 0, lNowY = 0;
+    CPoint cPt1 = 0, cPt2 = 0, cPt3 = 0, cPt4 = 0, cPtCen1 = 0, cPtCen2 = 0;
+    int iData = 0, iBuff = 0;//判斷是否有餘數，buff用於計數兩端寬度
+    std::vector<CPoint>m_ptVec;
+    std::vector<CPoint>::iterator ptIter;//迭代器
+    m_ptVec.clear();
+    cPt1.x = lX1;
+    cPt1.y = lY1;
+    cPtCen1.x = lCenX;
+    cPtCen1.y = lCenY;//上半圓圓心
+    dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
+    if (dRadius == 0)
+    {
+        return;
+    }
+    lDistance = LONG(dRadius);
+    dWidth = lWidth * 1000;
+    dWidth2 = lWidth2 * 1000;
+    dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
+    dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
+    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    m_ptVec.push_back(cPt1);
+    m_ptVec.push_back(cPt2);
+    lDistance = LONG(lDistance - dWidth);
+    LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+        lDistance);
+    cPt3.x = lXClose;
+    cPt3.y = lYClose;
+    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
+    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    lDistance = LONG(lDistance + dWidth);
+    iData = (int)dRadius % (int)dWidth;
+    iBuff = 1;
+    while (1)
+    {
+        if ((iBuff == 1) && (lDistance - (2 * dWidth2) < 0))
+        {
+            AfxMessageBox(L"兩端寬度過大");
+            break;
+        }
+        dRadius = dRadius - dWidth;
+        lDistance = LONG(lDistance - dWidth);
+        if (iBuff * dWidth > dWidth2)
+        {
+            lDistance += LONG(dWidth);
+            LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+                lDistance);
+            cPt3.x = lXClose;
+            cPt3.y = lYClose;
+            m_ptVec.push_back(cPt3);
+            break;
+        }
+        LineGetToPoint(lXClose, lYClose, cPt1.x, cPt1.y, cPtCen1.x, cPtCen1.y,
+            lDistance);
+        cPt3.x = lXClose;
+        cPt3.y = lYClose;
+        m_ptVec.push_back(cPt3);
+        cPt4.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        m_ptVec.push_back(cPt4);
+        iBuff++;
+    }
+#pragma endregion
+    std::vector<DATA_2MOVE> DATA_2DO;
+    DATA_2DO.clear();
+    for (UINT i = 1; i < m_ptVec.size(); i++)
+    {
+        if (i == m_ptVec.size() - 1)
+        {
+            if (i % 2 == 0)
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen1.x, cPtCen1.y, bRev, DATA_2DO);//上半圓
+            }
+            else
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);//下半圓
+            }
+        }
+        else
+        {
+            if (i % 2 != 0)
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen1.x, cPtCen1.y, bRev, DATA_2DO);//上半圓
+            }
+            else
+            {
+                MO_Do2dDataCir(m_ptVec.at(i).x, m_ptVec.at(i).y, cPtCen2.x, cPtCen2.y, bRev, DATA_2DO);//下半圓
+            }
+        }
+    }
+    EndX = DATA_2DO.back().EndP.x;
+    EndY = DATA_2DO.back().EndP.y;
+    Sleep(1);
+    DATA_2DO.clear();
+#endif
+}
+/***********************************************************
+**                                                        **
+**          運動模組-連續差補.                             **
+**                                                        **
+************************************************************/
 #ifdef MOVE
 //填充用兩軸連續差補(給值--直線)
 void CAction::MO_Do2dDataLine(LONG EndPX, LONG EndPY, std::vector<DATA_2MOVE>& str)
@@ -3816,7 +5194,7 @@ void CAction::MO_Do2dDataCir(LONG EndPX, LONG EndPY, LONG CenX, LONG CenY, BOOL 
     DATA_2D.CirRev = bRev;
     str.push_back(DATA_2D);
 }
-
+/*絕對座標轉相對座標3軸連續插補使用*/
 void CAction::LA_AbsToOppo3Move(std::vector<DATA_3MOVE> &str)
 {
 #ifdef LA

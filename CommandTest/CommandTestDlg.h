@@ -21,11 +21,8 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支援
 	virtual BOOL OnInitDialog();
 	virtual void OnCancel();
-	void SaveParameter();
-	void LoadParameter();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
-	void Counter();
 	DECLARE_MESSAGE_MAP()
 // 程式碼實作
 protected:
@@ -40,6 +37,9 @@ public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
 	CDialog* m_pLaserDlg;
+	CDialog* m_pDefaultDlg;
+	CDialog* m_pPositionModifyDlg;
+	CDialog* m_pLaserAdjustDlg;
 	BOOL InputAuto;
 	CPoint TipOffset,LaserOffset;
 	LONG LaserOffsetz;
@@ -63,6 +63,14 @@ public:
 	afx_msg void OnBnClickedBtnhome();
 	afx_msg void OnBnClickedBtnview();
 	afx_msg void OnBnClickedBtnalloffset();
+	afx_msg void OnBnClickedBtncommit();
+	afx_msg void OnBnClickedBtnnocommit();
+	afx_msg void OnBnClickedBtnsave();
+	afx_msg void OnBnClickedBtnopen();
+	afx_msg void OnBnClickedBtnloaddemo();
+	afx_msg void OnBnClickedBtnprintflaser();
+	afx_msg void OnBnClickedBtnmodify();
+	afx_msg void OnBnClickedBtnprintcline();
 	//設置
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
@@ -73,7 +81,9 @@ public:
 	/*列表*/
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
+	afx_msg void OnMove();
 	afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
+	afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
 	void ListRefresh(BOOL ScrollBarRefresh);
 	/*命令*/
 	afx_msg void OnBnClickedBtncommand1();
@@ -131,19 +141,11 @@ public:
 	afx_msg void OnBnClickedBtncommand45();
 	//外部函數
 	CString CommandResolve(CString Command, UINT Choose);
-	afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
+	void SaveParameter();
+	void LoadParameter();
+	void Counter();
 	
-	
-   
-	afx_msg void OnBnClickedBtncommit();
-	afx_msg void OnBnClickedBtnnocommit();
-	afx_msg void OnBnClickedBtnsave();
-	afx_msg void OnBnClickedBtnopen();
-	afx_msg void OnBnClickedBtnloaddemo();
-	afx_msg void OnBnClickedBtnprintflaser();
-	afx_msg void OnBnClickedBtnmodify();
-	afx_msg void OnBnClickedBtnprintcline();
-	
+	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
 };
 
 

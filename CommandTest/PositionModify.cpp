@@ -37,6 +37,8 @@ BEGIN_MESSAGE_MAP(CPositionModify, CDialogEx)
 	ON_COMMAND(IDM_DELETE3, &CPositionModify::OnDelete3)
     ON_BN_CLICKED(IDC_BTNNEW, &CPositionModify::OnBnClickedBtnnew)
     ON_BN_CLICKED(IDC_BTNCLEAR, &CPositionModify::OnBnClickedBtnclear)
+    ON_WM_SHOWWINDOW()
+    ON_WM_MOUSEACTIVATE()
 END_MESSAGE_MAP()
 
 
@@ -55,10 +57,12 @@ BOOL CPositionModify::OnInitDialog()
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX 屬性頁應傳回 FALSE
 }
+//取消Enter 關閉視窗
 void CPositionModify::OnOK()
 {
 	//CDialogEx::OnOK();
 }
+//取消
 void CPositionModify::OnCancel()
 {
 	CDialogEx::OnCancel();
@@ -234,4 +238,24 @@ void CPositionModify::OnBnClickedBtnclear()
         ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.clear();
         ListRefresh();
     }
+}
+
+
+
+
+//顯示視窗時設定
+void CPositionModify::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+    CDialogEx::OnShowWindow(bShow, nStatus);
+    SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
+    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
+
+}
+
+//非活動轉活動事件
+int CPositionModify::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
+{
+    //從非活動轉為活動改成不透明
+    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
+    return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
