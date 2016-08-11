@@ -8,7 +8,6 @@
 #include "CommandTestDlg.h"
 #include "Question.h"
 
-
 #define IDC_EDITBUFF  10000
 // CDefault 對話方塊
 
@@ -36,8 +35,8 @@ BEGIN_MESSAGE_MAP(CDefault, CDialogEx)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CDefault::OnNMDblclkList1)
 	ON_NOTIFY(NM_CLICK, IDC_LIST1, &CDefault::OnNMClickList1)
 	ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CDefault::OnNMRClickList1)
-    ON_WM_SHOWWINDOW()
-    ON_WM_MOUSEACTIVATE()
+	ON_WM_SHOWWINDOW()
+	ON_WM_MOUSEACTIVATE()
 END_MESSAGE_MAP()
 
 
@@ -121,7 +120,7 @@ void CDefault::ParamShow()
 	ParamArray[42] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle;
 	ParamArray[43] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError;
 	ParamArray[44] = ((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber;
-    ParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
+	ParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
 	for (int i = 0; i < 46; i++) {
 		CString StrBuff;
 		StrBuff.Format(_T("%d"), ParamArray[i]);
@@ -186,14 +185,18 @@ void CDefault::ParamModify()
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion = pQuestion;
 	//最大運行次數
 	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
-    ((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
+	((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
 }
+#include "ExcelToList.h"
+#include "ListToExcel.h"
 void CDefault::OnBnClickedButton2()
 {
 	for (int i = 0; i < 46; i++) {
 		m_ListDefault.SetItemText(i, 1, _T("0"));
 	}
 	ParamModify();
+	//ExportListToExcel(&m_ListDefault, L"LineContinuous");
+    //ExportExcelToList(&m_ListDefault, L"LineContinuous");
 }
 void CDefault::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
 {
@@ -304,14 +307,14 @@ void CDefault::DistroyEdit(CListCtrl *list, CEdit *distroyedit, int &Item, int &
 //顯示視窗時設定
 void CDefault::OnShowWindow(BOOL bShow, UINT nStatus)
 {
-    CDialogEx::OnShowWindow(bShow, nStatus);
-    SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
-    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
+	CDialogEx::OnShowWindow(bShow, nStatus);
+	SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
+	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
 }
 //非活動轉活動事件
 int CDefault::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 {
-    //從非活動轉為活動改成不透明
-    this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
-    return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
+	//從非活動轉為活動改成不透明
+	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
+	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }

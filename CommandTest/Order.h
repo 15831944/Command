@@ -408,6 +408,8 @@ public:     //函數
 
 	//載入檔案
 	void    LoadPointData();
+	//命令mm轉um
+	CString CommandmmToum(CString Command);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

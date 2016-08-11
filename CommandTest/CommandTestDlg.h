@@ -33,6 +33,7 @@ protected:
 	BOOL Insert;
 	UINT InsertNum;
 	LONG OffsetX, OffsetY;
+	BOOL GlueInformation;
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
@@ -40,6 +41,7 @@ public:
 	CDialog* m_pDefaultDlg;
 	CDialog* m_pPositionModifyDlg;
 	CDialog* m_pLaserAdjustDlg;
+	CDialog* m_pLineContinuousDlg;
 	BOOL InputAuto;
 	CPoint TipOffset,LaserOffset;
 	LONG LaserOffsetz;

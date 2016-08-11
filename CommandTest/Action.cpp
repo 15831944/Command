@@ -2,7 +2,7 @@
 *檔案名稱:Action.cpp(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/08/2
+*＠data 更新日期:2016/08/10
 *@更新內容三軸兩軸連續差補&雷射API*/
 #include "stdafx.h"
 #include "Action.h"
@@ -30,6 +30,7 @@ CAction::CAction()
     g_OffSetScan = 500;//雷射位移補償
     g_LaserAverage = FALSE; //雷射平均(1使用/0不使用)
     g_LaserAveBuffZ = 0; // 雷射用平均暫存值(絕對位置z值)
+    g_AdvanceGlue = 0;//提前出膠專用
 #ifdef MOVE
     LA_m_ptVec2D.clear();
     LA_m_ptVec.clear();
@@ -395,12 +396,12 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
 }
 /*
 *(現在位置在結束點上)線段結束動作--多載
-*輸入(線段結束點、線段點膠設定、加速度、線速度、Z軸工作高度設定、點膠結束設定、返回設定、系統參數)
+*輸入(線段結束點、線段點膠設定、加速度、線速度、Z軸工作高度設定、點膠結束設定、返回設定、系統參數、一般結束點使用)
 *執行Z軸回升型態1
 */
 void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
 	LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh,
-	LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+	LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy,BOOL bGeneral)
 {
 	/*線段點膠設定(停留時間，關機距離，關機延遲)
 	LONG lCloseOffDelayTime ,LONG lCloseDistance ,LONG lCloseONDelayTime
@@ -418,11 +419,17 @@ void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
 	/*點膠結束設定(高速度)
 	LONG lHighVelocity
 	*/
+    /*
+    BOOL bGeneral 用於不塗膠出膠的線段使用(1使用/0不使用)
+    */
 #ifdef MOVE
 	LONG lNowX = 0, lNowY = 0, lNowZ = 0;
 	LONG lLineClose = 0, lXClose = 0, lYClose = 0;
-	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
-	lNowX = MO_ReadLogicPosition(0);
+    if (!bGeneral)
+    {
+        PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
+    }
+    lNowX = MO_ReadLogicPosition(0);
 	lNowY = MO_ReadLogicPosition(1);
 	lNowZ = MO_ReadLogicPosition(2);
 	if (!bZDisType) //絕對位置
@@ -452,8 +459,11 @@ void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
 		}
 		Sleep(1);
 	}
-	MO_StopGumming();//停止出膠
-	GelatinizeBack(1, lNowX, lNowY, lNowZ, lNowX, lNowY, lDistance, lHigh, lZBackDistance, lLowVelocity, lHighVelocity, lAcceleration, lInitVelociy);//返回設定
+    if (!bGeneral || MO_ReadGumming())
+    {
+        MO_StopGumming();//停止出膠
+    }
+    GelatinizeBack(1, lNowX, lNowY, lNowZ, lNowX, lNowY, lDistance, lHigh, lZBackDistance, lLowVelocity, lHighVelocity, lAcceleration, lInitVelociy);//返回設定
 	MO_Timer(0, 0, lCloseOffDelayTime * 1000);
 	MO_Timer(1, 0, lCloseOffDelayTime * 1000);//線段點膠設定---(3)停留時間 
 	Sleep(1);//防止出錯，避免計時器初直為0
@@ -499,9 +509,7 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 	LONG lBuffX = 0, lBuffY = 0;
 	DOUBLE dTime = 0;
 	BOOL bSame = 0;
-	dTime = (sqrt((DOUBLE)lInitVelociy*(DOUBLE)lInitVelociy + ((
-		DOUBLE)lAcceleration*(DOUBLE)lStartDistance / 2)) - (DOUBLE)lInitVelociy) /
-		(DOUBLE)lAcceleration;
+    dTime = DOUBLE(sqrt(DOUBLE(lInitVelociy / 1000 * lInitVelociy / 1000 + 2 * lAcceleration / 1000 * lStartDistance / 1000)) - lInitVelociy / 1000) / DOUBLE(lAcceleration / 1000);
 	lNowX = MO_ReadLogicPosition(0);
 	lNowY = MO_ReadLogicPosition(1);
 	lLineClose = lStartDistance;
@@ -566,14 +574,8 @@ void CAction::DecideLineSToP(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 			MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸先下降
 			PreventMoveError();//防止軸卡出錯
 		}
-		if (g_bIsDispend == 1)
-		{
-			MO_GummingSet(g_iNumberGluePort, 0);//塗膠(不卡)
-		}
-        if (LONG(dTime) != 0)
-        {
-            MO_TimerSetIntter(LONG(dTime * 1000000));//計時到跳至執行序
-        }
+        g_AdvanceGlue = 1;//使用中斷啟用出膠
+        MO_TimerSetIntter(LONG(dTime * 1000000));//計時到跳至執行序
         if (!g_bIsStop)
 		{
 			MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸(移動到點2)
@@ -628,7 +630,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 	LONG lBuffX = 0, lBuffY = 0, LineLength=0;
 	DOUBLE dTime = 0;
 	BOOL bSame = 0;
-	dTime = (sqrt((DOUBLE)lInitVelociy*(DOUBLE)lInitVelociy + ((DOUBLE)lAcceleration*(DOUBLE)lStartDistance / 2)) - (DOUBLE)lInitVelociy) / (DOUBLE)lAcceleration;
+    dTime = DOUBLE(sqrt(DOUBLE(lInitVelociy / 1000 * lInitVelociy / 1000 + 2 * lAcceleration / 1000 * lStartDistance / 1000)) - lInitVelociy / 1000) / DOUBLE(lAcceleration / 1000);
 	lNowZ = MO_ReadLogicPosition(2);
 	lLineClose = lStartDistance;
 	LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lX, lY, lZ2, lZ, lLineClose);
@@ -738,16 +740,10 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 			MO_Do3DLineMove(0, 0, lZClose - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,Z軸移動
 			PreventMoveError();//防止軸卡出錯
 		}
-		if (g_bIsDispend == 1)
-		{
-			MO_GummingSet(g_iNumberGluePort, 0);//塗膠(不卡)
-		}
+        g_AdvanceGlue = 1;//使用中斷啟用出膠
+        MO_TimerSetIntter(LONG(dTime * 1000000));//計時到跳至執行序
 		if (lCloseDistance == 0)//線段點膠設定---(5)關機距離
 		{
-            if (LONG(dTime) != 0)
-            {
-                MO_TimerSetIntter(LONG(dTime * 1000000));//計時到跳至執行序
-            }
             if (!g_bIsStop)
 			{
 				MO_Do3DLineMove(lX2 - MO_ReadLogicPosition(0), lY2 - MO_ReadLogicPosition(1), lZ2 - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y,Z軸移動
@@ -1236,40 +1232,108 @@ void CAction::DecideWaitPoint(LONG lX, LONG lY, LONG lZ, LONG lWaitTime, LONG lW
 *停駐點動作
 *輸入(停駐點、系統參數)
 */
-void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
+void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lZBackDistance, BOOL bZDisType, LONG lZdistance, LONG lHighVelocity, LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
 {
-	/*停駐點(x座標，y座標，z座標，排膠時間，結束後等待時間，)
-	LONG lX, LONG lY, LONG lZ,LONG lTimeGlue,LONG lWaitTime
-	*/
-	/*系統參數(驅動速度，加速度，初速度)
-	LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy
-	*/
+    /*停駐點(x座標，y座標，z座標，排膠時間，結束後等待時間，)
+    LONG lX, LONG lY, LONG lZ,LONG lTimeGlue,LONG lWaitTime
+    */
+    /*Z軸工作高度設定-Z軸回升高度(相對)最高點
+    LONG lZBackDistance ,BOOL bZDisType(0絕對位置/1相對位置)
+    */
+    /*點膠結束設定(Z軸相對距離，高速度，低速度，)
+    LONG lZdistance,LONG lHighVelocity,LONG lLowVelocity
+    */
+    /*系統參數(驅動速度，加速度，初速度)
+    LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy
+    */
 #ifdef MOVE
-	if (!g_bIsStop)
-	{
-		MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
-		PreventMoveError();//防止軸卡出錯
-	}
-	MO_Timer(0, 0, lWaitTime * 1000);
-	MO_Timer(1, 0, 0);//(ms)
-	Sleep(1);//防止出錯，避免計時器初直為0
-	while (MO_Timer(3, 0, 0))
-	{
-		if (g_bIsStop == 1)
-		{
-			MO_Timer(2, 0, 0);//停止計時器
-			break;
-		}
-		Sleep(1);
-	}
-	if (lTimeGlue == 0)
-	{
-		Sleep(1);
-	}
-	else
-	{
-		DoGlue(lTimeGlue, lStayTime);//執行排膠
-	}
+    if (lHighVelocity == 0)
+    {
+        lHighVelocity = lWorkVelociy;
+    }
+    if (lLowVelocity == 0)
+    {
+        lLowVelocity = lWorkVelociy;
+    }
+    if (!bZDisType) //絕對位置
+    {
+        if (lZBackDistance > lZ)
+        {
+            lZBackDistance = lZ;
+        }
+        lZBackDistance = abs(lZBackDistance - lZ);
+    }
+
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), 0, lWorkVelociy, lAcceleration, lInitVelociy);//x,y軸移動
+        PreventMoveError();//防止軸卡出錯
+    }
+    if (!g_bIsStop)
+    {
+        MO_Do3DLineMove(0, 0, lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);//z軸移動
+        PreventMoveError();//防止軸卡出錯
+    }
+    MO_Timer(0, 0, lWaitTime * 1000);
+    MO_Timer(1, 0, 0);//(ms)
+    Sleep(1);//防止出錯，避免計時器初直為0
+    while (MO_Timer(3, 0, 0))
+    {
+        if (g_bIsStop == 1)
+        {
+            MO_Timer(2, 0, 0);//停止計時器
+            break;
+        }
+        Sleep(1);
+    }
+    if (lTimeGlue == 0)
+    {
+        Sleep(1);
+    }
+    else
+    {
+        DoGlue(lTimeGlue, lStayTime);//執行排膠
+    }
+    Sleep(10);//防止程式出錯
+              //排膠完後的回升動作
+    if (!MO_ReadGumming())
+    {
+        if (lZdistance == 0)
+        {
+            if (!g_bIsStop)
+            {
+                MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lWorkVelociy, lAcceleration,
+                    lInitVelociy);//點膠結束設置
+                PreventMoveError();//防止軸卡出錯
+            }
+        }
+        else
+        {
+            if (lZdistance>lZBackDistance && lZBackDistance != 0)
+            {
+                lZdistance = lZBackDistance;
+                MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - lZ, lHighVelocity, lAcceleration,
+                    lInitVelociy);//點膠結束設置
+                PreventMoveError();//防止軸卡出錯
+            }
+            else
+            {
+                if (!g_bIsStop)
+                {
+                    MO_Do3DLineMove(0, 0, (lZ - lZdistance) - lZ, lLowVelocity, lAcceleration,
+                        lInitVelociy);//點膠結束設置
+                    PreventMoveError();//防止軸卡出錯
+                }
+                if (!g_bIsStop)
+                {
+                    MO_Do3DLineMove(0, 0, (lZ - lZBackDistance) - (lZ - lZdistance), lHighVelocity,
+                        lAcceleration, lInitVelociy);//點膠結束設置
+                    PreventMoveError();//防止軸卡出錯
+                }
+            }
+
+        }
+    }
 #endif
 }
 /*
@@ -1564,6 +1628,7 @@ void CAction::LA_SetInit()
 {
 #ifdef LA
 	//LAS_SetInit();
+    //TODO::雷射OFFSET修改在這
 	//*************目前寫死動作***************************************
 	g_OffSetLaserX = 40324;
 	g_OffSetLaserY = -647;
@@ -1875,7 +1940,7 @@ void CAction::LA_Line3DtoDo(int iData, LONG lWorkVelociy, LONG lAcceleration, LO
 */
 void CAction::LA_Clear()
 {
-#ifdef LA
+#ifdef MOVE
 	LA_m_ptVec.clear();//雷射連續切點儲存vector
 	LA_m_ptVec2D.clear();//兩軸連續插補vector
 	LA_m_iVecSP.clear();//主要雷射vector(SP:Scan End)
@@ -2038,10 +2103,19 @@ DWORD CAction::MoInterrupt(LPVOID param)
 		getHeightFlag = TRUE;
 		((CAction *)pAction)->g_bIsGetLAend = FALSE;
 	}
-	else if (RR1Z & 0x0200)//Z計時器中斷
-	{
-		MO_FinishGumming();
-	}
+    else if (RR1Z & 0x0200) //Z計時器中斷
+    {
+        if (((CAction *)pAction)->g_AdvanceGlue)
+        {
+            MO_GummingSet();//出膠
+            Sleep(1);
+            ((CAction *)pAction)->g_AdvanceGlue = 0;//關閉提前出膠
+        }
+        else
+        {
+            MO_FinishGumming();
+        }
+    }
 	else if (RR1U & 0x0200 && getHeightFlag) //U計時器中斷
 	{
 #ifdef LA
@@ -2467,85 +2541,92 @@ void CAction::GelatinizeBack(int iType, LONG lXarEnd, LONG lYarEnd, LONG lZarEnd
 */
 void CAction::LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG &lLineClose)
 {
-	DOUBLE dM, dB; //(X0,Y0)起始點; (X1,Y1)結束點; Y0=M*X0+B 斜率公式;L已知長度
-	if ((lX1 - lX0) == 0)
-	{
-		dM = 0;
-	}
-	else
-	{
-		dM = ((float)lY1 - (float)lY0) / ((float)lX1 - (float)lX0);
-	}
-	dB = lY0 - (dM*lX0);
-	LONG la = lX1 - lX0, lb = lY1 - lY0;
-	if (la == 0)
-	{
-		if (lY0 > lY1)
-		{
-			lYClose = lY1 + lLineClose;
-			lXClose = lX1;
-		}
-		else
-		{
-			lYClose = lY1 - lLineClose;
-			lXClose = lX1;
-		}
-	}
-	else if (lb == 0)
-	{
-		if (lX0 > lX1)
-		{
-			lXClose = lX1 + lLineClose;
-			lYClose = lY1;
-		}
-		else
-		{
-			lXClose = lX1 - lLineClose;
-			lYClose = lY1;
-		}
-	}
-	else
-	{
-		if (abs(la) > abs(lb))
-		{
-			if (la > 0)
-			{
-				lXClose = lX1 - lLineClose;
-				lYClose = LONG((dM*lX1) + dB);
-			}
-			else
-			{
-				lXClose = lX1 + lLineClose;
-				lYClose = LONG((dM*lX1) + dB);
-			}
-		}
-		else if (abs(la) == abs(lb))
-		{
-			if (la > 0)
-			{
-				lXClose = LONG(lX1 - ((float)lLineClose / sqrt(2)));
-				lYClose = LONG(lY1 - ((float)lLineClose / sqrt(2)));
-			}
-			else
-			{
-				lXClose = LONG(lX1 + ((float)lLineClose / sqrt(2)));
-				lYClose = LONG(lY1 + ((float)lLineClose / sqrt(2)));
-			}
-		}
-		else if (abs(la) < abs(lb))
-		{
-			if (lb > 0)
-			{
-				lYClose = lY1 - lLineClose;
-				lXClose = LONG((lYClose - dB) / dM);
-			}
-			else
-			{
-				lYClose = lY1 + lLineClose;
-				lXClose = LONG((lYClose - dB) / dM);
-			}
-		}
-	}
+    DOUBLE dX = lX0 - lX1;
+    DOUBLE dY = lY0 - lY1;
+    DOUBLE D = sqrt(pow(dX, 2) + pow(dY, 2));
+    DOUBLE dXc = dX*(DOUBLE)lLineClose / D;
+    DOUBLE dYc = dY*(DOUBLE)lLineClose / D;
+    lXClose = lX1 + (LONG)round(dXc);
+    lYClose = lY1 + (LONG)round(dYc);
+	//DOUBLE dM, dB; //(X0,Y0)起始點; (X1,Y1)結束點; Y0=M*X0+B 斜率公式;L已知長度
+	//if ((lX1 - lX0) == 0)
+	//{
+	//	dM = 0;
+	//}
+	//else
+	//{
+	//	dM = ((float)lY1 - (float)lY0) / ((float)lX1 - (float)lX0);
+	//}
+	//dB = lY0 - (dM*lX0);
+	//LONG la = lX1 - lX0, lb = lY1 - lY0;
+	//if (la == 0)
+	//{
+	//	if (lY0 > lY1)
+	//	{
+	//		lYClose = lY1 + lLineClose;
+	//		lXClose = lX1;
+	//	}
+	//	else
+	//	{
+	//		lYClose = lY1 - lLineClose;
+	//		lXClose = lX1;
+	//	}
+	//}
+	//else if (lb == 0)
+	//{
+	//	if (lX0 > lX1)
+	//	{
+	//		lXClose = lX1 + lLineClose;
+	//		lYClose = lY1;
+	//	}
+	//	else
+	//	{
+	//		lXClose = lX1 - lLineClose;
+	//		lYClose = lY1;
+	//	}
+	//}
+	//else
+	//{
+	//	if (abs(la) > abs(lb))
+	//	{
+	//		if (la > 0)
+	//		{
+	//			lXClose = lX1 - lLineClose;
+	//			lYClose = LONG((dM*lX1) + dB);
+	//		}
+	//		else
+	//		{
+	//			lXClose = lX1 + lLineClose;
+	//			lYClose = LONG((dM*lX1) + dB);
+	//		}
+	//	}
+	//	else if (abs(la) == abs(lb))
+	//	{
+	//		if (la > 0)
+	//		{
+	//			lXClose = LONG(lX1 - ((float)lLineClose / sqrt(2)));
+	//			lYClose = LONG(lY1 - ((float)lLineClose / sqrt(2)));
+	//		}
+	//		else
+	//		{
+	//			lXClose = LONG(lX1 + ((float)lLineClose / sqrt(2)));
+	//			lYClose = LONG(lY1 + ((float)lLineClose / sqrt(2)));
+	//		}
+	//	}
+	//	else if (abs(la) < abs(lb))
+	//	{
+	//		if (lb > 0)
+	//		{
+	//			lYClose = lY1 - lLineClose;
+	//			lXClose = LONG((lYClose - dB) / dM);
+	//		}
+	//		else
+	//		{
+	//			lYClose = lY1 + lLineClose;
+	//			lXClose = LONG((lYClose - dB) / dM);
+	//		}
+	//	}
+	//}
 }
 /*
 *直線距離轉換成座標點--多載
@@ -3095,7 +3176,7 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     cPtCen1.x = lCenX;
     cPtCen1.y = lCenY;//上半圓圓心
     dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
-    if (dRadius == 0)
+    if (LONG(dRadius) == 0)
     {
         return;
     }
@@ -3103,8 +3184,10 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     dWidth = lWidth * 1000;
     dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
     dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
-    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
-    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    /*cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);*/
+    cPt2.x = (LONG)((cPt1.x - cPtCen1.x)*cos(M_PI) - (cPt1.y - cPtCen1.y)*sin(M_PI) + cPtCen1.x);
+    cPt2.y = (LONG)((cPt1.x - cPtCen1.x)*sin(M_PI) + (cPt1.y - cPtCen1.y)*cos(M_PI) + cPtCen1.y);
     m_ptVec.push_back(cPt1);
     m_ptVec.push_back(cPt2);
     lDistance = LONG(lDistance - dWidth);
@@ -3112,8 +3195,8 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         lDistance);
     cPt3.x = lXClose;
     cPt3.y = lYClose;
-    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
-    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    cPtCen2.x = LONG((cPt3.x + cPt2.x) / 2.0);
+    cPtCen2.y = LONG((cPt3.y + cPt2.y) / 2.0);//下半圓圓心
     iData = (int)dRadius % (int)dWidth;
     lDistance = LONG(lDistance + dWidth);
     while (1)
@@ -3128,8 +3211,10 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         cPt3.x = lXClose;
         cPt3.y = lYClose;
         m_ptVec.push_back(cPt3);
-        cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
-        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        /*cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
+        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);*/
+        cPt4.x = (LONG)((cPt3.x - cPtCen1.x)*cos(M_PI) - (cPt3.y - cPtCen1.y)*sin(M_PI) + cPtCen1.x);
+        cPt4.y = (LONG)((cPt3.x - cPtCen1.x)*sin(M_PI) + (cPt3.y - cPtCen1.y)*cos(M_PI) + cPtCen1.y);
         m_ptVec.push_back(cPt4);
     }
 #pragma endregion
@@ -3539,7 +3624,7 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     cPtCen1.x = lCenX;
     cPtCen1.y = lCenY;//上半圓圓心
     dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
-    if (dRadius == 0)
+    if (LONG(dRadius) == 0)
     {
         return;
     }
@@ -3548,8 +3633,10 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     dWidth2 = lWidth2 * 1000;
     dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
     dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
-    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
-    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    //cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    //cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    cPt2.x = (LONG)((cPt1.x - cPtCen1.x)*cos(M_PI) - (cPt1.y - cPtCen1.y)*sin(M_PI) + cPtCen1.x);
+    cPt2.y = (LONG)((cPt1.x - cPtCen1.x)*sin(M_PI) + (cPt1.y - cPtCen1.y)*cos(M_PI) + cPtCen1.y);
     m_ptVec.push_back(cPt1);
     m_ptVec.push_back(cPt2);
     lDistance = LONG(lDistance - dWidth);
@@ -3557,8 +3644,8 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         lDistance);
     cPt3.x = lXClose;
     cPt3.y = lYClose;
-    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
-    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    cPtCen2.x = LONG((cPt3.x + cPt2.x) / 2.0);
+    cPtCen2.y = LONG((cPt3.y + cPt2.y) / 2.0);//下半圓圓心
     lDistance = LONG(lDistance + dWidth);
     iData = (int)dRadius % (int)dWidth;
     iBuff = 1;
@@ -3824,7 +3911,7 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     cPtCen1.x = lCenX;
     cPtCen1.y = lCenY;//上半圓圓心
     dRadius = sqrt(pow(cPtCen1.x - cPt1.x, 2) + pow(cPtCen1.y - cPt1.y, 2));//半徑
-    if (dRadius == 0)
+    if (LONG(dRadius) == 0)
     {
         return;
     }
@@ -3832,8 +3919,10 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     dWidth = lWidth * 1000;
     dAng1 = acos((cPt1.x - cPtCen1.x) / dRadius);
     dAng2 = asin((cPt1.y - cPtCen1.y) / dRadius);
-    cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
-    cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    //cPt2.x = LONG(dRadius*cos(dAng1 + M_PI) + cPtCen1.x);
+    //cPt2.y = LONG(dRadius*sin(dAng2 + M_PI) + cPtCen1.y);
+    cPt2.x = (LONG)((cPt1.x - cPtCen1.x)*cos(M_PI) - (cPt1.y - cPtCen1.y)*sin(M_PI) + cPtCen1.x);
+    cPt2.y = (LONG)((cPt1.x - cPtCen1.x)*sin(M_PI) + (cPt1.y - cPtCen1.y)*cos(M_PI) + cPtCen1.y);
     m_ptVec.push_back(cPt1);
     m_ptVec.push_back(cPt2);
     lDistance = LONG(lDistance - dWidth);
@@ -3841,8 +3930,8 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         lDistance);
     cPt3.x = lXClose;
     cPt3.y = lYClose;
-    cPtCen2.x = (cPt3.x + cPt2.x) / 2;
-    cPtCen2.y = (cPt3.y + cPt2.y) / 2;//下半圓圓心
+    cPtCen2.x = LONG((cPt3.x + cPt2.x) / 2.0);
+    cPtCen2.y = LONG((cPt3.y + cPt2.y) / 2.0);//下半圓圓心
     iData = (int)dRadius % (int)dWidth;
     lDistance = LONG(lDistance + dWidth);
     while (1)
@@ -3857,8 +3946,10 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         cPt3.x = lXClose;
         cPt3.y = lYClose;
         m_ptVec.push_back(cPt3);
-        cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
-        cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        //cPt4.x = LONG(lDistance*cos(dAng1 + M_PI) + cPtCen1.x);
+        //cPt4.y = LONG(lDistance*sin(dAng2 + M_PI) + cPtCen1.y);
+        cPt4.x = (LONG)((cPt3.x - cPtCen1.x)*cos(M_PI) - (cPt3.y - cPtCen1.y)*sin(M_PI) + cPtCen1.x);
+        cPt4.y = (LONG)((cPt3.x - cPtCen1.x)*sin(M_PI) + (cPt3.y - cPtCen1.y)*cos(M_PI) + cPtCen1.y);
         m_ptVec.push_back(cPt4);
     }
 #pragma endregion
@@ -3953,8 +4044,8 @@ void CAction::LA_CorrectLocation(LONG &PointX, LONG &PointY, LONG RefX, LONG Ref
     else
     {
         //Tip 點膠針頭模式，四捨五入
-        PointX = (X + 0.5);
-        PointY = (Y + 0.5);
+        PointX = LONG(X + 0.5);
+        PointY = LONG(Y + 0.5);
     }
 }
 /*附屬---填充形態(型態2圓形螺旋填充.由外而內)

@@ -66,6 +66,15 @@
     <ClInclude Include="LaserAdjust.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
+    <ClInclude Include="LineContinuous.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="ListToExcel.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="ExcelToList.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandTest.cpp">
@@ -108,6 +117,15 @@
       <Filter>原始程式檔</Filter>
     </ClCompile>
     <ClCompile Include="LaserAdjust.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="LineContinuous.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="ListToExcel.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="ExcelToList.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>

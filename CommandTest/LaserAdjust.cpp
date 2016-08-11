@@ -233,5 +233,3 @@ int CLaserAdjust::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message
 	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
-
-

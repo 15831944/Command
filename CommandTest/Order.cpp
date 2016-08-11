@@ -444,10 +444,10 @@ UINT COrder::Thread(LPVOID pParam)
         ((COrder*)pParam)->m_Action.BackGOZero(120000, 1500000, 6000);
     }
     //TODO::DEMO所以加入
-    if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
+    /*if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
     {
         SavePointData(pParam);
-    } 
+    } */
     if (!((COrder*)pParam)->DemoTemprarilySwitch)//如果DemoTemprarilySwitch為FALSE清除
     {
         ((COrder*)pParam)->m_Action.LA_Clear();//清除連續線段陣列
@@ -1941,7 +1941,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 if (((COrder*)pParam)->GlueData.GlueAuto)
                 {
                     ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
-                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
                     
                     ((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z };//紀錄移動虛擬座標
                 }
@@ -1951,7 +1953,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 if (((COrder*)pParam)->GlueData.GlueAuto)
                 {
                     ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
-                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime, ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
+                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
                 }
                 ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
                     ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, 6000);
@@ -2372,10 +2376,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         //找到抬升
 #ifdef MOVE
-                        //TODO::對位完畢會有出膠聲音
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         //紀錄對位點
                         ((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
@@ -2415,10 +2419,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
                         //找到抬升
 #ifdef MOVE
-                        //TODO::對位完畢會有出膠聲音
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         _cwprintf(L"手動模式找到\r\n");
                         //紀錄對位點
@@ -2607,10 +2611,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         _cwprintf(L"第一點找到\r\n");
                         //找到抬升
 #ifdef MOVE
-                        //TODO::對位完畢會有出膠聲音
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
                     }
@@ -2630,10 +2634,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         //找到清除手動狀態、將對位點依設置已經有Offset
                         //找到抬升
 #ifdef MOVE
-                        //TODO::對位完畢會有出膠聲音
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
                         ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
@@ -2671,10 +2675,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         //找到抬升
 #ifdef MOVE
-                        //TODO::對位完畢會有出膠聲音
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
                         _cwprintf(L"第一點找到移動至第二點找到\r\n");
@@ -2698,7 +2702,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef MOVE
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
 #endif
                         //找到清除手動狀態、將對位點依設置已經有Offset
                         ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
@@ -3043,13 +3047,13 @@ void COrder::ModifyPointOffSet(LPVOID pParam ,CString Command)
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(XYZOffset, 2));
         //將Switch 轉換成已修正
         ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
-        //修正完畢斷膠抬升
+        //修正完畢斷膠抬升(或直接抬升)
         if (((COrder*)pParam)->ModelControl.Mode != 1 && ((COrder*)pParam)->ModelControl.Mode != 2)//在影像、雷射模式下不做回升
         {
             ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
                 ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
                 ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
-                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
         }
     } 
 #endif
@@ -3089,10 +3093,10 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 #ifdef VI
         //無找到抬升
         #ifdef MOVE
-        //TODO::對位完畢會有出膠聲音
+        //對位完畢不出膠回升
         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
         #endif
         if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1 || ((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
         {
@@ -3110,11 +3114,12 @@ void COrder::VisionFindMarkError(LPVOID pParam)
                     if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
                     {
                         if (VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
-                        {
+                        {                      
                         #ifdef MOVE
+                            //對位完畢不出膠回升
                             ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                                 ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
                         #endif
                             break;
                         }
@@ -3125,9 +3130,10 @@ void COrder::VisionFindMarkError(LPVOID pParam)
                         if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
                         {
                         #ifdef MOVE
+                            //對位完畢不出膠回升
                             ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                                 ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
                         #endif
                             break;
                         }
@@ -3155,9 +3161,10 @@ void COrder::VisionFindMarkError(LPVOID pParam)
                     if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
                     {
                     #ifdef MOVE
+                        //對位完畢不出膠回升
                         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+                            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
                     #endif
                         break;
                     }
@@ -3174,10 +3181,10 @@ void COrder::VisionFindMarkError(LPVOID pParam)
     case 3://暫停
         //無找到抬升
         #ifdef MOVE
-        //TODO::對位完畢會有出膠聲音
+        //對位完畢不出膠回升
         ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
             ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000);
+            ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 6000,1);
         #endif
         ((COrder*)pParam)->Pause(); 
         if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2 || ((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
@@ -3458,10 +3465,10 @@ void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
                         }
                     }
 #ifdef PRINTF
-                    for (UINT i= 0; i < ((COrder*)pParam)->m_Action.LA_m_ptVec2D.size(); i++)
+         /*           for (UINT i= 0; i < ((COrder*)pParam)->m_Action.LA_m_ptVec2D.size(); i++)
                     {
                         _cwprintf(L"%d,%d\n", ((COrder*)pParam)->m_Action.LA_m_ptVec2D.at(i).EndP.x, ((COrder*)pParam)->m_Action.LA_m_ptVec2D.at(i).EndP.y);
-                    }
+                    }*/
 #endif
                     //呼叫執行掃描
                     ((COrder*)pParam)->m_Action.LA_Line2D(10000, 10000, 6000);
@@ -4951,7 +4958,7 @@ void COrder::SavePointData(LPVOID pParam)
     CString  Distinguish3 = _T("m_ptVec");
     CString  StrBuff;
     TCHAR szFilters[] = _T("文字文件(*.txt)|*.txt|所有檔案(*.*)|*.*||");
-    CFileDialog FileDlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
+    CFileDialog FileDlg(FALSE, L".txt", NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
     FileDlg.m_ofn.lpstrTitle = _T("儲存點資訊");
     if (FileDlg.DoModal() == IDOK)
     {
@@ -5016,7 +5023,7 @@ void COrder::LoadPointData()
     LONG Control = 0;
     LONG Count = 0;
     TCHAR szFilters[] = _T("文字文件(*.txt)|*.txt|所有檔案(*.*)|*.*||");
-    CFileDialog FileDlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
+    CFileDialog FileDlg(TRUE, NULL, L".txt", OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
     FileDlg.m_ofn.lpstrTitle = _T("儲存命令表");
     if (FileDlg.DoModal() == IDOK)
     {
@@ -5084,7 +5091,7 @@ void COrder::LoadPointData()
             ar.Close();
             File.Close();
             /*寫入連續線段SP*/
-#ifdef LA
+#ifdef MOVE
             m_Action.LA_m_iVecSP.clear();
             m_Action.LA_m_iVecSP.push_back(1);
             for (UINT i = 0; i < m_Action.LA_m_ptVec.size(); i++)
@@ -5097,4 +5104,15 @@ void COrder::LoadPointData()
 #endif
         }
     }
+}
+/*命令mm轉um*/
+CString COrder::CommandmmToum(CString Command) 
+{
+     if(CommandResolve(Command,0) == L"Dot" || 
+         CommandResolve(Command, 0) == L"LineStart" || 
+         CommandResolve(Command, 0) == L"LinePassing" || 
+         CommandResolve(Command, 0) == L"LineEnd" || 
+         CommandResolve(Command, 0) == L"ArcPoint" || 
+         CommandResolve(Command, 0) == L"CyclePoint" || 
+         CommandResolve(Command, 0) == L"" || )
 }

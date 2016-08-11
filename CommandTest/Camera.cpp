@@ -358,20 +358,7 @@ void CCamera::OnBnClickedButton4()
 //關閉對話框
 void CCamera::OnCancel()
 {
-#ifdef VI
-	//VI_DisplayAlloc(NULL, 1);
-	if (*((int*)MilModel) == 0)
-	{
-		free(MilModel);
-		_cwprintf(_T("free"));
-	}
-	else
-	{
-		VI_ModelFree(MilModel);
-		free(MilModel);
-		_cwprintf(_T("VI_ModelFree"));
-	}
-#endif
+	DestroyWindow();
 	CDialogEx::OnCancel();
 }
 void CCamera::OnOK()
@@ -395,6 +382,20 @@ int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 
 BOOL CCamera::DestroyWindow()
 {
-    OnCancel();
+	_cwprintf(_T("VI_ModelFree"));
+#ifdef VI
+	//VI_DisplayAlloc(NULL, 1);
+	if (*((int*)MilModel) == 0)
+	{
+		free(MilModel);
+		_cwprintf(_T("free"));
+	}
+	else
+	{
+		VI_ModelFree(MilModel);
+		free(MilModel);
+		_cwprintf(_T("VI_ModelFree"));
+	}
+#endif
 	return CDialogEx::DestroyWindow();
 }

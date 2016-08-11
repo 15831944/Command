@@ -36,7 +36,7 @@
 
 
 #define MOVE
-#define VI
+#define VI                                                     
 #define LA
 #define PRINTF
 

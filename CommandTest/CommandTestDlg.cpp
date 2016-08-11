@@ -13,6 +13,7 @@
 #include "LaserDlg.h"
 #include "PositionModify.h"
 #include "LaserAdjust.h"
+#include "LineContinuous.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -42,12 +43,14 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	YNumber = 0;   
 	BlockCount = 0;
 	BlockStr = _T("");
+	GlueInformation = FALSE;
 
 	m_pDefaultDlg = NULL;
 	m_pCameraDlg = NULL;
 	m_pLaserDlg = NULL;
 	m_pPositionModifyDlg = NULL;
-    m_pLaserAdjustDlg = NULL;
+	m_pLaserAdjustDlg = NULL;
+	m_pLineContinuousDlg = NULL;
 }
 
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
@@ -436,6 +439,22 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 	{
 		a.Home(0);
 	}
+	if (MO_ReadGlueOutBtn())
+	{
+		if (a.RunStatusRead.RunStatus != 1)//不在運行中才可以使用
+		{
+			GlueInformation = TRUE;
+			MO_GummingSet();//出膠
+		}  
+	}
+	else
+	{
+		if (GlueInformation)
+		{
+			MO_StopGumming();//停止出膠，清除Timer
+			GlueInformation = FALSE;
+		}    
+	}
 	#endif
 	if (a.RunStatusRead.RunStatus != 0)
 	{
@@ -656,7 +675,11 @@ void CCommandTestDlg::OnBnClickedBtnvision()
 	}
 	else
 	{
-		((CCamera*)m_pCameraDlg)->DestroyWindow();
+		if (::IsWindow(((CCamera*)m_pCameraDlg)->m_hWnd))//判斷視窗是否有銷毀
+		{
+			((CCamera*)m_pCameraDlg)->DestroyWindow();
+			_cwprintf(L"視窗在");
+		}
 		free(m_pCameraDlg);
 		m_pCameraDlg = new CCamera();
 		m_pCameraDlg->Create(IDD_DIALOG2, this);
@@ -740,11 +763,14 @@ void CCommandTestDlg::OnBnClickedBtnmodefyz()
 void CCommandTestDlg::OnCancel()
 {
 #ifdef VI
+	if (m_pCameraDlg != NULL)
+	{
+		if (::IsWindow(((CCamera*)m_pCameraDlg)->m_hWnd))
+		{
+			((CCamera*)m_pCameraDlg)->DestroyWindow();
+		}
+	}
 	VI_VisionFree();
-    if (m_pCameraDlg == NULL)
-    {
-        ((CCamera*)m_pCameraDlg)->DestroyWindow();
-    }
 #endif
 	//儲存參數檔案
 	SaveParameter();
@@ -823,20 +849,20 @@ void CCommandTestDlg::OnBnClickedBtnloaddemo()
 /*讀取雷射表*/
 void CCommandTestDlg::OnBnClickedBtnprintflaser()
 {
-    if (m_pLaserAdjustDlg == NULL)
-    {
-        m_pLaserAdjustDlg = new CLaserAdjust();
-        m_pLaserAdjustDlg->Create(IDD_DIALOG9, this);
-        m_pLaserAdjustDlg->ShowWindow(SW_SHOW);
-    }
-    else
-    {
-        ((CCamera*)m_pLaserAdjustDlg)->DestroyWindow();
-        free(m_pLaserAdjustDlg);
-        m_pLaserAdjustDlg = new CLaserAdjust();
-        m_pLaserAdjustDlg->Create(IDD_DIALOG9, this);
-        m_pLaserAdjustDlg->ShowWindow(SW_SHOW);
-    }
+	if (m_pLaserAdjustDlg == NULL)
+	{
+		m_pLaserAdjustDlg = new CLaserAdjust();
+		m_pLaserAdjustDlg->Create(IDD_DIALOG9, this);
+		m_pLaserAdjustDlg->ShowWindow(SW_SHOW);
+	}
+	else
+	{
+		((CCamera*)m_pLaserAdjustDlg)->DestroyWindow();
+		free(m_pLaserAdjustDlg);
+		m_pLaserAdjustDlg = new CLaserAdjust();
+		m_pLaserAdjustDlg->Create(IDD_DIALOG9, this);
+		m_pLaserAdjustDlg->ShowWindow(SW_SHOW);
+	}
 }
 /*讀取修正表*/
 void CCommandTestDlg::OnBnClickedBtnmodify()
@@ -856,17 +882,23 @@ void CCommandTestDlg::OnBnClickedBtnmodify()
 		m_pPositionModifyDlg->ShowWindow(SW_SHOW);
 	}
 }
-/*印出所有連續線段*/
+/*讀取所有連續線段*/
 void CCommandTestDlg::OnBnClickedBtnprintcline()
 {
-#ifdef LA
-	for (UINT i = 0; i < a.m_Action.LA_m_ptVec.size(); i++)
+	if (m_pLineContinuousDlg == NULL)
 	{
-#ifdef PRINTF
-		_cwprintf(L"%dm%d,%d\n", a.m_Action.LA_m_ptVec.at(i).EndPX, a.m_Action.LA_m_ptVec.at(i).EndPY, a.m_Action.LA_m_ptVec.at(i).EndPZ);
-#endif
+		m_pLineContinuousDlg = new CLineContinuous;
+		m_pLineContinuousDlg->Create(IDD_DIALOG8, this);
+		m_pLineContinuousDlg->ShowWindow(SW_SHOW);
 	}
-#endif
+	else
+	{
+		((CCamera*)m_pLineContinuousDlg)->DestroyWindow();
+		free(m_pLineContinuousDlg);
+		m_pLineContinuousDlg = new CLineContinuous();
+		m_pLineContinuousDlg->Create(IDD_DIALOG8, this);
+		m_pLineContinuousDlg->ShowWindow(SW_SHOW);
+	}
 }
 /*註解*/
 void CCommandTestDlg::OnBnClickedBtncommit()
@@ -901,7 +933,7 @@ void CCommandTestDlg::OnBnClickedBtnnocommit()
 void CCommandTestDlg::OnBnClickedBtnsave()
 {
 	TCHAR szFilters[] = _T("文字文件(*.txt)|*.txt|所有檔案(*.*)|*.*||");
-	CFileDialog FileDlg(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
+	CFileDialog FileDlg(FALSE, L".txt", NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
 	FileDlg.m_ofn.lpstrTitle = _T("儲存命令表");
 	if (FileDlg.DoModal() == IDOK)
 	{
@@ -922,7 +954,7 @@ void CCommandTestDlg::OnBnClickedBtnsave()
 void CCommandTestDlg::OnBnClickedBtnopen()
 {
 	TCHAR szFilters[] = _T("文字文件(*.txt)|*.txt|所有檔案(*.*)|*.*||");
-	CFileDialog FileDlg(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
+	CFileDialog FileDlg(TRUE, NULL, L".txt", OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, szFilters);
 	FileDlg.m_ofn.lpstrTitle = _T("儲存命令表");
 	if (FileDlg.DoModal() == IDOK)
 	{
@@ -1512,7 +1544,7 @@ CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
 /*計算程序執行時間*/
 void CCommandTestDlg::Counter()
 {
-	int a, b;
+	int a = 0, b = 0;
 	LARGE_INTEGER startTime, endTime, fre;
 	double times;
 	QueryPerformanceFrequency(&fre); //取得CPU頻率
@@ -1587,9 +1619,9 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 	{
 		m_pPositionModifyDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
 	}
-    if (m_pLaserAdjustDlg != NULL)
-    {
-        m_pLaserAdjustDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
-    }
+	if (m_pLaserAdjustDlg != NULL)
+	{
+		m_pLaserAdjustDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+	}
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }

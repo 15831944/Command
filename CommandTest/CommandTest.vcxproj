@@ -146,7 +146,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>mcc.lib;Vision.lib;Laser.lib;</AdditionalDependencies>
+      <AdditionalDependencies>mcc.lib;Vision.lib;Laser.lib;C:\Program Files (x86)\Windows Kits\8.0\Lib\win8\um\x86\odbccp32.lib</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -196,8 +196,11 @@
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
     <ClInclude Include="Default.h" />
+    <ClInclude Include="ExcelToList.h" />
     <ClInclude Include="LaserAdjust.h" />
     <ClInclude Include="LaserDlg.h" />
+    <ClInclude Include="LineContinuous.h" />
+    <ClInclude Include="ListToExcel.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="MoveButton.h" />
     <ClInclude Include="Order.h" />
@@ -214,8 +217,11 @@
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
     <ClCompile Include="Default.cpp" />
+    <ClCompile Include="ExcelToList.cpp" />
     <ClCompile Include="LaserAdjust.cpp" />
     <ClCompile Include="LaserDlg.cpp" />
+    <ClCompile Include="LineContinuous.cpp" />
+    <ClCompile Include="ListToExcel.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="MoveButton.cpp" />
     <ClCompile Include="Order.cpp" />
