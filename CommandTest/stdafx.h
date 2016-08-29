@@ -38,7 +38,7 @@
 #define MOVE
 #define VI                                                     
 #define LA
-#define PRINTF
+//#define PRINTF
 
 #ifdef MOVE
 #include "mcc.h"

@@ -32,14 +32,13 @@ public:     //變數
 	int     g_LaserCnt;//雷射線段計數器(掃描用)
     BOOL    g_LaserAverage;//雷射平均(1使用/0不使用)
     BOOL    g_interruptLock;//中斷鎖
-    BOOL    g_AdvanceGlue;//提前出膠用
-
-
 	std::vector<UINT>  LA_m_iVecSP;//主要雷射vector(SP:Scan End)
+    static BOOL    g_YtimeOutGlueSet;//Y計時器中斷時出斷膠控制
+    static BOOL    g_ZtimeOutGlueSet;//Z計時器中斷時出斷膠控制
 #ifdef MOVE
     std::vector<DATA_3MOVE> LA_m_ptVec;//雷射連續切點儲存vector
 	std::vector<DATA_2MOVE> LA_m_ptVec2D;//雷射連續切點儲存vector
-    DATA_3MOVE DATA_3Do[256];//連續切暫存
+    DATA_3MOVE DATA_3Do[512];//連續切暫存
     DATA_3MOVE DATA_3ZERO_B;//雷射歸零_針頭B點
     DATA_3MOVE DATA_3ZERO_LA;//雷射歸零_雷射B點
 	DATA_2MOVE DATA_2Do[128]; 
@@ -79,8 +78,8 @@ public:     //運動API
 	void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lZBackDistance, BOOL bZDisType, LONG lZdistance, LONG lHighVelocity, LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//原點賦歸動作--(原點復歸速度1,原點復歸速度2,復歸軸(7),偏移量(0))
 	void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ);
-    //填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸上升距離，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，驅動速度，加速度，初速度)
-    void DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, LONG lZBackDistance, BOOL bZDisType, int iType, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+    ////填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸距離(相對)，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，線段點膠設定(1.移動前延遲，2.設置距離，3停留時間，5關機距離，6關機延遲)，驅動速度，加速度，初速度)
+    void DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, LONG lZBackDistance, BOOL bZDisType,int iType, LONG lWidth, LONG lWidth2, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//輸出-16個輸出(選擇埠(0~15),開啟關閉(0~1))
 	BOOL DecideOutPutSign(int iPort, BOOL bChoose);
 	//輸入-12個輸入(選擇埠(0~11),開啟關閉(0~1))
@@ -137,17 +136,20 @@ private:    //自行運用函數
 	void GelatinizeBack(int iType, LONG lXarEnd, LONG lYarEnd, LONG lZarEnd, LONG lXarUp, LONG lYarUp, LONG lLineStop, LONG lStopZar, LONG lBackZar, LONG lLowSpeed, LONG lHighSpeed, LONG lAcceleration, LONG lInitSpeed);//返回設定
 	void LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG &lLineClose);//直線距離轉換成座標點
 	void LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG &lZClose, LONG lX0, LONG lY0, LONG lX1, LONG lY1, LONG lZ0, LONG lZ1, LONG &lLineClose);//直線距離轉換成座標點--多載3D
-	CString TRoundCCalculation(CString Origin, CString End, CString Between);//三點計算圓心
+    LONG CalPreglue(LONG lStartDistance, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//計算提前出斷膠距離或時間(us)
+    LONG CalPreglue(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//計算提前出斷膠距離
+    LONG CalPreglueTime(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//計算提前出斷膠時間(us)
+    CString TRoundCCalculation(CString Origin, CString End, CString Between);//三點計算圓心
 	LONG CStringToLong(CString csData, int iChoose);//字串轉長整數，使用的結尾一定要是"，"
     DOUBLE AngleCount(DOUBLE LocatX, DOUBLE LocatY, DOUBLE LocatX1, DOUBLE LocatY1, DOUBLE LocatX2, DOUBLE LocatY2, BOOL bRev);//三點取得角度(向量夾角)(圓心x,y座標x1,y1,座標x2,y2,正逆轉)
     void ArcGetToPoint(LONG &lArcX, LONG &lArcY, LONG lDistance, LONG lX, LONG lY, LONG lCenX, LONG lCenY, LONG lRadius, BOOL bDir);//圓弧長距離轉點做標
-    void AttachFillType1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態1
-    void AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態2
-    void AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態3
-    void AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態4
-    void AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態5
-    void AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態6
-    void AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7                                                                                                                                                                      //絕對座標轉相對座標3軸連續插補使用
+    void AttachFillType1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime,LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態1-矩形S
+    void AttachFillType2(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態2-螺旋圓
+    void AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態3-矩形螺旋
+    void AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態4-矩形環
+    void AttachFillType5(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lWidth2, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態5-圓環
+    void AttachFillType6(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態6-矩形反螺旋
+    void AttachFillType7(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, LONG lZBackDistance, LONG lWidth, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//附屬--- 填充形態7-反螺旋圓                                                                                                                                                                      //絕對座標轉相對座標3軸連續插補使用
     void LA_CorrectLocation(LONG &PointX, LONG &PointY, LONG RefX, LONG RefY, DOUBLE OffSetX, DOUBLE OffSetY, DOUBLE Andgle, DOUBLE CameraToTipOffsetX, DOUBLE CameraToTipOffsetY, BOOL Mode, LONG lSubOffsetX, LONG lSubOffsetY);//雷射用旋轉平移
     //===============未使用連續插補的填充型態=========================
     void AttachFillType2_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG lZ,

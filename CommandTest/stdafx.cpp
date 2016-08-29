@@ -1,10 +1,34 @@
-
-// stdafx.cpp : ∂»•]ßtº–∑« Include ¿…™∫≠Ï©lµ{¶°¿…
-// CommandTest.pch ∑|¶®¨∞•˝¶ÊΩsƒ∂º–¿Y¿…
-// stdafx.obj ∑|•]ßt•˝¶ÊΩsƒ∂√˛´¨∏Í∞T
+Ôªø
+// stdafx.cpp : ÂÉÖÂåÖÂê´Ê®ôÊ∫ñ Include Ê™îÁöÑÂéüÂßãÁ®ãÂºèÊ™î
+// CommandTest.pch ÊúÉÊàêÁÇ∫ÂÖàË°åÁ∑®Ë≠ØÊ®ôÈ†≠Ê™î
+// stdafx.obj ÊúÉÂåÖÂê´ÂÖàË°åÁ∑®Ë≠ØÈ°ûÂûãË≥áË®ä
 
 #include "stdafx.h"
 #ifdef PRINTF
+HHOOK g_hGetMessage = NULL;
+HWND g_Consolehwnd;
+LRESULT CALLBACK GetMsgProc(
+    int    code,
+    WPARAM wParam,
+    LPARAM lParam
+){
+    if (code == HC_ACTION)
+    {
+        MSG * pMsg = (MSG*)lParam;
+        switch (pMsg->message)
+        {
+        case WM_RBUTTONUP:
+            //SendMessage(g_hwnd, WM_HOOK_MESSAGE, wParam, lParam);
+            _cwprintf(L"WM_RBUTTONUP");
+            break;
+        case WM_RBUTTONDOWN:
+            //SendMessage(g_hwnd, WM_HOOK_MESSAGE, wParam, lParam);
+            _cwprintf(L"WM_RBUTTONDOWN");
+            break;
+        }
+    }
+    return CallNextHookEx(g_hGetMessage, code, wParam, lParam);
+}
 void InitConsoleWindow()
 {
     /*AllocConsole();
@@ -20,6 +44,38 @@ void InitConsoleWindow()
     fp = _fdopen(nCrt, "w");
     *stdout = *fp;
     setvbuf(stdout, NULL, _IONBF, 0);
+
+    //Âà™Èô§Menu ÈóúÈñâÊåâÈàï ÊñπÂºè1
+    //char oldTitle[100];
+    //char newTitle[100];
+    //GetConsoleTitleA(oldTitle, 100);
+    //sprintf_s(newTitle, "%d-%d", GetTickCount(), GetCurrentProcessId());
+    //SetConsoleTitleA(newTitle);
+    //Sleep(100);
+    //g_Consolehwnd = FindWindowA(NULL, newTitle);
+    //SetConsoleTitleA(oldTitle);
+    //if (g_Consolehwnd)
+    //{
+    //    HMENU h_Menu = GetSystemMenu(g_Consolehwnd, FALSE);
+    //    if (h_Menu)
+    //    {
+    //        RemoveMenu(h_Menu, 0xF060, 0);
+    //        //return ::EnableMenuItem( h_Menu, 0xF060, FALSE );
+    //    }
+    //}
+
+    //Âà™Èô§Menu ÈóúÈñâÊåâÈàï ÊñπÂºè2
+    g_Consolehwnd = ::GetConsoleWindow();
+    if (g_Consolehwnd != NULL)
+    {
+        HMENU h_Menu = ::GetSystemMenu(g_Consolehwnd, FALSE);           
+        if (h_Menu != NULL)
+        {
+            DeleteMenu(h_Menu, SC_CLOSE, MF_BYCOMMAND);
+        }
+    }
+    
+    //g_hGetMessage = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, NULL, GetCurrentThreadId());
 }
 #endif
 CString GetCurrentPath(CString Folder)
@@ -33,4 +89,6 @@ CString GetCurrentPath(CString Folder)
     lstrcpy(lpszText, path);
     return path;
 }
+
+
 

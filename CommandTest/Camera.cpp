@@ -16,8 +16,6 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG2, pParent)
 {
 	RaiChoose = 1;
-	PixToPulsX = 0.0;
-	PixToPulsY = 0.0;
 	FocusPoint = 0;
 	MilModel = malloc(sizeof(int));
 	*((int*)MilModel) = 0;
@@ -58,6 +56,7 @@ END_MESSAGE_MAP()
 BOOL CCamera::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
+    CWnd* pMain = AfxGetApp()->m_pMainWnd;
 	/*初始化按鈕移動*/
 	m_Xup.MoveX = 350000;
 	m_Xdown.MoveX = -350000;
@@ -69,9 +68,8 @@ BOOL CCamera::OnInitDialog()
 	((CButton *)GetDlgItem(IDC_RADH))->SetCheck(TRUE);
 	RaiChoose = 1;
 	CString StrBuff;
-	StrBuff.Format(_T("%.6f,%.6f"), PixToPulsX, PixToPulsY);
+	StrBuff.Format(_T("%.6f,%.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
 	SetDlgItemText(IDC_PIXTOPULS, StrBuff);
-	CWnd* pMain = AfxGetApp()->m_pMainWnd;
 	StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
 	SetDlgItemText(IDC_TIPTOCCD, StrBuff);
 	//影像開啟
@@ -291,6 +289,7 @@ void CCamera::OnBnClickedButton3()
 	CString StrBuff;
 	static LONG Point1X = 0;
 	static LONG Point1Y=0;
+    CWnd* pMain = AfxGetApp()->m_pMainWnd;
 	GetDlgItemText(IDC_BUTTON3,StrBuff);
 #ifdef VI
 	if (StrBuff == L"SetPixToPuls")
@@ -311,10 +310,10 @@ void CCamera::OnBnClickedButton3()
 	else if (StrBuff == L"SetPixToPuls2")
 	{
 		VI_SetPatternMatch(MilModel, 1, 1, 80, 0, 360);
-		VI_SetPixelPulseRelation(GetDlgItem(IDC_PIC),MilModel, Point1X, Point1Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), PixToPulsX, PixToPulsY);
-		if (PixToPulsX != 0.0)
+		VI_SetPixelPulseRelation(GetDlgItem(IDC_PIC),MilModel, Point1X, Point1Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
+		if (((CCommandTestDlg*)pMain)->PixToPulsX != 0.0)
 		{
-			StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), PixToPulsX, PixToPulsY);
+			StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
 			SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 			VI_ModelFree(MilModel);
 			//free(MilModel);

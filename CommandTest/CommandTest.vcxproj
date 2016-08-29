@@ -135,7 +135,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>Disabled</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -196,6 +196,7 @@
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
     <ClInclude Include="Default.h" />
+    <ClInclude Include="EmgDlg.h" />
     <ClInclude Include="ExcelToList.h" />
     <ClInclude Include="LaserAdjust.h" />
     <ClInclude Include="LaserDlg.h" />
@@ -217,6 +218,7 @@
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
     <ClCompile Include="Default.cpp" />
+    <ClCompile Include="EmgDlg.cpp" />
     <ClCompile Include="ExcelToList.cpp" />
     <ClCompile Include="LaserAdjust.cpp" />
     <ClCompile Include="LaserDlg.cpp" />

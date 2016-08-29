@@ -62,6 +62,7 @@ void ExportExcelToList(CListCtrl* pList, CString strTitle)
     // 創建數據庫 (既Excel表格文件)
     if (database.Open(NULL,false,false,sSql)) //開啟資料庫
     {
+        pList->DeleteAllItems();
         //創建結構表
         CString sItem;
         CString columnName;

@@ -5,6 +5,7 @@
 static CWinThread* g_pThread = NULL;
 static CWinThread* g_pSubroutineThread = NULL;
 static CWinThread* g_pRunLoopThread = NULL;
+static CWinThread* g_pIODetectionThread = NULL;
 class COrder : public CWnd
 {
 	DECLARE_DYNAMIC(COrder)
@@ -17,10 +18,11 @@ private:
 		LONG Y;
 		LONG Z;
 	};
-	//速度結構(加速度、驅動速度)
+	//速度結構(加速度、驅動速度、初速度)
 	struct Speed {
 		LONG AccSpeed;
 		LONG EndSpeed;
+        LONG InitSpeed;
 	};
 	//點膠設置結構(點膠開啟時間、點膠關閉停留時間)
 	struct DispenseDotSet {
@@ -74,7 +76,7 @@ private:
 		BOOL PrecycleInitialize;
 		BOOL VisionGoHome;
 	};
-	//初始化結構(點膠設置結構、點膠結束結構、點膠速度、線段設置結構、線段結束結構、線段速度、Z軸結構、排膠結構)
+	//初始化結構(點膠設置結構、點膠結束結構、點膠速度、線段設置結構、線段結束結構、線段速度、Z軸結構、排膠結構、回原點結構)
 	struct Default {
 		DispenseDotSet  DispenseDotSet;
 		DispenseDotEnd  DispenseDotEnd;
@@ -86,12 +88,22 @@ private:
 		GlueData        GlueData;
 		GoHome          GoHome;
 	};
-	//運動點選擇修正表(命令地址、影像修正編號、雷射修正編號)
+	//修正表結構(命令地址、影像修正編號、雷射修正編號)
 	struct PositionModifyNumber {
 		CString Address;
 		int VisionNumber;
 		int LaserNumber;
 	};
+	/************************************************************I/O參數結構*******************************************************/
+	//IO控制結構(IO偵測開關、出膠鈕判斷)
+    struct IOControl {
+        BOOL SwitchInformation;
+        BOOL GlueInformation;
+	};
+    //IO參數結構(EMG對話框指針)
+    struct IOParam{
+        CDialog* pEMGDlg;
+    };
 	/************************************************************影像參數結構*******************************************************/
 	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
 	struct Vision {
@@ -129,7 +141,7 @@ private:
 		UINT ModelCount;
 		std::vector<CString> AllModelName;
 	};
-	//影像擴大搜尋(調整狀態、擴大對位區間1、擴大對位區間2)
+	//影像擴大搜尋(調整狀態、擴大對位1開關、擴大對位2開關、擴大對位區間1、擴大對位區間2)
 	struct VisionTrigger {
 		UINT AdjustStatus;
 		BOOL Trigger1Switch;
@@ -137,25 +149,25 @@ private:
 		std::vector<CoordinateData> Trigger1;
 		std::vector<CoordinateData> Trigger2;
 	};
-	//影像搜尋錯誤結構(搜尋錯誤方式、對話框指針、手動模式開關、暫停模式判斷)
+	//影像搜尋錯誤結構(搜尋錯誤方式、尋問對話框指針、手動模式開關、暫停模式判斷)
 	struct VisionSerchError {
 		int SearchError;
 		CDialog* pQuestion;
 		BOOL Manuallymode;
 		BOOL Pausemode;
 	};
-	//影像初始化結構
+	//影像初始化結構(影像設置結構、影像對位點檔案結構、影像搜尋錯誤結構)
 	struct VisionDefault{
 		VisionSet VisionSet;
 		VisionFile VisionFile;
 		VisionSerchError VisionSerchError;
 	};
-	//影像所有Offset值紀錄陣列
+	//影像Offset值紀錄陣列(影像修正計算結構)
 	struct VisionAdjust {
 		VisionOffset VisionOffset;
 	};
 	/************************************************************雷射參數結構*******************************************************/ 
-	//Laser模式轉換開關
+	//Laser模式轉換開關(雷射高度、雷射點調節、雷射檢測、雷射調整、雷射跳過)
 	struct LaserSwitch {
 		BOOL LaserHeight;
 		BOOL LaserPointAdjust;
@@ -163,19 +175,19 @@ private:
 		BOOL LaserAdjust;
 		BOOL LaserSkip;
 	};
-	//Laser資料紀錄
+	//Laser資料紀錄(雷射地址(之後用來記錄關閉開啟位置)、雷射單點測高座標、雷射線段平均測高開始和結束座標、雷射測高數據)
 	struct LaserData {
 		UINT LaserAddress;
 		CoordinateData LaserHeightPoint;
 		CoordinateData LaserDetectLS, LaserDetectLE;
 		LONG LaserMeasureHeight;		
 	};
-	//Laser所有測高值紀錄陣列
+	//Laser測高值紀錄陣列(雷射測高數據)
 	struct LaserAdjust {
 		LONG LaserMeasureHeight; 
 	};
 	/************************************************************模組參數結構*******************************************************/
-	//控管模組結構(模式選擇、模式轉換地址(目前不使用)、雷射模組跳過)
+	//控管模組結構(模式選擇、模式轉換地址(目前不使用)、影像模組跳過、雷射模組跳過)
 	struct ModelControl{
 		UINT Mode;
 		UINT ModeChangeAddress;
@@ -206,8 +218,9 @@ private:
 		UINT StackingCount;
 		std::vector<UINT> ActionStatus;  
 	};
-	/*運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數)
-	*運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
+	//運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數)
+	/*
+    *運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
 	*回原點狀態(TRUE = 賦歸完成 FLASE = 賦歸中)
 	*/
 	struct RunStatusRead {
@@ -215,6 +228,7 @@ private:
 		UINT CurrentRunCommandNum;
 		BOOL GoHomeStatus;
 		int FinishProgramCount;
+        DOUBLE RunTotalTime;   
 	};
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
@@ -249,7 +263,7 @@ private:
 		std::vector<int> StepRepeatCountY;
 		std::vector<StepRepeatBlockData> StepRepeatBlockData;
 	};
-	/*程序循環運行結構(控制循環開關、循環次數、最大運行次數(設 -1 =沒有限制))*/
+	/*程序循環運行結構(控制循環開關、循環次數、循環計數、最大運行次數(設 -1 =沒有限制))*/
 	struct RunLoopData {      
 		BOOL RunSwitch;
 		int LoopNumber;
@@ -259,6 +273,7 @@ private:
 	
 private:    //變數
 	HANDLE          wakeEvent;
+    LARGE_INTEGER   startTime, endTime, fre;
 	//命令
 	StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
@@ -271,6 +286,10 @@ private:    //變數
 	RunData         RunData;
 	//狀態
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
+	//IO
+	IOControl       IOControl;
+    //未修正虛擬模擬座標
+    CoordinateData  NVMVirtualCoordinateData;
    
 	
 private:    //函數
@@ -279,13 +298,13 @@ private:    //函數
 	static  UINT    Thread(LPVOID pParam);
 	static  UINT    SubroutineThread(LPVOID pParam);
 	static  UINT    RunLoopThread(LPVOID pParam);
+	static  UINT    IODetection(LPVOID pParam);
 	//動作處理
 	static  void    LineGotoActionJudge(LPVOID pParam);
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
 	static  void    VisionModify(LPVOID pParam);
 	void            VisionFindMarkError(LPVOID pParam);
 	static  void    LaserModify(LPVOID pParam);
-	
 	//阻斷處理
 	static  void    BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus);
 	static  BOOL    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
@@ -314,9 +333,11 @@ private:    //函數
 	static  CString VirtualNowOffSet(LPVOID pParam , CString Command);
 	//虛擬座標模擬
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);
-	//其他功能
+    //單位轉換
+    CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
+	//其他功能(Demo用)
 	static  void    SavePointData(LPVOID pParam);
-	
+    
 	
 public:     //變數
 	//主運動物件
@@ -326,6 +347,7 @@ public:     //變數
 	LONG            V_ActionCount;
 	//程序陣列
 	std::vector<CString> CommandMemory;
+    std::vector<CString> mmCommandMemory;
 	//運動參數值
 	Default         Default;
 
@@ -333,7 +355,7 @@ public:     //變數
 	DispenseDotEnd  DispenseDotEnd;
 	DispenseLineSet DispenseLineSet;
 	DispenseLineEnd DispenseLineEnd;
-	Speed           DotSpeedSet, LineSpeedSet;
+	Speed           DotSpeedSet, LineSpeedSet,MoveSpeedSet;
 	ZSet            ZSet;
 	GlueData        GlueData;
 	GoHome          GoHome;
@@ -358,10 +380,9 @@ public:     //變數
 	LaserData       LaserData;
 	//影像修正後工作座標
 	CoordinateData  FinalWorkCoordinateData;
-	//虛擬模擬座標
+	//*虛擬模擬座標
 	CoordinateData  VirtualCoordinateData;
-	//未修正虛擬模擬座標
-	CoordinateData  NVMVirtualCoordinateData;
+	
 	//模組控管
 	ModelControl    ModelControl;
 
@@ -378,7 +399,7 @@ public:     //變數
 
 	//紀錄目前紀錄到表中地址(特殊線段使用)
 	CString         CurrentTableAddress;
-	//判斷影像是否修正
+	//(暫存)判斷影像是否修正
 	BOOL            VisioModifyJudge;
 	
 	//連續線段計數(連續掃描使用)
@@ -388,6 +409,10 @@ public:     //變數
 
 	//Demo載入用判斷符號(DEMO 用)
 	BOOL            DemoTemprarilySwitch;
+
+    //IO參數設定
+    IOParam         IOParam;
+
 public:     //函數
 	COrder();
 	virtual ~COrder();
@@ -405,11 +430,11 @@ public:     //函數
 	BOOL    Home(BOOL mode);
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
-
+	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式)
+    BOOL    IODetectionSwitch(BOOL Switch, int mode);
 	//載入檔案
 	void    LoadPointData();
-	//命令mm轉um
-	CString CommandmmToum(CString Command);
+    
 protected:
 	DECLARE_MESSAGE_MAP()
 };

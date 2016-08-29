@@ -20,7 +20,6 @@ public:
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV 支援
 	virtual BOOL OnInitDialog();
-	virtual void OnCancel();
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
@@ -34,6 +33,7 @@ protected:
 	UINT InsertNum;
 	LONG OffsetX, OffsetY;
 	BOOL GlueInformation;
+    BOOL EMGInformation;
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
@@ -42,6 +42,7 @@ public:
 	CDialog* m_pPositionModifyDlg;
 	CDialog* m_pLaserAdjustDlg;
 	CDialog* m_pLineContinuousDlg;
+    DOUBLE PixToPulsX, PixToPulsY;
 	BOOL InputAuto;
 	CPoint TipOffset,LaserOffset;
 	LONG LaserOffsetz;
@@ -145,9 +146,12 @@ public:
 	CString CommandResolve(CString Command, UINT Choose);
 	void SaveParameter();
 	void LoadParameter();
+    void SaveDefault();
+    void LoadDefault();
 	void Counter();
-	
+	//介面透明化
 	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
+    afx_msg void OnDestroy();
 };
 
 

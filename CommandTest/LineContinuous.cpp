@@ -266,6 +266,24 @@ void CLineContinuous::OnBnClickedBtnlisttoexcel()
 void CLineContinuous::OnBnClickedBtnexceltolist()
 {
 	ExportExcelToList(&m_ListLCPoint, L"LineContinuous");
+#ifdef MOVE
+    ((CCommandTestDlg*)pMain)->a.m_Action.LA_Clear();
+    for (int i = 0; i < m_ListLCPoint.GetItemCount(); i++)
+    {
+        ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.push_back({ 0,0,0,0,0 });
+        ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.back().EndPX = _ttol(m_ListLCPoint.GetItemText(i, 1));
+        ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.back().EndPY = _ttol(m_ListLCPoint.GetItemText(i, 2));
+        ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.back().EndPZ = _ttol(m_ListLCPoint.GetItemText(i, 3));
+    }
+    ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_iVecSP.push_back(1);
+    for (UINT i = 0; i < ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.size(); i++)
+    {
+        if (((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.at(i).EndPX == -99999 && ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.at(i).EndPY == -99999 && ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_ptVec.at(i).EndPZ == -99999)
+        {
+            ((CCommandTestDlg*)pMain)->a.m_Action.LA_m_iVecSP.push_back(i + 1);
+        }
+    }
+#endif
 }
 //顯示視窗時設定
 void CLineContinuous::OnShowWindow(BOOL bShow, UINT nStatus)

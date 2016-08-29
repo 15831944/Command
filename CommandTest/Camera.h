@@ -20,7 +20,6 @@ public: //≈‹º∆
 	CMoveButton m_Yup, m_Ydown, m_Xup, m_Xdown, m_Zup, m_Zdown;
 	UINT RaiChoose;
 	void* MilModel;
-	DOUBLE PixToPulsX, PixToPulsY;
 	CDialog* m_pCModel;
     LONG FocusPoint;
 public:// ®Áº∆

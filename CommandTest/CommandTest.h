@@ -27,6 +27,8 @@ public:
 // 程式碼實作
 
 	DECLARE_MESSAGE_MAP()
+    virtual BOOL PreTranslateMessage(MSG* pMsg);
+    virtual BOOL OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo);
 };
 
 extern CCommandTestApp theApp;

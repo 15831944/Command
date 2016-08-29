@@ -14,6 +14,8 @@
 #include "PositionModify.h"
 #include "LaserAdjust.h"
 #include "LineContinuous.h"
+#include "EmgDlg.h"
+#include "Question.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -75,7 +77,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_COMMAND(IDM_INSERT, &CCommandTestDlg::OnInsert)
 	ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
 	ON_NOTIFY(NM_RCLICK, IDC_LIST1, &CCommandTestDlg::OnNMRClickList1)
-	   
+	ON_WM_DESTROY()
+
 	ON_BN_CLICKED(IDC_BTNCOMMAND1, &CCommandTestDlg::OnBnClickedBtncommand1)
 	ON_BN_CLICKED(IDC_BTNCOMMAND2, &CCommandTestDlg::OnBnClickedBtncommand2)
 	ON_BN_CLICKED(IDC_BTNCOMMAND3, &CCommandTestDlg::OnBnClickedBtncommand3)
@@ -148,6 +151,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNPRINTCLINE, &CCommandTestDlg::OnBnClickedBtnprintcline)
 	ON_COMMAND(IDM_MOVE, &CCommandTestDlg::OnMove)
 	ON_WM_MOUSEACTIVATE()
+	
 END_MESSAGE_MAP()
 
 
@@ -202,23 +206,20 @@ BOOL CCommandTestDlg::OnInitDialog()
 		m_ParamList.SetItemText(i, 1, 0);
 	}
 	//TODO:參數修改在這
-	a.Default.GoHome = { 30000,5000,7,47000,62000,10000 };
-	a.Default.DotSpeedSet = { 100000,30000 };
-	a.Default.LineSpeedSet = { 100000,30000 };
-	a.Default.ZSet = { 5000,1 };
-	a.VisionDefault.VisionSet = { 0,1,1,50,640,480,0,360,0,0 };
+	//原點復歸參數
+	LoadDefault();
 	//載入參數檔案
 	LoadParameter();
 	SetTimer(1, 500, NULL);
 	//軸卡運動開啟
 #ifdef MOVE
-	MO_Open(1);
-	MO_SetHardLim(7, 1);
+	MO_Open(1);//軸卡開啟
+	MO_SetHardLim(7, 1);//極限開啟
 	MO_SetDecOK(1);//開啟減速有效
-	MO_InterruptCase(1, 1, a.m_Action.MoInterrupt);
-	//MO_SetSoftLim(7, 1);
-	//MO_SetCompSoft(1, -60000, -17500, -8000);
-	//MO_SetCompSoft(0, 140000, 170000, 70000); //0, 150000, 190000, 80000
+	MO_InterruptCase(1, 1, a.m_Action.MoInterrupt);//中斷開啟
+	MO_SetSoftLim(7, 1);//軟極限開啟
+	MO_SetCompSoft(1, -47000, -62000, -10000);
+	MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
 	OnBnClickedBtnhome();
 #endif
 #ifdef VI
@@ -403,9 +404,9 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 	}
 	/*手臂與出膠狀態*/
 	#ifdef MOVE
-		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d)\tGlueStatus:%d\t驅動速度:%d\t加速度:%d"),
+		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d)\tGlueStatus:%d\t驅動速度:%d\t加速度:%d\t加工時間:%f(s)"),
 			MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming(),
-			MO_ReadSpeed(0),MO_ReadAccDec(0));
+			MO_ReadSpeed(0),MO_ReadAccDec(0),a.RunStatusRead.RunTotalTime);
 	#endif 
 	SetDlgItemText(IDC_ARMSTATUS, XYZlocation);
 	/*程序運行狀態*/
@@ -433,29 +434,6 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 	/*程序計數*/
 	FinishCountBuff.Format(_T("完整程序運行次數:%d"), a.RunStatusRead.FinishProgramCount);
 	SetDlgItemText(IDC_FINISHCOUNT, FinishCountBuff);
-	/*綠色原點賦歸按鈕*/
-	#ifdef MOVE
-	if (MO_ReadStartBtn())
-	{
-		a.Home(0);
-	}
-	if (MO_ReadGlueOutBtn())
-	{
-		if (a.RunStatusRead.RunStatus != 1)//不在運行中才可以使用
-		{
-			GlueInformation = TRUE;
-			MO_GummingSet();//出膠
-		}  
-	}
-	else
-	{
-		if (GlueInformation)
-		{
-			MO_StopGumming();//停止出膠，清除Timer
-			GlueInformation = FALSE;
-		}    
-	}
-	#endif
 	if (a.RunStatusRead.RunStatus != 0)
 	{
 		m_CommandList.SetItemState(a.RunStatusRead.CurrentRunCommandNum, LVIS_SELECTED, LVIS_SELECTED);//將工作點設為高亮
@@ -593,6 +571,7 @@ void CCommandTestDlg::OnMove()
 {
 	if (!Insert)
 	{
+#ifdef MOVE
 		int istat = m_CommandList.GetSelectionMark();
 		if (CommandResolve(a.CommandMemory.at(istat), 0) == L"Dot" ||
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"LineStart" ||
@@ -601,48 +580,69 @@ void CCommandTestDlg::OnMove()
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"ArcPoint" ||
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"VirtualPoint" || 
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"StopPoint" || 
-			CommandResolve(a.CommandMemory.at(istat), 0) == L"WaitPoint")
+			CommandResolve(a.CommandMemory.at(istat), 0) == L"WaitPoint" ||
+			CommandResolve(a.CommandMemory.at(istat), 0) == L"FindMark" ||
+			CommandResolve(a.CommandMemory.at(istat), 0) == L"FiducialMark"||
+			CommandResolve(a.CommandMemory.at(istat), 0) == L"CameraTrigger" )
 		{
-#ifdef MOVE
-			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - MO_ReadLogicPosition(0),
-				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - MO_ReadLogicPosition(1),
-				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
-#endif
+
+			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) + OffsetX - MO_ReadLogicPosition(0),
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetY - MO_ReadLogicPosition(1),
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"CirclePoint")
 		{
-#ifdef MOVE
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetY - MO_ReadLogicPosition(1),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
-#endif
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"FillArea")
 		{
-#ifdef MOVE
 			if (MessageBox( L"選擇Yes則移動至第一點，選擇NO則移動至第二點。",L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 8)) - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 9)) - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 8)) + OffsetY - MO_ReadLogicPosition(1),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 9)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
-#endif
 		}   
+		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserHeight")
+		{
+
+			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetX - MO_ReadLogicPosition(0),
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) + OffsetY - MO_ReadLogicPosition(1),
+				a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+		}
+		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserDetect")
+		{
+			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
+			{
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) + OffsetY - MO_ReadLogicPosition(1),
+					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+			}
+			else
+			{
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+			}
+		}
+#endif
 	}
 }
 /*******************************************************************************************外部功能**********************************************************/
@@ -678,7 +678,6 @@ void CCommandTestDlg::OnBnClickedBtnvision()
 		if (::IsWindow(((CCamera*)m_pCameraDlg)->m_hWnd))//判斷視窗是否有銷毀
 		{
 			((CCamera*)m_pCameraDlg)->DestroyWindow();
-			_cwprintf(L"視窗在");
 		}
 		free(m_pCameraDlg);
 		m_pCameraDlg = new CCamera();
@@ -759,9 +758,10 @@ void CCommandTestDlg::OnBnClickedBtnmodefyz()
 	}
 	ListRefresh(NULL);
 }
-//關閉程式
-void CCommandTestDlg::OnCancel()
+//關閉程式視窗銷毀事件
+void CCommandTestDlg::OnDestroy()
 {
+	CDialogEx::OnDestroy();
 #ifdef VI
 	if (m_pCameraDlg != NULL)
 	{
@@ -774,7 +774,7 @@ void CCommandTestDlg::OnCancel()
 #endif
 	//儲存參數檔案
 	SaveParameter();
-	CDialogEx::OnCancel();
+	SaveDefault();
 }
 //全部位置偏移
 void CCommandTestDlg::OnBnClickedBtnalloffset()
@@ -912,7 +912,7 @@ void CCommandTestDlg::OnBnClickedBtncommit()
 			ListRefresh(NULL);
 		}     
 	}
-}
+}               
 /*取消註解*/
 void CCommandTestDlg::OnBnClickedBtnnocommit()
 {
@@ -1276,14 +1276,39 @@ void CCommandTestDlg::OnBnClickedBtncommand23()
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
-}
+}                                                      
 /*填充區域*/
 void CCommandTestDlg::OnBnClickedBtncommand24()
 {
-	StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4) + OffsetX, GetDlgItemInt(IDC_EDITPARAM5) + OffsetY, GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7) + OffsetX, GetDlgItemInt(IDC_EDITPARAM8) + OffsetY, GetDlgItemInt(IDC_EDITPARAM9));
-	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
-	Insert = FALSE;
-	ListRefresh(NULL);
+	CString ControlName;
+	GetDlgItemText(IDC_BTNCOMMAND24, ControlName);
+	if (InputAuto)
+	{
+#ifdef MOVE
+		if (ControlName == L"填充區域")
+		{
+			StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
+				MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+			SetDlgItemText(IDC_BTNCOMMAND24, _T("填充點2"));
+		}
+		else
+		{
+			ControlName.Format(_T(",%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+			StrBuff = StrBuff + ControlName;
+			SetDlgItemText(IDC_BTNCOMMAND24, _T("填充區域"));
+			(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+			Insert = FALSE;
+			ListRefresh(NULL);
+		}
+#endif
+	}
+	else
+	{
+		StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4) + OffsetX, GetDlgItemInt(IDC_EDITPARAM5) + OffsetY, GetDlgItemInt(IDC_EDITPARAM6), GetDlgItemInt(IDC_EDITPARAM7) + OffsetX, GetDlgItemInt(IDC_EDITPARAM8) + OffsetY, GetDlgItemInt(IDC_EDITPARAM9));
+		(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+		Insert = FALSE;
+		ListRefresh(NULL);
+	}
 }
 /*回原點命令*/
 void CCommandTestDlg::OnBnClickedBtncommand25()
@@ -1502,10 +1527,34 @@ void CCommandTestDlg::OnBnClickedBtncommand47()
 /*雷射檢測*/
 void CCommandTestDlg::OnBnClickedBtncommand48()
 {
-	StrBuff.Format(_T("LaserDetect,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
-	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
-	Insert = FALSE;
-	ListRefresh(NULL);
+	CString ControlName;
+	GetDlgItemText(IDC_BTNCOMMAND48, ControlName);
+	if (InputAuto)
+	{
+#ifdef MOVE
+		if (ControlName == L"雷射檢測")
+		{
+			StrBuff.Format(_T("LaserDetect,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+			SetDlgItemText(IDC_BTNCOMMAND48, _T("雷射檢測點2"));
+		}
+		else
+		{
+			ControlName.Format(_T(",%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+			StrBuff = StrBuff + ControlName;
+			SetDlgItemText(IDC_BTNCOMMAND48, _T("雷射檢測"));
+			(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+			Insert = FALSE;
+			ListRefresh(NULL);
+		}
+#endif
+	}
+	else
+	{
+		StrBuff.Format(_T("LaserDetect,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2) + OffsetX, GetDlgItemInt(IDC_EDITPARAM3) + OffsetY, GetDlgItemInt(IDC_EDITPARAM4) + OffsetX, GetDlgItemInt(IDC_EDITPARAM5) + OffsetY);
+		(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+		Insert = FALSE;
+		ListRefresh(NULL);
+	}
 }
 /*雷射調整*/
 void CCommandTestDlg::OnBnClickedBtncommand49()
@@ -1569,7 +1618,7 @@ void CCommandTestDlg::SaveParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeCreate | CFile::modeWrite))
 	{
 		CArchive ar(&File, CArchive::store);//儲存檔案
-		ar << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.m_Action.g_HeightLaserZero;
+        ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.m_Action.g_HeightLaserZero;
 	}
 	File.Close();
 }
@@ -1586,7 +1635,7 @@ void CCommandTestDlg::LoadParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeRead))
 	{
 		CArchive ar(&File, CArchive::load);//讀取檔案
-		ar >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.m_Action.g_HeightLaserZero;
+        ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.m_Action.g_HeightLaserZero;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -1596,9 +1645,148 @@ void CCommandTestDlg::LoadParameter()
 	LaserOffsetz = a.m_Action.g_OffSetLaserZ;
 	HeightLaserZero = a.m_Action.g_HeightLaserZero;
 #ifdef VI
-	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);
+    VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
+	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);//設定針頭和影像Offset
 #endif
 }
+//儲存Default參數檔案
+void CCommandTestDlg::SaveDefault()
+{
+	CString path = GetCurrentPath(_T("\\Param"));
+	CFileFind m_FileFind;
+	if (!m_FileFind.FindFile(path))
+	{
+		CreateDirectory(path, NULL);
+	}
+	CFile File;
+	if (File.Open(path + _T("\\Default.txt"), CFile::modeCreate | CFile::modeWrite))
+	{
+		CArchive ar(&File, CArchive::store);//儲存檔案
+		ar << 
+			a.Default.GoHome.Speed1 << 
+			a.Default.GoHome.Speed2 <<
+			a.Default.GoHome.Axis <<
+			a.Default.GoHome.MoveX <<
+			a.Default.GoHome.MoveY <<
+			a.Default.GoHome.MoveZ <<
+			a.Default.GoHome.PrecycleInitialize <<
+			a.Default.DispenseDotSet.GlueOpenTime <<
+			a.Default.DispenseDotSet.GlueCloseTime <<
+			a.Default.DispenseDotEnd.RiseDistance <<
+			a.Default.DispenseDotEnd.RiseLowSpeed <<
+			a.Default.DispenseDotEnd.RiseHightSpeed <<
+			a.Default.DotSpeedSet.AccSpeed <<
+			a.Default.DotSpeedSet.EndSpeed <<
+			a.Default.DispenseLineSet.BeforeMoveDelay <<
+			a.Default.DispenseLineSet.BeforeMoveDistance <<
+			a.Default.DispenseLineSet.NodeTime <<
+			a.Default.DispenseLineSet.StayTime <<
+			a.Default.DispenseLineSet.ShutdownDistance <<
+			a.Default.DispenseLineSet.ShutdownDelay <<
+			a.Default.DispenseLineEnd.Type <<
+			a.Default.DispenseLineEnd.LowSpeed <<
+			a.Default.DispenseLineEnd.Height <<
+			a.Default.DispenseLineEnd.Width <<
+			a.Default.DispenseLineEnd.HighSpeed <<
+			a.Default.LineSpeedSet.AccSpeed <<
+			a.Default.LineSpeedSet.EndSpeed <<
+			a.Default.ZSet.ZBackHeight <<
+			a.Default.ZSet.ZBackType <<
+			a.Default.GlueData.ParkPositionData.X <<
+			a.Default.GlueData.ParkPositionData.Y <<
+			a.Default.GlueData.ParkPositionData.Z <<
+			a.Default.GlueData.GlueAuto <<
+			a.Default.GlueData.GlueWaitTime <<
+			a.Default.GlueData.GlueTime <<
+			a.Default.GlueData.GlueStayTime <<
+			a.VisionDefault.VisionSet.Accuracy <<
+			a.VisionDefault.VisionSet.Speed <<
+			a.VisionDefault.VisionSet.Score <<
+			a.VisionDefault.VisionSet.width <<
+			a.VisionDefault.VisionSet.height <<
+			a.VisionDefault.VisionSet.Startangle <<
+			a.VisionDefault.VisionSet.Endangle <<
+			a.VisionDefault.VisionSerchError.SearchError <<
+			a.RunLoopData.MaxRunNumber <<
+			RunLoopNumber;
+	}
+	File.Close();
+}
+//載入Default參數檔案
+void CCommandTestDlg::LoadDefault()
+{
+	CString path = GetCurrentPath(_T("\\Param"));
+	CFileFind m_FileFind;
+	if (!m_FileFind.FindFile(path))
+	{
+		CreateDirectory(path, NULL);
+	}
+	CFile File;
+	if (File.Open(path + _T("\\Default.txt"), CFile::modeRead))
+	{
+		CArchive ar(&File, CArchive::load);//讀取檔案
+		ar >>
+			a.Default.GoHome.Speed1 >>
+			a.Default.GoHome.Speed2 >>
+			a.Default.GoHome.Axis >>
+			a.Default.GoHome.MoveX >>
+			a.Default.GoHome.MoveY >>
+			a.Default.GoHome.MoveZ >>
+			a.Default.GoHome.PrecycleInitialize >>
+			a.Default.DispenseDotSet.GlueOpenTime >>
+			a.Default.DispenseDotSet.GlueCloseTime >>
+			a.Default.DispenseDotEnd.RiseDistance >>
+			a.Default.DispenseDotEnd.RiseLowSpeed >>
+			a.Default.DispenseDotEnd.RiseHightSpeed >>
+			a.Default.DotSpeedSet.AccSpeed >>
+			a.Default.DotSpeedSet.EndSpeed >>
+			a.Default.DispenseLineSet.BeforeMoveDelay >>
+			a.Default.DispenseLineSet.BeforeMoveDistance >>
+			a.Default.DispenseLineSet.NodeTime >>
+			a.Default.DispenseLineSet.StayTime >>
+			a.Default.DispenseLineSet.ShutdownDistance >>
+			a.Default.DispenseLineSet.ShutdownDelay >>
+			a.Default.DispenseLineEnd.Type >>
+			a.Default.DispenseLineEnd.LowSpeed >>
+			a.Default.DispenseLineEnd.Height >>
+			a.Default.DispenseLineEnd.Width >>
+			a.Default.DispenseLineEnd.HighSpeed >>
+			a.Default.LineSpeedSet.AccSpeed >>
+			a.Default.LineSpeedSet.EndSpeed >>
+			a.Default.ZSet.ZBackHeight >>
+			a.Default.ZSet.ZBackType >>
+			a.Default.GlueData.ParkPositionData.X >>
+			a.Default.GlueData.ParkPositionData.Y >>
+			a.Default.GlueData.ParkPositionData.Z >>
+			a.Default.GlueData.GlueAuto >>
+			a.Default.GlueData.GlueWaitTime >>
+			a.Default.GlueData.GlueTime >>
+			a.Default.GlueData.GlueStayTime >>
+			a.VisionDefault.VisionSet.Accuracy >>
+			a.VisionDefault.VisionSet.Speed >>
+			a.VisionDefault.VisionSet.Score >>
+			a.VisionDefault.VisionSet.width >>
+			a.VisionDefault.VisionSet.height >>
+			a.VisionDefault.VisionSet.Startangle >>
+			a.VisionDefault.VisionSet.Endangle >>
+			a.VisionDefault.VisionSerchError.SearchError >>
+			a.RunLoopData.MaxRunNumber >>
+			RunLoopNumber;
+		File.Close();
+	}
+	else
+	{
+		a.Default.GoHome = { 30000,5000,7,47000,62000,10000 };
+		a.Default.DotSpeedSet = { 100000,30000 };
+		a.Default.LineSpeedSet = { 100000,30000 };
+		a.Default.ZSet = { 5000,1 };
+		a.VisionDefault.VisionSet = { 0,1,1,50,640,480,0,360,0,0 };
+		a.IOParam.pEMGDlg = new CEmgDlg;
+		a.IODetectionSwitch(TRUE, 0);
+		a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
+	}
+}
+
 /*******************************************************************************************視窗處理**********************************************************/
 //非活動轉活動事件
 int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
@@ -1623,5 +1811,10 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 	{
 		m_pLaserAdjustDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
 	}
+	if (m_pLineContinuousDlg != NULL)
+	{
+		m_pLineContinuousDlg->SetLayeredWindowAttributes(0, (250 * 70) / 100, LWA_ALPHA);
+	}
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
+

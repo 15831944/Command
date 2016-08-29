@@ -102,4 +102,47 @@ BOOL CCommandTestApp::InitInstance()
 	// 而非提示開始應用程式的訊息。
 	return FALSE;
 }
-
+//取消IO偵測
+BOOL CCommandTestApp::PreTranslateMessage(MSG* pMsg)
+{
+    if (pMsg->message == WM_KEYDOWN)
+    {
+        if (pMsg->wParam == VK_F1)
+        {
+           ((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(FALSE, 0);
+        }
+        else if (pMsg->wParam == VK_F2)
+        {
+            ((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(TRUE, 0);
+        }
+        else if (pMsg->wParam == VK_F3)
+        {
+            for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.size(); i++)
+            {
+#ifdef PRINTF
+                _cwprintf(L"%s\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.at(i));
+#endif
+            }
+        }
+        else if (pMsg->wParam == VK_F4)
+        {
+#ifdef MOVE
+            for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.size(); i++)
+            {
+#ifdef PRINTF
+                _cwprintf(L"%d,%d,%d\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPX,
+                    ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPY,
+                    ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPZ);
+#endif
+            }
+#endif
+        }  
+    }
+    return CWinApp::PreTranslateMessage(pMsg);
+}
+//屏蔽F1Help對話框
+BOOL CCommandTestApp::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo)
+{
+    // TODO: 在此加入特定的程式碼和 (或) 呼叫基底類別
+    return TRUE;
+}

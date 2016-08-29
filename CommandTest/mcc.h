@@ -108,8 +108,7 @@ MO_DLL LONG MO_Timer(int iMode, int iTimerNo,
                      LONG lData);//計時器(選擇timer模式 0：設置TIMER/1：TIMER啟動/2：TIMER停止/3：讀取當下TIMER值)
 MO_DLL LONG MO_Timer(int iMode, LONG
                      lData);//設置TIMER((反複)多載-限使用u軸), 選擇timer模式 0：設置TIMER/1：TIMER啟動/2：TIMER停止
-MO_DLL void MO_TimerSetIntter(LONG lMicroSecond,
-                              LPTHREAD_START_ROUTINE TimeOutThread = NULL);//設定計時器到後觸發中斷(usec)
+MO_DLL void MO_TimerSetIntter(LONG lMicroSecond, BOOL timerY0orZ1);//設定計時器到後觸發中斷(usec)
 MO_DLL BOOL MO_ReadGumming();//讀取出膠控制狀態
 MO_DLL void MO_GummingSet(LONG lMicroSecond = 0);//設置出膠秒數，單位[us]
 MO_DLL void MO_GummingSet(int iData,
