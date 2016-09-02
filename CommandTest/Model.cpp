@@ -139,7 +139,7 @@ void CModel::OnBnClickedButton1()
 	//陣列清除
 	AllModelName.clear();
 	//搜尋檔案
-	ListAllFileInDirectory(lpszText, TEXT("*年*月*日*時*分*秒*.mod"));
+	ListAllFileInDirectory(lpszText, TEXT("*_*_*_*_*.mod"));
 }
 /*列表點選右鍵時*/
 void CModel::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)

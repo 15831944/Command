@@ -1393,6 +1393,7 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
     //5.為防止過量流體在線段結束點處發生堆積，點膠機在距離線段結束點前多遠處關閉。
     //6.點膠機在線段結束點處停止後保持開啟的時長。
     */
+#ifdef MOVE
     LONG lNowX = 0, lNowY = 0, lNowZ = 0;
     lNowX = MO_ReadLogicPosition(0);
     lNowY = MO_ReadLogicPosition(1);
@@ -1405,7 +1406,7 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
     {
         lCloseONDelayTime = 0;
     }
-#ifdef MOVE
+
 
     if (!bZDisType) //絕對位置
     {
@@ -1630,6 +1631,7 @@ void CAction::LA_Butt_GoLAtoBPoint()
 	//TODO::雷射OFFSET修改在這
 	//g_OffSetLaserX = 48436; 
 	//g_OffSetLaserY = 0;
+
 #endif
 }
 /*
@@ -1696,6 +1698,7 @@ BOOL CAction::LA_Dot3D(LONG lX, LONG lY, LONG &lZ, LONG lWorkVelociy,
 BOOL CAction::LA_SetZero()
 {
 #ifdef LA
+#ifdef MOVE
 	if (LAS_SetZero())//執行歸零點
 	{
 		if (!g_bIsStop)
@@ -1721,15 +1724,19 @@ BOOL CAction::LA_SetZero()
 		return FALSE;//z軸高度不正確雷射無法取得值
 	}
 #endif
+#endif
 #ifndef LA
 	return FALSE;
+#endif
+#ifndef MOVE
+    return FALSE;
 #endif
 }
 /*兩軸連續插補*/
 //以(lx3,ly3)為結束點
 void CAction::LA_Do2DVetor(LONG lX3, LONG lY3, LONG lX2, LONG lY2, LONG lX1, LONG lY1)
-{
-#ifdef LA
+{          
+#ifdef MOVE
 	BOOL bType = 0;
 	DATA_2MOVE DATA_2D;
 	if (lX1 == 0 && lY1 == 0 && lX2 == 0 && lY2 == 0)
@@ -1764,7 +1771,7 @@ void CAction::LA_Do2DVetor(LONG lX3, LONG lY3, LONG lX2, LONG lY2, LONG lX1, LON
 /*兩軸線段點*/
 void CAction::LA_Do2dDataLine(LONG EndPX, LONG EndPY)
 {
-#ifdef LA
+#ifdef MOVE
 	DATA_2MOVE DATA_2D;
 	DATA_2D.EndP.x = EndPX;
 	DATA_2D.EndP.y = EndPY;
@@ -1779,7 +1786,7 @@ void CAction::LA_Do2dDataLine(LONG EndPX, LONG EndPY)
 /*兩軸線段圓弧*/
 void CAction::LA_Do2dDataArc(LONG EndPX, LONG EndPY, LONG ArcX, LONG ArcY)
 {
-#ifdef LA
+#ifdef MOVE
 	if (LA_m_ptVec2D.empty())
 	{
 		return;
@@ -1804,7 +1811,7 @@ void CAction::LA_Do2dDataArc(LONG EndPX, LONG EndPY, LONG ArcX, LONG ArcY)
 /*兩軸線段圓*/
 void CAction::LA_Do2dDataCircle(LONG EndPX, LONG EndPY, LONG CirP1X, LONG CirP1Y, LONG CirP2X, LONG CirP2Y)
 {
-#ifdef LA
+#ifdef MOVE
 	if (LA_m_ptVec2D.empty())
 	{
 		return;
@@ -1830,6 +1837,7 @@ void CAction::LA_Do2dDataCircle(LONG EndPX, LONG EndPY, LONG CirP1X, LONG CirP1Y
 void CAction::LA_Line2D(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef LA
+#ifdef MOVE
     if (g_LaserAverage == FALSE)
     {
         g_LaserCnt++;
@@ -1884,13 +1892,14 @@ void CAction::LA_Line2D(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy
 	Sleep(200);
 	LA_m_ptVec2D.clear();
 #endif
+#endif
 }
 /*
 連續線段動作--(三軸連續插補)
 */
 void CAction::LA_Line3DtoDo(int iData, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bDoAll)
 {
-#ifdef LA
+#ifdef MOVE
 	if (iData <= 0)
 	{
 		return;
@@ -1941,12 +1950,15 @@ void CAction::LA_Line3DtoDo(int iData, LONG lWorkVelociy, LONG lAcceleration, LO
 		MO_Do3DLineMove(0, 0, LA_ptIter->EndPZ, lWorkVelociy, lAcceleration,lInitVelociy);//z軸下降到起始點高度
 		PreventMoveError();//防止驅動錯誤
 	}
-	if (g_bIsDispend == 1)
-	{
-		MO_GummingSet(1, 0);//塗膠(不卡)
-	}
-	MO_DO3Curve(DATA_3Do, LA_Buff.size() - 1, lWorkVelociy);//連續插補開始
-	PreventMoveError();//防止驅動錯誤
+    if (!g_bIsStop)
+    {
+        if (g_bIsDispend == 1)
+        {
+            MO_GummingSet(1, 0);//塗膠(不卡)
+        }
+        MO_DO3Curve(DATA_3Do, LA_Buff.size() - 1, lWorkVelociy);//連續插補開始
+        PreventMoveError();//防止驅動錯誤
+    }
 #endif
 }
 /*
@@ -1965,12 +1977,16 @@ void CAction::LA_Clear()
 //雷射平均高度
 void CAction::LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &lZ)
 {
+#ifdef LA
+#ifdef MOVE
     g_LaserAverage = TRUE;
     LA_Do2dDataLine(lStrX, lStrY);
     LA_Do2dDataLine(lEndX, lEndY);
     LA_Line2D(10000, 10000, 2000);
     Sleep(200);
     lZ = g_LaserAveBuffZ;
+#endif
+#endif
 }
 //修正加執行連續線段
 void CAction::LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, LONG RefX, LONG RefY, DOUBLE OffSetX, DOUBLE OffSetY, DOUBLE Andgle, DOUBLE CameraToTipOffsetX, DOUBLE CameraToTipOffsetY, BOOL Mode, LONG lSubOffsetX, LONG lSubOffsetY)
@@ -2013,14 +2029,15 @@ void CAction::LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG 
         MO_Do3DLineMove(0, 0, LA_ptIter->EndPZ, lWorkVelociy, lAcceleration, lInitVelociy);//z軸下降到起始點高度
         PreventMoveError();//防止驅動錯誤
     }
-
-    if (g_bIsDispend == 1)
+    if (!g_bIsStop)
     {
-        MO_GummingSet(1, 0);//塗膠(不卡)
+        if (g_bIsDispend == 1)
+        {
+            MO_GummingSet(1, 0);//塗膠(不卡)
+        }
+        MO_DO3Curve(DATA_3Do, LA_Buff.size() - 1, lWorkVelociy);//連續插補開始
+        PreventMoveError();//防止驅動錯誤
     }
-
-    MO_DO3Curve(DATA_3Do, LA_Buff.size() - 1, lWorkVelociy);//連續插補開始
-    PreventMoveError();//防止驅動錯誤
 #endif
 }
 //填充選擇拿取最後一點座標(EndX,EndY)
@@ -3258,6 +3275,7 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     //6.點膠機在線段結束點處停止後保持開啟的時長。
     */
 #pragma region ****圓型螺旋功能****
+#ifdef MOVE
     DOUBLE dRadius = 0, dWidth = 0, dAng0 = 0, dAng1 = 0, dAng2 = 0;
     BOOL bRev = 1;//0逆轉/1順轉
     LONG lLineClose = 0, lXClose = 0, lYClose = 0, lDistance = 0;
@@ -3455,7 +3473,7 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
 
     MO_Timer(0, 0, lCloseONDelayTime * 1000);
     MO_Timer(1, 0, lCloseONDelayTime * 1000);//線段點膠設定---(6)關機延遲
-#ifdef MOVE
+
     Sleep(1);//防止出錯，避免計時器初直為0
     while (MO_Timer(3, 0, 0))
     {
@@ -3465,7 +3483,6 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         }
         Sleep(1);
     }
-#endif // MOVE
     MO_StopGumming();//停止出膠
     if (!g_bIsStop)
     {
@@ -3476,7 +3493,6 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
     }
     MO_Timer(0, 0, lCloseOffDelayTime * 1000);
     MO_Timer(1, 0, lCloseOffDelayTime * 1000);//線段點膠設定---(3)停留時間
-#ifdef MOVE
     Sleep(1);//防止出錯，避免計時器初直為0
     while (MO_Timer(3, 0, 0))
     {

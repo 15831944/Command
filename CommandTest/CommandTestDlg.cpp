@@ -960,6 +960,7 @@ void CCommandTestDlg::OnBnClickedBtnopen()
 	{
 		CFile File;
 		CString StrBuff;
+        a.CommandMemory.clear();
 		if (File.Open(FileDlg.GetPathName(), CFile::modeRead))
 		{
 			CArchive ar(&File, CArchive::load);//讀取檔案
@@ -1773,6 +1774,7 @@ void CCommandTestDlg::LoadDefault()
 			a.RunLoopData.MaxRunNumber >>
 			RunLoopNumber;
 		File.Close();
+        a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
 	}
 	else
 	{

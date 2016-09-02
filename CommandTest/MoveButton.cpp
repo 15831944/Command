@@ -52,11 +52,17 @@ void CMoveButton::OnLButtonUp(UINT nFlags, CPoint point)
 {
 #ifdef MOVE
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
-    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
     {
-        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
         {
-            MO_DecSTOP();
+            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+            {
+                if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+                {
+                    MO_DecSTOP();
+                }
+            }
         }
     }
 #endif // MOVE
@@ -66,31 +72,37 @@ void CMoveButton::OnLButtonUp(UINT nFlags, CPoint point)
 void CMoveButton::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
-    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2 )
+    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
     {
-        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
         {
-            switch (((CCamera*)((CCommandTestDlg*)pMain)->m_pCameraDlg)->RaiChoose)
+            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
             {
-            case 1:
-                if (!MO_ReadIsDriving(7))
-                    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
-                break;
-            case 2:
-                if (!MO_ReadIsDriving(7))
-                    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
-                break;
-            case 3:
-                if (!MO_ReadIsDriving(7))
-                    MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
-                break;
-            default:
-                //MessageBox(_T("程式出現錯誤!"));
-                break;
-            }
+                if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+                {
+                    switch (((CCamera*)((CCommandTestDlg*)pMain)->m_pCameraDlg)->RaiChoose)
+                    {
+                    case 1:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
+                        break;
+                    case 2:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
+                        break;
+                    case 3:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+                        break;
+                    default:
+                        //MessageBox(_T("程式出現錯誤!"));
+                        break;
+                    }
 #ifdef PRINTF
-            //_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+                    //_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
+                }
+            }
         }
     }
 #ifdef PRINTF

@@ -26,7 +26,7 @@ COrder::COrder()
     VisionOffset = { { 0,0,0,0 },0,0,0 };
     VisionSet = { 0,0,0,0,0,0,0,0,0,0 };
     
-    RunStatusRead = { 0,0,1,0};
+    RunStatusRead = { 0,0,1,0,0,0,0,0 };
     VisionDefault.VisionSerchError.Manuallymode = FALSE;
     VisionDefault.VisionSerchError.Pausemode = FALSE;
 
@@ -75,7 +75,7 @@ BOOL COrder::Run()
             //狀態初始化
             DecideInit();
             //載入所有檔案名
-            ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*年*月*日*時*分*秒*.mod"));
+            ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*_*_*_*_*.mod"));
             //出膠控制器模式
             m_Action.g_bIsDispend = TRUE;   
             wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -94,7 +94,7 @@ BOOL COrder::Run()
 }
 /*循環開始*/
 BOOL COrder::RunLoop(int LoopNumber) {
-    if (LoopNumber > 0 && !g_pRunLoopThread)
+    if (LoopNumber > 0 && !g_pRunLoopThread && !g_pThread)
     {
         RunLoopData.RunSwitch = TRUE;
         RunLoopData.LoopNumber = LoopNumber;
@@ -119,7 +119,7 @@ BOOL COrder::Stop()
             m_Action.g_bIsPause = FALSE;
             g_pThread->ResumeThread();//啟動線程
             #ifdef MOVE
-                MO_STOP();//立即停止運動指令
+                MO_DecSTOP();//立即減速停止運動指令
             #endif
             //SetEvent(wakeEvent);
             //WaitForSingleObject(g_pThread->m_hThread, INFINITE);        //等待线程安全返回
@@ -148,6 +148,10 @@ BOOL COrder::Pause()
         g_pThread->SuspendThread();
         RunStatusRead.RunStatus = 2;//狀態改變成暫停中
         m_Action.g_bIsPause = TRUE;
+        if (g_pRunLoopThread && RunStatusRead.RunLoopStatus)
+        {
+            RunStatusRead.RunLoopStatus = FALSE;
+        }
         return TRUE;
     }
     else
@@ -165,6 +169,10 @@ BOOL COrder::Continue()
             m_Action.g_bIsPause = FALSE;
             g_pThread->ResumeThread();//啟動線程
             RunStatusRead.RunStatus = 1;//狀態改變成運作中
+            if (g_pRunLoopThread && !RunStatusRead.RunLoopStatus)
+            {
+                RunStatusRead.RunLoopStatus = TRUE;
+            }
             return TRUE;
         }
         else
@@ -220,7 +228,7 @@ BOOL COrder::View(BOOL mode)
             //狀態初始化
             DecideInit();
             //載入所有檔案名
-            ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*年*月*日*時*分*秒*.mod"));
+            ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*_*_*_*_*.mod"));
             //出膠控制器模式
             m_Action.g_bIsDispend = FALSE;
             //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -265,43 +273,60 @@ BOOL COrder::IODetectionSwitch(BOOL Switch, int mode)
 /**************************************************************************執行續動作區塊*************************************************************************/
 /*重複運行執行續*/
 UINT COrder::RunLoopThread(LPVOID pParam) {
+    ((COrder*)pParam)->RunStatusRead.RunLoopStatus = TRUE;
+    ((COrder*)pParam)->RunStatusRead.PaintClearClose = FALSE;
     while (((COrder*)pParam)->RunLoopData.RunSwitch)   
     {
 #ifdef PRINTF
         _cprintf("%d", (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)));
 #endif
-        if (((COrder*)pParam)->RunLoopData.MaxRunNumber >= 0 && (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)) > 0)
-        {
-            if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
+#ifdef MOVE
+        //if (!MO_ReadEMG())
+        //{
+#endif
+            if (((COrder*)pParam)->RunLoopData.LoopCount == (((COrder*)pParam)->RunLoopData.LoopNumber - 1) ||
+                (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)) > 1)
+            {
+                ((COrder*)pParam)->RunStatusRead.PaintClearClose = TRUE;
+            }
+            if (((COrder*)pParam)->RunLoopData.MaxRunNumber >= 0 && (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)) > 0)
+            {
+                if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
+                {
+                    ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+                }
+                else if (((COrder*)pParam)->RunStatusRead.RunStatus == 0 && g_pThread == NULL)
+                {
+                    Sleep(10);
+                    if (!((COrder*)pParam)->Run()) {
+                        ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+                    }
+                }
+            }
+            else if (((COrder*)pParam)->RunLoopData.MaxRunNumber < 0 && ((COrder*)pParam)->RunLoopData.LoopCount != ((COrder*)pParam)->RunLoopData.LoopNumber)
+            {
+                if (((COrder*)pParam)->RunStatusRead.RunStatus == 0 && g_pThread == NULL)
+                {
+                    Sleep(10);
+                    if (!((COrder*)pParam)->Run()) {
+                        ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+                    }
+                }
+            }
+            else if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)     
             {
                 ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
             }
-            else if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
-            {          
-                if (!((COrder*)pParam)->Run()) {
-                    ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
-                }
-            }
-        }
-        else if (((COrder*)pParam)->RunLoopData.MaxRunNumber < 0 && ((COrder*)pParam)->RunLoopData.LoopCount != ((COrder*)pParam)->RunLoopData.LoopNumber)
-        {
-            if (((COrder*)pParam)->RunStatusRead.RunStatus == 0)
+            else
             {
-                if (!((COrder*)pParam)->Run()) {
-                    ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
-                }
+                ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
             }
-        }
-        else if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
-        {
-            ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
-        }
-        else
-        {
-            ((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
-        }
+#ifdef MOVE
+        //}
+#endif
         Sleep(10);
     }
+    ((COrder*)pParam)->RunStatusRead.RunLoopStatus = FALSE;
     g_pRunLoopThread = NULL;
     return 0;
 }
@@ -309,6 +334,9 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 UINT COrder::HomeThread(LPVOID pParam)
 {
 #ifdef MOVE
+    //先移動到(0,0,0)位置
+    ((COrder*)pParam)->m_Action.DecideVirtualPoint(0, 0, 0,
+        ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
     ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
     if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
     {   
@@ -417,10 +445,21 @@ UINT COrder::Thread(LPVOID pParam)
         {
             ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
             ((COrder*)pParam)->RunStatusRead.CurrentRunCommandNum = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));//主程式編號
+#ifdef LOG
+            LARGE_INTEGER   StartTime, EndTime, Fre;
+            QueryPerformanceFrequency(&Fre); //取得CPU頻率
+            QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+#endif
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
+#ifdef LOG
+            QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
+            CString Temp;
+            Temp.Format(L"%s at RunTime:%.6f\n", ((COrder*)pParam)->Commanding,((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
+            InitFileLog(Temp);
+#endif
         }
 
         if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//在StepRepeat階段用來尋找N層StepRepeat用
@@ -489,16 +528,17 @@ UINT COrder::Thread(LPVOID pParam)
     } 
     ((COrder*)pParam)->DecideClear();//清除所有陣列
     ((COrder*)pParam)->m_Action.g_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
-    ((COrder*)pParam)->RunStatusRead.RunStatus = 0;//狀態設為未運行
-    g_pThread = NULL;
     //計算執行時間
     QueryPerformanceCounter(&((COrder*)pParam)->endTime); //取得開機到程式執行完成經過幾個CPU Cycle
     ((COrder*)pParam)->RunStatusRead.RunTotalTime = ((double)((COrder*)pParam)->endTime.QuadPart - (double)((COrder*)pParam)->startTime.QuadPart) / ((COrder*)pParam)->fre.QuadPart;
+    ((COrder*)pParam)->RunStatusRead.RunStatus = 0;//狀態設為未運行
+    g_pThread = NULL;
     return 0;
 }
 /*命令動作(子)執行緒*/
 UINT COrder::SubroutineThread(LPVOID pParam) {
     HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;
+    ((COrder*)pParam)->RunStatusRead.StepCommandStatus = TRUE;
     CString Command = ((COrder*)pParam)->Commanding; 
     if (CommandResolve(Command, 0) == L"Printf")
     {
@@ -734,7 +774,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     }   
                 }
                 else 
-                {
+                {            
 #ifdef PRINTF
                     _cwprintf(L"所有條件不成立\n");
 #endif
@@ -770,7 +810,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     _cwprintf(L"第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(i));
 #endif 
                                 }
-
                                 if (!((COrder*)pParam)->RepeatData.SSwitch.at(i))
                                 {
                                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X - _ttol(CommandResolve(Command, 1));
@@ -1954,9 +1993,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ChooseLaserModify(pParam);//選擇雷射高度
             ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
             LineGotoActionJudge(pParam);//判斷動作狀態
-            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
             
             ((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
             
@@ -2804,6 +2843,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 /*都找到後處理*/
                 if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
                 {
+#ifdef LOG
+                    LARGE_INTEGER   StartTime, EndTime, Fre;
+                    QueryPerformanceFrequency(&Fre); //取得CPU頻率
+                    QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+#endif
                     //算出偏移角度
                     ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
                         ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y,
@@ -2841,7 +2885,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
                     *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
                     //清除對位Offset資料
-                    ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };                
+                    ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 }; 
+
+#ifdef LOG
+                    QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
+                    CString Temp;
+                    Temp.Format(L"CCD at RunTime:%.6f\n", ((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
+                    InitFileLog(Temp);
+#endif
                 }
 
                 /*判斷暫停模式是否開啟*/
@@ -3019,7 +3070,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         }
     }
     if (CommandResolve(Command, 0) == L"LaserDetect")
-    {
+    {                                                 
         if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)//在任何模式下動作
         {
             CString CommandBuff;
@@ -3060,6 +3111,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         }
     }
 #endif
+    ((COrder*)pParam)->RunStatusRead.StepCommandStatus = FALSE;
     g_pSubroutineThread = NULL;
     return 0;
 }
@@ -3094,12 +3146,13 @@ UINT COrder::IODetection(LPVOID pParam)
         //讀取EMG按鈕
         if (MO_ReadEMG())
         {
+            ((COrder*)pParam)->Stop();
             if (((COrder*)pParam)->IOParam.pEMGDlg != NULL)
             {
                 switch (((COrder*)pParam)->IOParam.pEMGDlg->DoModal())
                 {
                 case 0:
-                    ((COrder*)pParam)->Home(((COrder*)pParam)->GoHome.VisionGoHome);
+                    ((COrder*)pParam)->Home(((COrder*)pParam)->GoHome.VisionGoHome);               
                     Sleep(10);
                     break;
                 default:
@@ -3343,28 +3396,31 @@ void COrder::VisionFindMarkError(LPVOID pParam)
         }
         break;
     case 4://跳出選擇對話窗
-        switch (((COrder*)pParam)->VisionSerchError.pQuestion->DoModal())
+        if (((COrder*)pParam)->VisionSerchError.pQuestion != NULL)
         {
-        case 0://略過或Trigger
-            ((COrder*)pParam)->VisionSerchError.SearchError = 1;
-            VisionFindMarkError(pParam);
-            break;
-        case 1://停止
-            ((COrder*)pParam)->Stop();
-            break;
-        case 2://重新尋找
-            ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
-            ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
-            break;
-        case 3://手動
-            ((COrder*)pParam)->VisionSerchError.SearchError = 5;
-            VisionFindMarkError(pParam);
-            break;
-        case 4:
-            break;
-        default:
-            break;
+            switch (((COrder*)pParam)->VisionSerchError.pQuestion->DoModal())
+            {
+            case 0://略過或Trigger
+                ((COrder*)pParam)->VisionSerchError.SearchError = 1;
+                VisionFindMarkError(pParam);
+                break;
+            case 1://停止
+                ((COrder*)pParam)->Stop();
+                break;
+            case 2://重新尋找
+                ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
+                ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
+                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
+                break;
+            case 3://手動
+                ((COrder*)pParam)->VisionSerchError.SearchError = 5;
+                VisionFindMarkError(pParam);
+                break;
+            case 4:
+                break;
+            default:
+                break;
+            }
         }
         break;
     case 5://手動模式
@@ -3403,7 +3459,7 @@ void COrder::LaserModify(LPVOID pParam)
 /*雷射檢測處理*/
 void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 {
-#ifdef LA 
+#ifdef LA
     if (!((COrder*)pParam)->LaserSwitch.LaserSkip)//雷射跳過未開啟
     {
         if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserAdjust)//模式二
@@ -4011,10 +4067,14 @@ void COrder::DecideInit()
         RunData.MSChange.at(i) = 0;
     }
     RunStatusRead.RunStatus = 0;//狀態改變成未運行
+    RunStatusRead.CurrentRunCommandNum = 0;//目前運行命令計數清0
+    //TODO::之後做總進度
+    //RunStatusRead.RegistrationStatus = FALSE;//對位完畢狀態清除
+    //RunStatusRead.CommandTotalCount = 0;//命令總數量清0
+    //RunStatusRead.CurrentRunCommandCount = 0;//命令總數量計數清0
     RunData.StackingCount = 0;//主副程式計數  
     RunData.SubProgramName = _T("");//副程式判斷標籤
     RunData.ActionStatus.push_back(0);//運動狀態清0
-    RunStatusRead.CurrentRunCommandNum = 0;//目前運行命令計數清0
     //運行計數清0
     for (UINT i = 0; i < RunData.RunCount.size(); i++)
     {
@@ -4276,7 +4336,6 @@ BOOL COrder::FileExist(LPCWSTR FilePathName)
 {
     HANDLE hFile;
     WIN32_FIND_DATA FindData;
-
     hFile = FindFirstFile(FilePathName, &FindData);
     if (hFile == INVALID_HANDLE_VALUE)
     {

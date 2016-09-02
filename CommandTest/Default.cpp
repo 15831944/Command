@@ -178,17 +178,17 @@ void CDefault::ParamModify()
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle = _ttol(m_ListDefault.GetItemText(42, 1));
 	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError = _ttol(m_ListDefault.GetItemText(43, 1));
 	//尋問對話框
-	if (pQuestion == NULL)
+	if (((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion == NULL)
 	{
 		pQuestion = new CQuestion;
+        ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion = pQuestion;
 	}
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion = pQuestion;
 	//最大運行次數
 	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
 	((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
 }
-#include "ExcelToList.h"
-#include "ListToExcel.h"
+//#include "ExcelToList.h"
+//#include "ListToExcel.h"
 void CDefault::OnBnClickedButton2()
 {
 	for (int i = 0; i < 46; i++) {

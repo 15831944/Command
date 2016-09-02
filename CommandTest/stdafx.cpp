@@ -29,6 +29,7 @@ LRESULT CALLBACK GetMsgProc(
     }
     return CallNextHookEx(g_hGetMessage, code, wParam, lParam);
 }
+
 void InitConsoleWindow()
 {
     /*AllocConsole();
@@ -38,13 +39,13 @@ void InitConsoleWindow()
     *stdout = *hf;*/
 
     int nCrt = 0;
-    FILE* fp;
+    FILE* fp = fopen("C:\\abc.txt","w");
     AllocConsole();
     nCrt = _open_osfhandle((long)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT);
     fp = _fdopen(nCrt, "w");
     *stdout = *fp;
     setvbuf(stdout, NULL, _IONBF, 0);
-
+                 
     //刪除Menu 關閉按鈕 方式1
     //char oldTitle[100];
     //char newTitle[100];
@@ -74,10 +75,30 @@ void InitConsoleWindow()
             DeleteMenu(h_Menu, SC_CLOSE, MF_BYCOMMAND);
         }
     }
-    
     //g_hGetMessage = SetWindowsHookEx(WH_GETMESSAGE, GetMsgProc, NULL, GetCurrentThreadId());
 }
 #endif
+#ifdef LOG
+BOOL InitFileLog(CString sentence)
+{
+    CString path = GetCurrentPath(L"\\log.txt");
+    if (!FileExist(path))
+    {
+        CFile mFile(path, CFile::modeWrite | CFile::modeCreate);
+        mFile.Flush();
+        mFile.Close();
+    }
+    FILE *fplog;
+    fplog = _wfopen(path, L"r+");     /* open file pointer */
+    fseek(fplog, 0, SEEK_END);
+    fwprintf(fplog, L"%hs", CT2CA(sentence));
+    // %hs、%S 是使用在寬字符 %hS、%s、%ws是使用在窄字符 
+    //CT2CA CString -> string 
+    fclose(fplog); //關閉Log檔
+    return 0;
+}
+#endif
+/*獲取目前目錄地址*/
 CString GetCurrentPath(CString Folder)
 {
     CString path;
@@ -89,6 +110,20 @@ CString GetCurrentPath(CString Folder)
     lstrcpy(lpszText, path);
     return path;
 }
+/*判斷檔案是否存在*/
+BOOL FileExist(LPCWSTR FilePathName)
+{
+    HANDLE hFile;
+    WIN32_FIND_DATA FindData;
+    hFile = FindFirstFile(FilePathName, &FindData);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 
 
 

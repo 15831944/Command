@@ -56,7 +56,7 @@ END_MESSAGE_MAP()
 BOOL CCamera::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
 	/*初始化按鈕移動*/
 	m_Xup.MoveX = 350000;
 	m_Xdown.MoveX = -350000;
@@ -142,7 +142,7 @@ void CCamera::OnBnClickedBtnmodel()
 	SYSTEMTIME st;
 	GetLocalTime(&st);
 	CString StrBuff;
-	StrBuff.Format(_T("%4d年%2d月%2d日%2d時%2d分%2d秒%2d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	StrBuff.Format(_T("%04d%02d%02d_%02d_%02d_%02d_%02d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	/*建立model*/
 #ifdef VI
 	void* Model;
@@ -192,13 +192,19 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 			|| pMsg->wParam == VK_HOME || pMsg->wParam == VK_END) {
 #ifdef MOVE
 			CWnd* pMain = AfxGetApp()->m_pMainWnd;
-			if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
-			{
-				if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
-				{
-					MO_DecSTOP();
-				}
-			}
+            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
+            {
+                if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+                {
+                    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+                    {
+                        if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+                        {
+                            MO_DecSTOP();
+                        }
+                    }
+                }
+            }
 #endif // MOVE
 			pMsg->message = WM_NULL;
 		}
@@ -209,34 +215,39 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2 )
-	{
-		if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
-		{
-			switch (RaiChoose)
-			{
-			case 1:
-				if (!MO_ReadIsDriving(7))
-					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
-				break;
-			case 2:
-				if (!MO_ReadIsDriving(7))
-					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
-				break;
-			case 3:
-				if (!MO_ReadIsDriving(7))
-					MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
-				break;
-			default:
-				//MessageBox(_T("程式出現錯誤!"));
-				break;
-			}
+    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
+    {
+        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+        {
+            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+            {
+                if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+                {
+                    switch (RaiChoose)
+                    {
+                    case 1:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
+                        break;
+                    case 2:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
+                        break;
+                    case 3:
+                        if (!MO_ReadIsDriving(7))
+                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+                        break;
+                    default:
+                        //MessageBox(_T("程式出現錯誤!"));
+                        break;
+                    }
 #ifdef PRINTF
-			//_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+                    //_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
-		}
-		
-	}
+                }         
+            }
+        }
+    }
 #ifdef PRINTF
 	//_cprintf("%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
@@ -289,7 +300,7 @@ void CCamera::OnBnClickedButton3()
 	CString StrBuff;
 	static LONG Point1X = 0;
 	static LONG Point1Y=0;
-    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
 	GetDlgItemText(IDC_BUTTON3,StrBuff);
 #ifdef VI
 	if (StrBuff == L"SetPixToPuls")
@@ -310,7 +321,9 @@ void CCamera::OnBnClickedButton3()
 	else if (StrBuff == L"SetPixToPuls2")
 	{
 		VI_SetPatternMatch(MilModel, 1, 1, 80, 0, 360);
+#ifdef MOVE
 		VI_SetPixelPulseRelation(GetDlgItem(IDC_PIC),MilModel, Point1X, Point1Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
+#endif
 		if (((CCommandTestDlg*)pMain)->PixToPulsX != 0.0)
 		{
 			StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);

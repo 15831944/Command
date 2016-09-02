@@ -218,17 +218,27 @@ private:
 		UINT StackingCount;
 		std::vector<UINT> ActionStatus;  
 	};
-	//運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數)
+	//運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數、一次程序運行時間、運行迴圈狀態、單次命令運行狀態、畫布刷新關狀態)
 	/*
     *運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
 	*回原點狀態(TRUE = 賦歸完成 FLASE = 賦歸中)
+    *運行迴圈狀態(0:未運行、暫停中 1:執行中)
+    *單次命令運行狀態(0:執行完畢、未執行 1:正在執行中)
+    *畫布刷新關狀態(0:不關閉 1:關閉清除)//人機要求
 	*/
 	struct RunStatusRead {
 		UINT RunStatus;
 		UINT CurrentRunCommandNum;
 		BOOL GoHomeStatus;
 		int FinishProgramCount;
-        DOUBLE RunTotalTime;   
+        DOUBLE RunTotalTime;
+        BOOL RunLoopStatus;
+        BOOL StepCommandStatus;
+        BOOL PaintClearClose;
+        //TODO::之後做總進度使用
+        //BOOL RegistrationStatus;
+        //UINT CommandTotalCount;
+        //UINT CurrentRunCommandCount;
 	};
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
