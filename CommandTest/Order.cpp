@@ -397,7 +397,17 @@ UINT COrder::Thread(LPVOID pParam)
                         //將Call子程序狀態設為否
                         ((COrder*)pParam)->Program.CallSubroutineStatus = FALSE;
                     }
-                }                                       
+                } 
+                else//有找到Subroutine時
+                {
+                    if (((COrder*)pParam)->SubroutinePretreatmentFind(pParam))
+                    {
+#ifdef LOG
+                        InitFileLog(L"找到Suroutine!\n");
+                        InitFileLog(L"預命令:" + ((COrder*)pParam)->Program.SubroutineCommandPretreatment + L"\n");
+#endif
+                    }
+                }
                 //執行Loop，沒有此標籤時
                 if (((COrder*)pParam)->RepeatData.LoopSwitch && ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
                 {
@@ -407,7 +417,7 @@ UINT COrder::Thread(LPVOID pParam)
                         ((COrder*)pParam)->RepeatData.LoopCount.pop_back();
                         ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;
                     }
-                }
+                }             
                 //標籤清除
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
@@ -446,22 +456,28 @@ UINT COrder::Thread(LPVOID pParam)
             ((COrder*)pParam)->Commanding = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
             ((COrder*)pParam)->RunStatusRead.CurrentRunCommandNum = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));//主程式編號
 #ifdef LOG
-            LARGE_INTEGER   StartTime, EndTime, Fre;
-            QueryPerformanceFrequency(&Fre); //取得CPU頻率
-            QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+            //LARGE_INTEGER   StartTime, EndTime, Fre;
+            //QueryPerformanceFrequency(&Fre); //取得CPU頻率
+            //QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+            CString Temp;
+            Temp.Format(L"%s:%d\nStatus:%d,OffsetX=%d,OffsetY=%d,OffsetZ=%d\n\n", ((COrder*)pParam)->Commanding, ((COrder*)pParam)->Program.SubroutinCount,
+                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status,
+                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z);
+            InitFileLog(Temp);
 #endif
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
             }
 #ifdef LOG
-            QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
-            CString Temp;
-            Temp.Format(L"%s at RunTime:%.6f\n", ((COrder*)pParam)->Commanding,((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
-            InitFileLog(Temp);
+            //QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
+            //CString Temp;
+            //Temp.Format(L"%s at RunTime:%.6f\n", ((COrder*)pParam)->Commanding,((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
+            //InitFileLog(Temp);
 #endif
         }
-
         if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//在StepRepeat階段用來尋找N層StepRepeat用
         {
             if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == 0)
@@ -735,6 +751,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
                         ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
                     }
+                    else
+                    {
+                        ModifyPointOffSet(pParam,((COrder*)pParam)->Program.SubroutineCommandPretreatment);          
+                    }
                     //紀錄X、Y計數
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
@@ -769,8 +789,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
                         _cwprintf(L"StepRepeatX 沒有阻斷\n");
 #endif
-                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);  
-                                    
+                        ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);                              
                     }   
                 }
                 else 
@@ -873,6 +892,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif 
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i);
                             ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i);
+#ifdef LOG
+                            CString Temp;
+                            Temp.Format(L"StepRepeatInitOffsetX:%d,StepRepeatInitOffsetY%d\n", ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(i));
+                            InitFileLog(Temp);
+#endif
                             ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + i);
 #ifdef PRINTF
                             _cwprintf(L"刪除StepRepeatNum陣列\n");
@@ -907,7 +931,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             break;
                         }
                     }
-                    else//不再StepRepeat陣列中，新增一個StepRepeat位置
+                    else//不再此StepRepeat陣列中，新增一個StepRepeat位置
                     {
                         if (i == StepRepeatNumSize - 1)
                         {
@@ -1063,6 +1087,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
                         ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
+                    }
+                    else
+                    {
+                        ModifyPointOffSet(pParam, ((COrder*)pParam)->Program.SubroutineCommandPretreatment);
                     }
                     //紀錄X、Y計數
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
@@ -1397,13 +1425,47 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             //虛擬紀錄座標歸零
             ((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0 };
             ((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 };
+            //RepeatClean
+            ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+            ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+            //迴圈陣列清除
+            ((COrder*)pParam)->RepeatData.LoopAddressNum.clear();
+            ((COrder*)pParam)->RepeatData.LoopCount.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatNum.clear();
+            ((COrder*)pParam)->RepeatData.SSwitch.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatCountX.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatCountY.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatBlockData.clear();
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 2)
         {
             ((COrder*)pParam)->ModelControl.Mode = 3;
             //虛擬紀錄座標歸零
             ((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0 };
-            ((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 };
+            ((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 }; 
+            //RepeatClean
+            ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;
+            ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
+            ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
+            ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+            ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+            //迴圈陣列清除
+            ((COrder*)pParam)->RepeatData.LoopAddressNum.clear();
+            ((COrder*)pParam)->RepeatData.LoopCount.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatNum.clear();
+            ((COrder*)pParam)->RepeatData.SSwitch.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatCountX.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatCountY.clear();
+            ((COrder*)pParam)->RepeatData.StepRepeatBlockData.clear();
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 3)
         {
@@ -1993,9 +2055,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ChooseLaserModify(pParam);//選擇雷射高度
             ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
             LineGotoActionJudge(pParam);//判斷動作狀態
-            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+            ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
             
             ((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
             
@@ -2844,9 +2906,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
                 {
 #ifdef LOG
-                    LARGE_INTEGER   StartTime, EndTime, Fre;
-                    QueryPerformanceFrequency(&Fre); //取得CPU頻率
-                    QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+                    //LARGE_INTEGER   StartTime, EndTime, Fre;
+                    //QueryPerformanceFrequency(&Fre); //取得CPU頻率
+                    //QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
 #endif
                     //算出偏移角度
                     ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
@@ -2888,10 +2950,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 }; 
 
 #ifdef LOG
-                    QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
-                    CString Temp;
-                    Temp.Format(L"CCD at RunTime:%.6f\n", ((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
-                    InitFileLog(Temp);
+                    //QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
+                    //CString Temp;
+                    //Temp.Format(L"CCD at RunTime:%.6f\n", ((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
+                    //InitFileLog(Temp);
 #endif
                 }
 
@@ -3246,7 +3308,7 @@ void COrder::ModifyPointOffSet(LPVOID pParam ,CString Command)
         if (((COrder*)pParam)->ModelControl.Mode != 1 && ((COrder*)pParam)->ModelControl.Mode != 2)//在影像、雷射模式下不做回升
         {
             ((COrder*)pParam)->m_Action.DecideLineEndMove(((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+            ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
                 ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
                 ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed,1);
         }
@@ -3704,6 +3766,7 @@ CString COrder::VirtualNowOffSet(LPVOID pParam, CString Command)
     lNowY = ((COrder*)pParam)->NVMVirtualCoordinateData.Y;
     lNowZ = ((COrder*)pParam)->NVMVirtualCoordinateData.Z;
     csBuff.Format(_T("%ld,%ld,%ld"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
+    ((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 };//計算完畢後數值規0
     return csBuff;
 }
 /*虛擬座標移動*/
@@ -4599,6 +4662,11 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
+#ifdef LOG
+                    CString Temp;
+                    Temp.Format(L"StepRepeatInitOffsetX:%d,StepRepeatInitOffsetY%d\n", ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount));
+                    InitFileLog(Temp);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
@@ -4660,6 +4728,11 @@ BOOL COrder::BlockProcessExecute(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount);
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount);
+#ifdef LOG
+                    CString Temp;
+                    Temp.Format(L"StepRepeatInitOffsetX:%d,StepRepeatInitOffsetY%d\n", ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.at(NowCount));
+                    InitFileLog(Temp);
+#endif
                     ((COrder*)pParam)->RepeatData.StepRepeatNum.erase(((COrder*)pParam)->RepeatData.StepRepeatNum.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
@@ -5158,6 +5231,45 @@ CString COrder::BlockResolve(CString String, UINT Choose)
     }
 }
 /**************************************************************************額外功能*********************************************************************************/
+/*Subroutine預處理尋找指令*/
+BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
+{
+    UINT CurrentRunCount = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) + 1;
+    UINT MaxRunNum = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1;
+    CString Command;
+    for (UINT i = CurrentRunCount; i < MaxRunNum; i++)
+    {
+        Command = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(i);
+        if (CommandResolve(Command, 0) == L"Dot" ||
+            CommandResolve(Command, 0) == L"LineStart" ||
+            CommandResolve(Command, 0) == L"LinePassing" ||
+            CommandResolve(Command, 0) == L"LineEnd" ||
+            CommandResolve(Command, 0) == L"ArcPoint" ||
+            CommandResolve(Command, 0) == L"CirclePoint" ||
+            CommandResolve(Command, 0) == L"VirtualPoint" ||
+            CommandResolve(Command, 0) == L"WaitPoint" ||
+            CommandResolve(Command, 0) == L"StopPoint" ||
+            CommandResolve(Command, 0) == L"FindMark" ||
+            CommandResolve(Command, 0) == L"FiducialMark" ||
+            CommandResolve(Command, 0) == L"CameraTrigger")
+        {
+            Program.SubroutineCommandPretreatment = Command;
+            return TRUE;
+        }
+        else if (CommandResolve(Command, 0) == L"FillArea")
+        {
+            Program.SubroutineCommandPretreatment = CommandResolve(Command, 0) + _T(",") + CommandResolve(Command, 4) + _T(",") + CommandResolve(Command, 5);
+            return TRUE;
+        }
+        else if (CommandResolve(Command, 0) == L"LaserHeight" ||
+            CommandResolve(Command, 0) == L"LaserDetect")
+        {
+            Program.SubroutineCommandPretreatment = CommandResolve(Command, 0) + _T(",") + CommandResolve(Command, 2) + _T(",") + CommandResolve(Command, 3);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 /*儲存所有陣列*/
 void COrder::SavePointData(LPVOID pParam)
 {

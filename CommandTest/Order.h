@@ -195,7 +195,7 @@ private:
 		UINT LaserModeJump;
 	};
 	/************************************************************程序參數結構*******************************************************/
-	//Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序控制是否修正影像)
+	//Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序控制是否修正影像、子程序命令預處理)
 	struct Program {
 		int LabelCount;
 		CString LabelName;
@@ -204,6 +204,7 @@ private:
 		std::vector<UINT> SubroutineStack;
 		std::vector<CoordinateData> SubroutinePointStack;
 		std::vector<BOOL> SubroutineVisioModifyJudge;
+        CString SubroutineCommandPretreatment;
 	};
 	//運行結構(副程式名稱、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)  
 	/*	
@@ -245,10 +246,11 @@ private:
 		int BlockNumber;
 		std::vector<CString> BlockPosition;
 	};
-	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料)
+	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料)
 	/*
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
+    *步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
 	*增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
 	*記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
 	*記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
@@ -347,6 +349,8 @@ private:    //函數
     CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
 	//其他功能(Demo用)
 	static  void    SavePointData(LPVOID pParam);
+    //CallSubroutin預處理尋找
+    BOOL            SubroutinePretreatmentFind(LPVOID pParam);
     
 	
 public:     //變數
