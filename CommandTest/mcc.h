@@ -20,11 +20,11 @@
 #endif
 
 #ifndef RESOLUTION
-#define RESOLUTION 1.92
+#define RESOLUTION 4.8
 #endif
 
 #ifndef RESOLUTION_Z
-#define RESOLUTION_Z 1
+#define RESOLUTION_Z 5
 #endif
 
 #ifndef LA_SCANEND
@@ -136,9 +136,8 @@ MO_DLL void MO_Do3DLineMoveInterr(LONG lXTar, LONG lYTar, LONG lZTar,
 //MO_DLL void MO_DO3DCurveStart(DATA_3CIP_MC8500P *data3CIP, int dataSize);
 MO_DLL void MO_DO3Continuous(LONG lInitSpeed, LONG lAcceleration, LONG lSpeed,
                              DATA_3MOVE *DATA_3M, int iNum);//3軸連續補間(8筆)
-MO_DLL void MO_InterruptCase(BOOL bIsClose, int iData, LPTHREAD_START_ROUTINE
-                             Thread = NULL);//中斷條件選擇(0:等速脈波輸出開始/ 1:輸出結束/ 2:驅動開始/ 3:驅動結束/ 4:釋放驅動)
-
+//中斷條件選擇(0:等速脈波輸出開始/ 1:輸出結束/ 2:驅動開始/ 3:驅動結束/ 4:釋放驅動)
+MO_DLL void MO_InterruptCase(BOOL bIsClose, int iData, LPTHREAD_START_ROUTINE Thread = NULL, LPVOID lpParameter = NULL);
 MO_DLL void MO_DO3Curve(DATA_3MOVE *DATA_3M, int dataCnt,LONG lSpeed);
 MO_DLL void MO_DO2Curve(DATA_2MOVE *DATA_2M, int dataCnt, LONG lSpeed);
 MO_DLL void MO_DllVersion(CString &dllVersion);//DLL 版本資訊

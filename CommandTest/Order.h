@@ -22,7 +22,7 @@ private:
 	struct Speed {
 		LONG AccSpeed;
 		LONG EndSpeed;
-        LONG InitSpeed;
+		LONG InitSpeed;
 	};
 	//點膠設置結構(點膠開啟時間、點膠關閉停留時間)
 	struct DispenseDotSet {
@@ -96,14 +96,14 @@ private:
 	};
 	/************************************************************I/O參數結構*******************************************************/
 	//IO控制結構(IO偵測開關、出膠鈕判斷)
-    struct IOControl {
-        BOOL SwitchInformation;
-        BOOL GlueInformation;
+	struct IOControl {
+		BOOL SwitchInformation;
+		BOOL GlueInformation;
 	};
-    //IO參數結構(EMG對話框指針)
-    struct IOParam{
-        CDialog* pEMGDlg;
-    };
+	//IO參數結構(EMG對話框指針)
+	struct IOParam{
+		CDialog* pEMGDlg;
+	};
 	/************************************************************影像參數結構*******************************************************/
 	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
 	struct Vision {
@@ -175,9 +175,9 @@ private:
 		BOOL LaserAdjust;
 		BOOL LaserSkip;
 	};
-	//Laser資料紀錄(雷射地址(之後用來記錄關閉開啟位置)、雷射單點測高座標、雷射線段平均測高開始和結束座標、雷射測高數據)
+	//Laser資料紀錄(雷射開啟地址、雷射單點測高座標、雷射線段平均測高開始和結束座標、雷射測高數據)
 	struct LaserData {
-		UINT LaserAddress;
+		UINT LaserOpenAddress;
 		CoordinateData LaserHeightPoint;
 		CoordinateData LaserDetectLS, LaserDetectLE;
 		LONG LaserMeasureHeight;		
@@ -204,7 +204,7 @@ private:
 		std::vector<UINT> SubroutineStack;
 		std::vector<CoordinateData> SubroutinePointStack;
 		std::vector<BOOL> SubroutineVisioModifyJudge;
-        CString SubroutineCommandPretreatment;
+		CString SubroutineCommandPretreatment;
 	};
 	//運行結構(副程式名稱、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)  
 	/*	
@@ -221,25 +221,25 @@ private:
 	};
 	//運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數、一次程序運行時間、運行迴圈狀態、單次命令運行狀態、畫布刷新關狀態)
 	/*
-    *運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
+	*運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
 	*回原點狀態(TRUE = 賦歸完成 FLASE = 賦歸中)
-    *運行迴圈狀態(0:未運行、暫停中 1:執行中)
-    *單次命令運行狀態(0:執行完畢、未執行 1:正在執行中)
-    *畫布刷新關狀態(0:不關閉 1:關閉清除)//人機要求
+	*運行迴圈狀態(0:未運行、暫停中 1:執行中)
+	*單次命令運行狀態(0:執行完畢、未執行 1:正在執行中)
+	*畫布刷新關狀態(0:不關閉 1:關閉清除)//人機要求
 	*/
 	struct RunStatusRead {
 		UINT RunStatus;
 		UINT CurrentRunCommandNum;
 		BOOL GoHomeStatus;
 		int FinishProgramCount;
-        DOUBLE RunTotalTime;
-        BOOL RunLoopStatus;
-        BOOL StepCommandStatus;
-        BOOL PaintClearClose;
-        //TODO::之後做總進度使用
-        //BOOL RegistrationStatus;
-        //UINT CommandTotalCount;
-        //UINT CurrentRunCommandCount;
+		DOUBLE RunTotalTime;
+		BOOL RunLoopStatus;
+		BOOL StepCommandStatus;
+		BOOL PaintClearClose;
+		//TODO::之後做總進度使用
+		//BOOL RegistrationStatus;
+		//UINT CommandTotalCount;
+		//UINT CurrentRunCommandCount;
 	};
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
@@ -250,7 +250,7 @@ private:
 	/*
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
-    *步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
+	*步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
 	*增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
 	*記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
 	*記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
@@ -285,7 +285,7 @@ private:
 	
 private:    //變數
 	HANDLE          wakeEvent;
-    LARGE_INTEGER   startTime, endTime, fre;
+	LARGE_INTEGER   startTime, endTime, fre;
 	//命令
 	StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
@@ -300,8 +300,8 @@ private:    //變數
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 	//IO
 	IOControl       IOControl;
-    //未修正虛擬模擬座標
-    CoordinateData  NVMVirtualCoordinateData;
+	//未修正虛擬模擬座標
+	CoordinateData  NVMVirtualCoordinateData;
    
 	
 private:    //函數
@@ -345,13 +345,13 @@ private:    //函數
 	static  CString VirtualNowOffSet(LPVOID pParam , CString Command);
 	//虛擬座標模擬
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);
-    //單位轉換
-    CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
+	//單位轉換
+	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
 	//其他功能(Demo用)
 	static  void    SavePointData(LPVOID pParam);
-    //CallSubroutin預處理尋找
-    BOOL            SubroutinePretreatmentFind(LPVOID pParam);
-    
+	//CallSubroutin預處理尋找
+	BOOL            SubroutinePretreatmentFind(LPVOID pParam);
+	
 	
 public:     //變數
 	//主運動物件
@@ -361,7 +361,7 @@ public:     //變數
 	LONG            V_ActionCount;
 	//程序陣列
 	std::vector<CString> CommandMemory;
-    std::vector<CString> mmCommandMemory;
+	std::vector<CString> mmCommandMemory;
 	//運動參數值
 	Default         Default;
 
@@ -424,8 +424,8 @@ public:     //變數
 	//Demo載入用判斷符號(DEMO 用)
 	BOOL            DemoTemprarilySwitch;
 
-    //IO參數設定
-    IOParam         IOParam;
+	//IO參數設定
+	IOParam         IOParam;
 
 public:     //函數
 	COrder();
@@ -445,10 +445,10 @@ public:     //函數
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
 	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式)
-    BOOL    IODetectionSwitch(BOOL Switch, int mode);
+	BOOL    IODetectionSwitch(BOOL Switch, int mode);
 	//載入檔案
 	void    LoadPointData();
-    
+	
 protected:
 	DECLARE_MESSAGE_MAP()
 };

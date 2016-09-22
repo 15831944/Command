@@ -216,7 +216,7 @@ BOOL CCommandTestDlg::OnInitDialog()
 	MO_Open(1);//軸卡開啟
 	MO_SetHardLim(7, 1);//極限開啟
 	MO_SetDecOK(1);//開啟減速有效
-	MO_InterruptCase(1, 1, a.m_Action.MoInterrupt);//中斷開啟
+	MO_InterruptCase(1, 1, a.m_Action.MoInterrupt,a.m_Action.pAction);//中斷開啟
 	MO_SetSoftLim(7, 1);//軟極限開啟
 	MO_SetCompSoft(1, -47000, -62000, -10000);
 	MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
@@ -338,7 +338,8 @@ void CCommandTestDlg::OnBnClickedStop()
 /*清除陣列*/
 void CCommandTestDlg::OnBnClickedOk()
 {
-	a.CommandMemory.clear();     
+	a.CommandMemory.clear(); 
+    Insert = FALSE;//取消插入
 	//TODO::為了DEMO加入
 	a.DemoTemprarilySwitch = FALSE;
 	ListRefresh(NULL);
