@@ -220,6 +220,7 @@ BOOL CCommandTestDlg::OnInitDialog()
 	MO_SetSoftLim(7, 1);//軟極限開啟
 	MO_SetCompSoft(1, -47000, -62000, -10000);
 	MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
+	a.m_Action.LA_SetInit();//雷射開啟
 	OnBnClickedBtnhome();
 #endif
 #ifdef VI
@@ -339,7 +340,7 @@ void CCommandTestDlg::OnBnClickedStop()
 void CCommandTestDlg::OnBnClickedOk()
 {
 	a.CommandMemory.clear(); 
-    Insert = FALSE;//取消插入
+	Insert = FALSE;//取消插入
 	//TODO::為了DEMO加入
 	a.DemoTemprarilySwitch = FALSE;
 	ListRefresh(NULL);
@@ -587,22 +588,22 @@ void CCommandTestDlg::OnMove()
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"CameraTrigger" )
 		{
 
-			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) + OffsetX - MO_ReadLogicPosition(0),
-				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetY - MO_ReadLogicPosition(1),
+			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY - MO_ReadLogicPosition(1),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"CirclePoint")
 		{
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY - MO_ReadLogicPosition(1),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 		}
@@ -610,36 +611,36 @@ void CCommandTestDlg::OnMove()
 		{
 			if (MessageBox( L"選擇Yes則移動至第一點，選擇NO則移動至第二點。",L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 8)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 8)) - OffsetY - MO_ReadLogicPosition(1),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 9)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 		}   
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserHeight")
 		{
 
-			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetX - MO_ReadLogicPosition(0),
-				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) + OffsetY - MO_ReadLogicPosition(1),
+			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
 				a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserDetect")
 		{
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
 					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) + OffsetX - MO_ReadLogicPosition(0),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) + OffsetY - MO_ReadLogicPosition(1),
+				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
 					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 		}
@@ -961,7 +962,7 @@ void CCommandTestDlg::OnBnClickedBtnopen()
 	{
 		CFile File;
 		CString StrBuff;
-        a.CommandMemory.clear();
+		a.CommandMemory.clear();
 		if (File.Open(FileDlg.GetPathName(), CFile::modeRead))
 		{
 			CArchive ar(&File, CArchive::load);//讀取檔案
@@ -1620,7 +1621,7 @@ void CCommandTestDlg::SaveParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeCreate | CFile::modeWrite))
 	{
 		CArchive ar(&File, CArchive::store);//儲存檔案
-        ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.m_Action.g_HeightLaserZero;
+		ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.m_Action.g_HeightLaserZero;
 	}
 	File.Close();
 }
@@ -1637,7 +1638,7 @@ void CCommandTestDlg::LoadParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeRead))
 	{
 		CArchive ar(&File, CArchive::load);//讀取檔案
-        ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.m_Action.g_HeightLaserZero;
+		ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.m_Action.g_HeightLaserZero;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -1647,7 +1648,7 @@ void CCommandTestDlg::LoadParameter()
 	LaserOffsetz = a.m_Action.g_OffSetLaserZ;
 	HeightLaserZero = a.m_Action.g_HeightLaserZero;
 #ifdef VI
-    VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
+	VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
 	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);//設定針頭和影像Offset
 #endif
 }
@@ -1775,7 +1776,7 @@ void CCommandTestDlg::LoadDefault()
 			a.RunLoopData.MaxRunNumber >>
 			RunLoopNumber;
 		File.Close();
-        a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
+		a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
 	}
 	else
 	{

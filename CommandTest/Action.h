@@ -2,7 +2,7 @@
 *檔案名稱:Action.h(3D用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/09/20
+*＠data 更新日期:2016/09/26
 *@更新內容三軸兩軸連續差補&雷射API*/
 #pragma once
 #include <vector>
@@ -11,6 +11,7 @@
 #ifdef MOVE
 #include "mcc.h"
 #endif
+//static LPVOID  pAction;
 static int     g_LaserErrCnt;//雷射時間切計數器(紀錄錯誤用)
 static int     g_LaserNuCnt;//雷射時間切計數器(紀錄數量用)
 class CAction
@@ -32,9 +33,13 @@ public:     //變數
 	int     g_LaserCnt;//雷射線段計數器(掃描用)
 	BOOL    g_LaserAverage;//雷射平均(1使用/0不使用)
 	BOOL    g_interruptLock;//中斷鎖
+    BOOL    g_getHeightFlag;//雷射測高旗標：允許測高
 	std::vector<UINT>  LA_m_iVecSP;//主要雷射vector(SP:Scan End)
 	static BOOL    g_YtimeOutGlueSet;//Y計時器中斷時出斷膠控制
 	static BOOL    g_ZtimeOutGlueSet;//Z計時器中斷時出斷膠控制
+    HANDLE m_hComm;
+    CString ComportNo = _T("COM6"); //RS232 COMPort
+
 #ifdef MOVE
 	std::vector<DATA_3MOVE> LA_m_ptVec;//雷射連續切點儲存vector
 	std::vector<DATA_2MOVE> LA_m_ptVec2D;//雷射連續切點儲存vector

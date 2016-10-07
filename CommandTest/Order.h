@@ -11,7 +11,7 @@ class COrder : public CWnd
 	DECLARE_DYNAMIC(COrder)
 private:
 	/************************************************************運動參數結構*******************************************************/
-	//座標結構 (狀態、紀錄X、紀錄Y、紀錄Z)
+	//座標結構(狀態、紀錄X、紀錄Y、紀錄Z)
 	struct CoordinateData {
 		BOOL Status;
 		LONG X;
@@ -175,27 +175,50 @@ private:
 		BOOL LaserAdjust;
 		BOOL LaserSkip;
 	};
-	//Laser資料紀錄(雷射開啟地址、雷射單點測高座標、雷射線段平均測高開始和結束座標、雷射測高數據)
+	//Laser資料紀錄(雷射階段執行過地址、雷射單點測高座標、雷射線段平均測高開始和結束座標、雷射測高數據)
 	struct LaserData {
-		UINT LaserOpenAddress;
+        int LaserExecutedAddress;
 		CoordinateData LaserHeightPoint;
 		CoordinateData LaserDetectLS, LaserDetectLE;
 		LONG LaserMeasureHeight;		
 	};
 	//Laser測高值紀錄陣列(雷射測高數據)
 	struct LaserAdjust {
-		LONG LaserMeasureHeight; 
+		LONG LaserMeasureHeight;
 	};
+    /*Laser連續線段控制參數(連續線段計數、連續線段開關)
+    *連續線段開關:控制是否切換連續線段(呼叫執行連續線段使用)
+    */
+    struct LaserContinuousControl {
+        LONG ContinuousLineCount;
+        BOOL ContinuousSwitch;
+    };
 	/************************************************************模組參數結構*******************************************************/
-	//控管模組結構(模式選擇、模式轉換地址(目前不使用)、影像模組跳過、雷射模組跳過)
+	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射模組跳過)
 	struct ModelControl{
 		UINT Mode;
-		UINT ModeChangeAddress;
+		int ModeChangeAddress;
 		UINT VisionModeJump;
 		UINT LaserModeJump;
 	};
 	/************************************************************程序參數結構*******************************************************/
-	//Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序控制是否修正影像、子程序命令預處理)
+    /*區間資料結構(類別、起始地址、結束地址)*/
+    struct IntervalData {
+        CString Type;
+        UINT BeginAddress;
+        UINT EndAddress;
+    };
+    /*Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序模式堆疊、子程序影像修正判斷堆疊、子程序命令預處理、子程序模組跳換開關)
+    *標籤計數:用來計算進入標籤時命令是否全部尋找完畢
+    *標籤名稱:用來記錄跳要的標名稱
+    *子程序計數:用來計數目前有呼叫幾個子程序
+    *子程序地址堆疊:用來記錄呼叫子程序時的命令地址
+    *子程序座標堆疊:用來記錄呼叫子程序時的機械手臂位置
+    *子程序模式堆疊:用來記錄呼叫子程序時目前命令運作的模式(ex:1影像2雷射...
+    *子程序影像修正判斷堆疊:控制子程序內的命令是否做影像修正
+    *子程序命令預處理:用來儲存和目前位置做相對量修正的命令
+    *子程序模組跳換開關:用來防止雷射關閉強行跳出子程序和讓之後命令失效只剩EndSubroutine有效
+    */
 	struct Program {
 		int LabelCount;
 		CString LabelName;
@@ -203,8 +226,10 @@ private:
 		BOOL CallSubroutineStatus;
 		std::vector<UINT> SubroutineStack;
 		std::vector<CoordinateData> SubroutinePointStack;
+        std::vector<UINT> SubroutineModel;
 		std::vector<BOOL> SubroutineVisioModifyJudge;
 		CString SubroutineCommandPretreatment;
+        BOOL SubroutineModelControlSwitch;
 	};
 	//運行結構(副程式名稱、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)  
 	/*	
@@ -246,7 +271,7 @@ private:
 		int BlockNumber;
 		std::vector<CString> BlockPosition;
 	};
-	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料)
+	//Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
 	/*
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
@@ -257,6 +282,7 @@ private:
 	*記錄S型轉換開關:用於S型態判斷Offset需要加還減
 	*步驟地址紀錄:用於判斷指令目前的StepRepeat是屬於哪一個陣列
 	*記錄組斷資料:包含數量、阻段陣列的字串
+    *StepRepeat區間堆疊:記錄StepRepeat的工作區間
 	*/
 	struct RepeatData {
 		BOOL LoopSwitch;
@@ -266,7 +292,7 @@ private:
 		BOOL StepRepeatLabelLock;
 		BOOL AddInStepRepeatSwitch;
 		int AllNewStepRepeatNum;
-		int AllDeleteStepRepeatNum;
+        int AllDeleteStepRepeatNum;
 		std::vector<BOOL> SSwitch;
 		std::vector<UINT> StepRepeatNum;
 		std::vector<UINT> StepRepeatInitOffsetX;
@@ -274,6 +300,7 @@ private:
 		std::vector<int> StepRepeatCountX;
 		std::vector<int> StepRepeatCountY;
 		std::vector<StepRepeatBlockData> StepRepeatBlockData;
+        std::vector<IntervalData> StepRepeatIntervel;
 	};
 	/*程序循環運行結構(控制循環開關、循環次數、循環計數、最大運行次數(設 -1 =沒有限制))*/
 	struct RunLoopData {      
@@ -282,77 +309,74 @@ private:
 		int LoopCount;
 		int MaxRunNumber;
 	};
-	
+    /************************************************************虛擬座標參數結構*******************************************************/
+    //虛擬座標模擬結構
+
 private:    //變數
 	HANDLE          wakeEvent;
 	LARGE_INTEGER   startTime, endTime, fre;
-	//命令
+	/*命令*/
 	StepRepeatBlockData InitBlockData;
 	CoordinateData  InitData;
 	CString         Commanding;
 	std::vector<CString> CommandSwap;
 	std::vector<std::vector<CString>> Command;
-	//程序
+	/*程序*/
 	RepeatData      RepeatData;
 	Program         Program;
 	RunData         RunData;
-	//狀態
+	/*狀態*/
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
-	//IO
+	/*IO*/
 	IOControl       IOControl;
-	//未修正虛擬模擬座標
-	CoordinateData  NVMVirtualCoordinateData;
-   
+	/*未修正虛擬模擬座標*/
+	CoordinateData  NVMVirtualCoordinateData; 
 	
 private:    //函數
-	//執行續
-	static  UINT    HomeThread(LPVOID pParam);
-	static  UINT    Thread(LPVOID pParam);
-	static  UINT    SubroutineThread(LPVOID pParam);
-	static  UINT    RunLoopThread(LPVOID pParam);
-	static  UINT    IODetection(LPVOID pParam);
-	//動作處理
-	static  void    LineGotoActionJudge(LPVOID pParam);
-	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);
-	static  void    VisionModify(LPVOID pParam);
-	void            VisionFindMarkError(LPVOID pParam);
-	static  void    LaserModify(LPVOID pParam);
-	//阻斷處理
-	static  void    BlockProcessStart(CString Command, LPVOID pParam, BOOL RepeatStatus);
-	static  BOOL    BlockProcessExecute(CString Command, LPVOID pParam, int NowCount);
+	/*執行續*/
+	static  UINT    HomeThread(LPVOID pParam);//原點賦歸程序
+	static  UINT    Thread(LPVOID pParam);//主程序
+	static  UINT    SubroutineThread(LPVOID pParam);//命令動作程序
+	static  UINT    RunLoopThread(LPVOID pParam);//運行迴圈程序
+	static  UINT    IODetection(LPVOID pParam);//IO偵測程序
+	/*動作處理*/
+	static  void    LineGotoActionJudge(LPVOID pParam);//判斷線段動作轉換
+	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);//CallSubroutin修正處理
+    static  CString VirtualNowOffSet(LPVOID pParam, CString Command);//虛擬座標計算偏差值
+	static  void    VisionModify(LPVOID pParam);//影像修正
+	void            VisionFindMarkError(LPVOID pParam);//影像未找到處理方法
+	static  void    LaserModify(LPVOID pParam);//雷射修正
+    static  void    LaserDetectHandle(LPVOID pParam, CString Command);//雷射檢測處理
+    static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標模擬移動
+    /*資料表處理區塊*/
+    static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
+    static  void    ChooseLaserModify(LPVOID pParam);//選擇雷射修正值
+    static  void    RecordCorrectionTable(LPVOID pParam);//記錄運動修正表
+    /*命令處理*/
+    static  CString CommandResolve(CString Command, UINT Choose);//命令分解
+    CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);//命令單位轉換
+    /*程序變數處理區塊*/
+    void            ParameterDefult();//運動參數初始化
+    void            DecideInit();//程序初始化
+    void            DecideClear();//程序結束清除
+    void            MainSubProgramSeparate();//劃分主副程序
+    void            DecideBeginModel();//起始模組判斷
+    /*檔案處理*/
+    BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);//搜尋目錄檔案
+    static  BOOL    FileExist(LPCWSTR FilePathName);//判斷檔案是否存在
+    /*StepRepeat處理*/
+    BOOL            SubroutinePretreatmentFind(LPVOID pParam);//CallSubroutin預處理尋找
+    static  void    StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address);//StepRepeat強行跳轉判斷
+	/*阻斷處理*/
+	static  void    BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatus);
+	static  BOOL    BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount);
 	static  void    BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus);
 	static  BOOL    BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount);
 	static  void    BlockSort(std::vector<CString> &BlockPosition, int Type, int mode);
-	static  CString BlockResolve(CString String, UINT Choose);
-	//命令處理
-	static  CString CommandResolve(CString Command,UINT Choose);
-	//初始化處理
-	void            ParameterDefult();
-	void            DecideInit();
-	void            DecideClear();
-	void            MainSubProgramSeparate();
-	void            DecideBeginModel();
-	//檔案處理
-	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);
-	static  BOOL    FileExist(LPCWSTR FilePathName);
-	//模組控管處理
-	static  void    RecordCorrectionTable(LPVOID pParam);
-	static  void    ChooseVisionModify(LPVOID pParam);
-	static  void    ChooseLaserModify(LPVOID pParam);
-	//雷射處理
-	static  void    LaserDetectHandle(LPVOID pParam, CString Command);
-	//虛擬修正處理
-	static  CString VirtualNowOffSet(LPVOID pParam , CString Command);
-	//虛擬座標模擬
-	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);
-	//單位轉換
-	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
-	//其他功能(Demo用)
+	static  CString BlockResolve(CString String, UINT Choose);  
+	
+    /*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
-	//CallSubroutin預處理尋找
-	BOOL            SubroutinePretreatmentFind(LPVOID pParam);
-	
-	
 public:     //變數
 	//主運動物件
 	CAction         m_Action;
@@ -378,49 +402,48 @@ public:     //變數
 	RunStatusRead   RunStatusRead;
 	//RunLoop
 	RunLoopData     RunLoopData;
-	//影像參數 
+	//影像參數
 	VisionDefault   VisionDefault;
 
 	VisionSet       VisionSet;
 	VisionFile      VisionFile;
 	VisionSerchError VisionSerchError;
 
-	//影像
+	//影像資料
 	Vision          FindMark, FiducialMark1, FiducialMark2;
 	VisionOffset    VisionOffset;
 	VisionTrigger   VisionTrigger;
-	//雷射
+	//雷射資料
 	LaserSwitch     LaserSwitch;
 	LaserData       LaserData;
-	//影像修正後工作座標
+    LaserContinuousControl LaserContinuousControl;
+
+	//影像雷射修正後工作座標
 	CoordinateData  FinalWorkCoordinateData;
-	//*虛擬模擬座標
+	
+    //虛擬模擬座標 (目前只用在CallSubroutine回歸點)
 	CoordinateData  VirtualCoordinateData;
 	
-	//模組控管
+	//模組控管資料
 	ModelControl    ModelControl;
 
 	//動作修正表
 	std::vector<PositionModifyNumber> PositionModifyNumber;
-	//影像資料
+	//影像修正資料
 	std::vector<VisionAdjust> VisionAdjust;
-	//雷射資料
+	//雷射修正資料
 	std::vector<LaserAdjust> LaserAdjust;
 
 	//影像、雷射資料計數
 	int             VisionCount;
 	int             LaserCount;
 
-	//紀錄目前紀錄到表中地址(特殊線段使用)
+	//紀錄目前紀錄到表中地址(特殊線段使用)(連續特殊線段使用)
 	CString         CurrentTableAddress;
-	//(暫存)判斷影像是否修正
+	
+    //(暫存)判斷影像是否修正
 	BOOL            VisioModifyJudge;
 	
-	//連續線段計數(連續掃描使用)
-	LONG            ContinuousLineCount;
-	//控制是否切換連續線段(呼叫執行連續線段使用)
-	BOOL            ContinuousSwitch;
-
 	//Demo載入用判斷符號(DEMO 用)
 	BOOL            DemoTemprarilySwitch;
 
