@@ -2759,7 +2759,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif
                 }
                 //設定影像參數
-                VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 360);
+                VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 0);//設定不找旋轉過標記
                 VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
                 if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
                 {
@@ -2837,6 +2837,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         //紀錄影像Offset至影像修正表 
                         ((COrder*)pParam)->VisionCount++;
                         ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+
+                       
 
                         //影像釋放記憶體
                         if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
@@ -3774,11 +3776,26 @@ void COrder::VisionFindMarkError(LPVOID pParam)
                         if (VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger1.at(i).Y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
                         {                      
                         #ifdef MOVE
-                            //對位完畢不出膠回升
+                           //對位完畢不出膠回升
                             ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
                                 ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
                                 ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed,1);
                         #endif
+                            //紀錄影像Offset至影像修正表 
+                            ((COrder*)pParam)->VisionCount++;
+                            ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+
+                            _cwprintf(L"影像定位完畢成功寫入數值VisionCount:%d,VisionAdjust:%d,%d\n", ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetX, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetY);
+
+                            //影像釋放記憶體
+                            if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+                            {
+                                VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+                            }
+                            //影像記憶體初始化
+                            *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+                            //清除對位Offset資料
+                            ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
                             break;
                         }
                     }
@@ -3831,6 +3848,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
             ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
         }
         ((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
+        _cwprintf(L"Tirrger運行完畢\n");
         break;
 #endif  
     case 2://停止                                         
