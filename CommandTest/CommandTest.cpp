@@ -81,9 +81,9 @@ BOOL CCommandTestApp::InitInstance()
 	else if (nResponse == IDCANCEL)
 	{
 		// TODO: 在此放置於使用 [取消] 來停止使用對話方塊時
-        #ifdef VI
-         VI_VisionFree();
-        #endif
+		#ifdef VI
+		 VI_VisionFree();
+		#endif
 		// 處理的程式碼
 	}
 	else if (nResponse == -1)
@@ -105,44 +105,44 @@ BOOL CCommandTestApp::InitInstance()
 //取消IO偵測
 BOOL CCommandTestApp::PreTranslateMessage(MSG* pMsg)
 {
-    if (pMsg->message == WM_KEYDOWN)
-    {
-        if (pMsg->wParam == VK_F1)
-        {
-           ((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(FALSE, 0);
-        }
-        else if (pMsg->wParam == VK_F2)
-        {
-            ((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(TRUE, 0);
-        }
-        else if (pMsg->wParam == VK_F3)
-        {
-            for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.size(); i++)
-            {
+	if (pMsg->message == WM_KEYDOWN)
+	{
+		if (pMsg->wParam == VK_F1)
+		{
+		   ((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(FALSE, 0);
+		}
+		else if (pMsg->wParam == VK_F2)
+		{
+			((CCommandTestDlg*)theApp.m_pMainWnd)->a.IODetectionSwitch(TRUE, 0);
+		}
+		else if (pMsg->wParam == VK_F3)
+		{
+			for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.size(); i++)
+			{
 #ifdef PRINTF
-                _cwprintf(L"%s\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.at(i));
+				_cwprintf(L"%s\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.at(i));
 #endif
-            }
-        }
-        else if (pMsg->wParam == VK_F4)
-        {
+			}
+		}
+		else if (pMsg->wParam == VK_F4)
+		{
 #ifdef MOVE
-            for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.size(); i++)
-            {
+			for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.size(); i++)
+			{
 #ifdef PRINTF
-                _cwprintf(L"%d,%d,%d\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPX,
-                    ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPY,
-                    ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPZ);
+				_cwprintf(L"%d,%d,%d\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPX,
+					((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPY,
+					((CCommandTestDlg*)theApp.m_pMainWnd)->a.m_Action.LA_m_ptVec.at(i).EndPZ);
 #endif
-            }
+			}
 #endif
-        }  
-    }
-    return CWinApp::PreTranslateMessage(pMsg);
+		}  
+	}
+	return CWinApp::PreTranslateMessage(pMsg);
 }
 //屏蔽F1Help對話框
 BOOL CCommandTestApp::OnCmdMsg(UINT nID, int nCode, void* pExtra, AFX_CMDHANDLERINFO* pHandlerInfo)
 {
-    // TODO: 在此加入特定的程式碼和 (或) 呼叫基底類別
-    return TRUE;
+	// TODO: 在此加入特定的程式碼和 (或) 呼叫基底類別
+	return TRUE;
 }

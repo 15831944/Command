@@ -65,6 +65,12 @@ private:
 		LONG GlueTime;
 		LONG GlueStayTime;
 	};
+    //清潔針頭結構(清潔裝置位置、清潔裝置開關、IOport)
+    struct CleanerData {
+        CoordinateData  CleanerPositionData;
+        BOOL CleanerSwitch;
+        LONG OutputPort;
+    };
 	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、循環是否復歸、是否為影像賦歸)
 	struct GoHome {
 		LONG Speed1;
@@ -197,7 +203,7 @@ private:
 	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射模組跳過)
 	struct ModelControl{
 		UINT Mode;
-		int ModeChangeAddress;
+		int  ModeChangeAddress;
 		UINT VisionModeJump;
 		UINT LaserModeJump;
 	};
@@ -315,9 +321,10 @@ private:
 private:    //變數
 	HANDLE          wakeEvent;
 	LARGE_INTEGER   startTime, endTime, fre;
+    /*代換暫存變數*/ 
+    StepRepeatBlockData InitBlockData;
+    CoordinateData  InitData;
 	/*命令*/
-	StepRepeatBlockData InitBlockData;
-	CoordinateData  InitData;
 	CString         Commanding;
 	std::vector<CString> CommandSwap;
 	std::vector<std::vector<CString>> Command;
@@ -331,6 +338,8 @@ private:    //變數
 	IOControl       IOControl;
 	/*未修正虛擬模擬座標*/
 	CoordinateData  NVMVirtualCoordinateData; 
+    /*系統移動速度*/
+    Speed           MoveSpeedSet,LMPSpeedSet,LMCSpeedSet,VMSpeedSet;
 	
 private:    //函數
 	/*執行續*/
@@ -393,10 +402,11 @@ public:     //變數
 	DispenseDotEnd  DispenseDotEnd;
 	DispenseLineSet DispenseLineSet;
 	DispenseLineEnd DispenseLineEnd;
-	Speed           DotSpeedSet, LineSpeedSet,MoveSpeedSet;
+	Speed           DotSpeedSet, LineSpeedSet;
 	ZSet            ZSet;
 	GlueData        GlueData;
 	GoHome          GoHome;
+    CleanerData     CleanerData;
 
 	//運行程序資料
 	RunStatusRead   RunStatusRead;

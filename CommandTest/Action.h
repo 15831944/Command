@@ -17,7 +17,7 @@ static int     g_LaserNuCnt;//雷射時間切計數器(紀錄數量用)
 class CAction
 {
 public:     //變數
-    LPVOID  pAction;          //this指針
+	LPVOID  pAction;          //this指針
 	BOOL    g_bIsPause;       //暫停用
 	BOOL    g_bIsStop;        //停止用
 	BOOL    g_bIsDispend;     //關閉點膠用
@@ -33,12 +33,12 @@ public:     //變數
 	int     g_LaserCnt;//雷射線段計數器(掃描用)
 	BOOL    g_LaserAverage;//雷射平均(1使用/0不使用)
 	BOOL    g_interruptLock;//中斷鎖
-    BOOL    g_getHeightFlag;//雷射測高旗標：允許測高
+	BOOL    g_getHeightFlag;//雷射測高旗標：允許測高
 	std::vector<UINT>  LA_m_iVecSP;//主要雷射vector(SP:Scan End)
 	static BOOL    g_YtimeOutGlueSet;//Y計時器中斷時出斷膠控制
 	static BOOL    g_ZtimeOutGlueSet;//Z計時器中斷時出斷膠控制
-    HANDLE m_hComm;
-    CString ComportNo = _T("COM6"); //RS232 COMPort
+	HANDLE m_hComm;
+	CString ComportNo = _T("COM6"); //RS232 COMPort
 
 #ifdef MOVE
 	std::vector<DATA_3MOVE> LA_m_ptVec;//雷射連續切點儲存vector
@@ -85,7 +85,11 @@ public:     //運動API
 	void DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lWaitTime, LONG lStayTime, LONG lZBackDistance, BOOL bZDisType, LONG lZdistance, LONG lHighVelocity, LONG lLowVelocity, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//原點賦歸動作--(原點復歸速度1,原點復歸速度2,復歸軸(7),偏移量(0))
 	void DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis, LONG lMoveX, LONG lMoveY, LONG lMoveZ);
-	////填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸距離(相對)，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，線段點膠設定(1.移動前延遲，2.設置距離，3停留時間，5關機距離，6關機延遲)，驅動速度，加速度，初速度)
+    //虛擬點原點復歸
+    void DecideVirtualHome(LONG lX, LONG lY, LONG lZ, LONG lZBackDistance, BOOL bZDisType, LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy);
+	//針頭清潔動作(清潔裝置位置X,Y,Z,清潔裝置使用的io,Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),驅動速度,家速度,初速度)
+	void DispenClear(LONG lX, LONG lY, LONG lZ, int ClreaPort, LONG lZBackDistance, BOOL bZDisType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+	//填充動作(線段開始X,Y,Z，線段結束X,Y,Z，Z軸距離(相對)，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm)，線段點膠設定(1.移動前延遲，2.設置距離，3停留時間，5關機距離，6關機延遲)，驅動速度，加速度，初速度)
 	void DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG lZ2, LONG lZBackDistance, BOOL bZDisType,int iType, LONG lWidth, LONG lWidth2, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//輸出-16個輸出(選擇埠(0~15),開啟關閉(0~1))
 	BOOL DecideOutPutSign(int iPort, BOOL bChoose);
@@ -120,13 +124,13 @@ public:     //雷射API
 	void LA_Do2dDataArc(LONG EndPX, LONG EndPY, LONG ArcX, LONG ArcY);
 	void LA_Do2dDataCircle(LONG EndPX, LONG EndPY, LONG CirP1X, LONG CirP1Y, LONG CirP2X, LONG CirP2Y);
 	//2D連續差補掃描
-	void LA_Line2D(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//單點雷射取值(使用DATA_2MOVE結構)+偏移量
+    void LA_Line2D(LONG lStartVe, LONG lStartAcc, LONG lStartInitVe, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//單點雷射取值(使用DATA_2MOVE結構)+偏移量
 	//三軸連續插補
 	void LA_Line3DtoDo(int iData, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bDoAll = FALSE);
 	//雷射清除指令
 	void LA_Clear();
 	//雷射平均回傳平均z值
-	void LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &lZ);
+    void LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &lZ, LONG lStartVe, LONG lStartAcc, LONG lStartInitVe, LONG  lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//將3Dvetor值作旋轉偏移修正
 	void LA_CorrectVectorToDo(LONG  lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, LONG RefX = 0, LONG RefY = 0, DOUBLE OffSetX = 0, DOUBLE OffSetY = 0, DOUBLE Andgle = 0, DOUBLE CameraToTipOffsetX = 0, DOUBLE CameraToTipOffsetY = 0, BOOL Mode = 0, LONG lSubOffsetX = 0, LONG lSubOffsetY = 0);//將3Dvetor值作旋轉偏移修正
 	//填充動作_多載(最後一點位置(EndX,EndY),線段開始X,Y,Z，線段結束X,Y,Z，Z軸距離(相對)，Z軸型態(0絕對位置/1相對位置)，填充形式(1~7)，寬度(mm)，兩端寬度(mm))

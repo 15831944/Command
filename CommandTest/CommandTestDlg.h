@@ -116,6 +116,7 @@ public:
 	afx_msg void OnBnClickedBtncommand23();
 	afx_msg void OnBnClickedBtncommand24();
 	afx_msg void OnBnClickedBtncommand25();
+    afx_msg void OnBnClickedBtncommand25_1();
 	afx_msg void OnBnClickedBtncommand26();
 	afx_msg void OnBnClickedBtncommand27();
 	afx_msg void OnBnClickedBtncommand28();
@@ -152,6 +153,8 @@ public:
 	//¤¶­±³z©ú¤Æ
 	afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
     afx_msg void OnDestroy();
+
+    
 };
 
 

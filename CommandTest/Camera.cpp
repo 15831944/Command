@@ -169,7 +169,7 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_UP) {
-			MoveXYZ(0, -(MO_ReadLogicPosition(1)), 0);
+			MoveXYZ(0,-(MO_ReadLogicPosition(1)), 0);
 			pMsg->message = WM_NULL;
 		}
 		if (pMsg->wParam == VK_DOWN) {

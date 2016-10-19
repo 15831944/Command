@@ -106,6 +106,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNCOMMAND23, &CCommandTestDlg::OnBnClickedBtncommand23)
 	ON_BN_CLICKED(IDC_BTNCOMMAND24, &CCommandTestDlg::OnBnClickedBtncommand24)
 	ON_BN_CLICKED(IDC_BTNCOMMAND25, &CCommandTestDlg::OnBnClickedBtncommand25)
+    ON_BN_CLICKED(IDC_BTNCOMMAND25_1, &CCommandTestDlg::OnBnClickedBtncommand25_1)
 	ON_BN_CLICKED(IDC_BTNCOMMAND26, &CCommandTestDlg::OnBnClickedBtncommand26)
 	ON_BN_CLICKED(IDC_BTNCOMMAND27, &CCommandTestDlg::OnBnClickedBtncommand27)
 	ON_BN_CLICKED(IDC_BTNCOMMAND28, &CCommandTestDlg::OnBnClickedBtncommand28)
@@ -151,6 +152,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNPRINTCLINE, &CCommandTestDlg::OnBnClickedBtnprintcline)
 	ON_COMMAND(IDM_MOVE, &CCommandTestDlg::OnMove)
 	ON_WM_MOUSEACTIVATE()
+	
 	
 END_MESSAGE_MAP()
 
@@ -1321,6 +1323,14 @@ void CCommandTestDlg::OnBnClickedBtncommand25()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
+/*清潔點*/
+void CCommandTestDlg::OnBnClickedBtncommand25_1()
+{
+	StrBuff.Format(_T("CleanerPosition"));
+	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+	Insert = FALSE;
+	ListRefresh(NULL);
+}
 /*標籤*/           
 void CCommandTestDlg::OnBnClickedBtncommand26()
 {
@@ -1821,4 +1831,3 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 	}
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
-
