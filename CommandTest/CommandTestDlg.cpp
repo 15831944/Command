@@ -16,6 +16,7 @@
 #include "LineContinuous.h"
 #include "EmgDlg.h"
 #include "Question.h"
+#include "TemplateSet.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -57,11 +58,21 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
 {
-	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST1, m_CommandList);
 	DDX_Control(pDX, IDC_LIST2, m_ParamList);
 	DDX_Check(pDX, IDC_CHECK1, InputAuto);
 	DDX_Check(pDX, IDC_CHELOOPRUN, m_LoopRun);
+	DDX_Control(pDX, IDC_EDITPARAM1, NumEdit1);
+	DDX_Control(pDX, IDC_EDITPARAM2, NumEdit2);
+	DDX_Control(pDX, IDC_EDITPARAM3, NumEdit3);
+	DDX_Control(pDX, IDC_EDITPARAM4, NumEdit4);
+	DDX_Control(pDX, IDC_EDITPARAM5, NumEdit5);
+	DDX_Control(pDX, IDC_EDITPARAM6, NumEdit6);
+	DDX_Control(pDX, IDC_EDITPARAM7, NumEdit7);
+	DDX_Control(pDX, IDC_EDITPARAM8, NumEdit8);
+	DDX_Control(pDX, IDC_EDITPARAM9, NumEdit9);
+
+	CDialogEx::DoDataExchange(pDX);
 }
 
 BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
@@ -106,7 +117,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNCOMMAND23, &CCommandTestDlg::OnBnClickedBtncommand23)
 	ON_BN_CLICKED(IDC_BTNCOMMAND24, &CCommandTestDlg::OnBnClickedBtncommand24)
 	ON_BN_CLICKED(IDC_BTNCOMMAND25, &CCommandTestDlg::OnBnClickedBtncommand25)
-    ON_BN_CLICKED(IDC_BTNCOMMAND25_1, &CCommandTestDlg::OnBnClickedBtncommand25_1)
+	ON_BN_CLICKED(IDC_BTNCOMMAND25_1, &CCommandTestDlg::OnBnClickedBtncommand25_1)
 	ON_BN_CLICKED(IDC_BTNCOMMAND26, &CCommandTestDlg::OnBnClickedBtncommand26)
 	ON_BN_CLICKED(IDC_BTNCOMMAND27, &CCommandTestDlg::OnBnClickedBtncommand27)
 	ON_BN_CLICKED(IDC_BTNCOMMAND28, &CCommandTestDlg::OnBnClickedBtncommand28)
@@ -154,6 +165,9 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_WM_MOUSEACTIVATE()
 	
 	
+	ON_BN_CLICKED(IDC_BTNCOMMAND51, &CCommandTestDlg::OnBnClickedBtncommand51)
+	ON_BN_CLICKED(IDC_BTNCOMMAND52, &CCommandTestDlg::OnBnClickedBtncommand52)
+	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
 END_MESSAGE_MAP()
 
 
@@ -662,7 +676,7 @@ void CCommandTestDlg::OnBnClickedBtndefault()
 	else
 	{
 		((CDefault*)m_pDefaultDlg)->DestroyWindow();
-		free(m_pDefaultDlg);
+        m_pDefaultDlg = NULL;
 		m_pDefaultDlg = new CDefault();
 		m_pDefaultDlg->Create(IDD_DIALOG1, this);
 		m_pDefaultDlg->ShowWindow(SW_SHOW);
@@ -683,7 +697,7 @@ void CCommandTestDlg::OnBnClickedBtnvision()
 		{
 			((CCamera*)m_pCameraDlg)->DestroyWindow();
 		}
-		free(m_pCameraDlg);
+        m_pCameraDlg = NULL;
 		m_pCameraDlg = new CCamera();
 		m_pCameraDlg->Create(IDD_DIALOG2, this);
 		m_pCameraDlg->ShowWindow(SW_SHOW);
@@ -701,7 +715,7 @@ void CCommandTestDlg::OnBnClickedBtnlaser()
 	else
 	{
 		((CCamera*)m_pLaserDlg)->DestroyWindow();
-		free(m_pLaserDlg);
+        m_pLaserDlg = NULL;
 		m_pLaserDlg = new CLaserDlg();
 		m_pLaserDlg->Create(IDD_DIALOG6, this);
 		m_pLaserDlg->ShowWindow(SW_SHOW);
@@ -1585,6 +1599,30 @@ void CCommandTestDlg::OnBnClickedBtncommand50()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
+/*模板檢測*/
+void CCommandTestDlg::OnBnClickedBtncommand51()
+{
+	CTemplateSet TemplateDlg;
+	if (TemplateDlg.DoModal() == IDOK)
+	{
+		(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, CheckStrBuff) : a.CommandMemory.push_back(CheckStrBuff);
+		Insert = FALSE;
+		ListRefresh(NULL);
+		CheckStrBuff = L"";
+	}	
+}
+/*直徑檢測*/
+void CCommandTestDlg::OnBnClickedBtncommand52()
+{
+	CString EditBuffer1, EditBuffer2, EditBuffer3;
+	GetDlgItemText(IDC_EDITPARAM3, EditBuffer1);
+	GetDlgItemText(IDC_EDITPARAM4, EditBuffer2);
+	GetDlgItemText(IDC_EDITPARAM6, EditBuffer3);
+	StrBuff.Format(_T("DiameterCheck,%d,%d,%.3f,%.3f,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), _tstof(EditBuffer1), _tstof(EditBuffer2), GetDlgItemInt(IDC_EDITPARAM5), _tstof(EditBuffer3));
+	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+	Insert = FALSE;
+	ListRefresh(NULL);
+}
 /*******************************************************************************************私有函數**********************************************************/
 /*指令分解*/
 CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
@@ -1830,4 +1868,8 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 		m_pLineContinuousDlg->SetLayeredWindowAttributes(0, (250 * 70) / 100, LWA_ALPHA);
 	}
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
+}
+/*測試用按鈕*/
+void CCommandTestDlg::OnBnClickedBtntest()
+{
 }

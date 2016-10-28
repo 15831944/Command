@@ -6,6 +6,7 @@
 #include "Order.h"
 #include "afxcmn.h"
 #include "afxwin.h"
+#include "NumEdit.h"
 // CCommandTestDlg 對話方塊
 class CCommandTestDlg : public CDialogEx
 {
@@ -34,6 +35,7 @@ protected:
 	LONG OffsetX, OffsetY;
 	BOOL GlueInformation;
     BOOL EMGInformation;
+    CNumEdit NumEdit1, NumEdit2, NumEdit3, NumEdit4, NumEdit5, NumEdit6, NumEdit7, NumEdit8, NumEdit9;
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
@@ -55,6 +57,8 @@ public:
 	UINT XNumber, YNumber;
 	UINT BlockCount;
 	CString BlockStr;
+    CString CheckStrBuff;
+
 public:
 	/*刷新*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -155,6 +159,9 @@ public:
     afx_msg void OnDestroy();
 
     
+    afx_msg void OnBnClickedBtncommand51();
+    afx_msg void OnBnClickedBtncommand52();
+    afx_msg void OnBnClickedBtntest();
 };
 
 

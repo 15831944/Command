@@ -145,12 +145,14 @@ void CCamera::OnBnClickedBtnmodel()
 	StrBuff.Format(_T("%04d%02d%02d_%02d_%02d_%02d_%02d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 	/*建立model*/
 #ifdef VI
-	void* Model;
-	Model = malloc(sizeof(char));
+	void* Model = NULL;
+    //TODO::記憶體配置在Debug中須注意型態
+	Model = malloc(4);
 	VI_CreateModelFromBox(1, GetDlgItem(IDC_PIC), Model, 150, 150);
 	VI_SaveModel(Model, path, StrBuff + _T(".mod"));
 	VI_ModelFree(Model);
 	free(Model);
+    MessageBox(L"asdasd");
 	VI_GetPicture(path, StrBuff + _T(".bmp"), 0, 150, 150);
 #endif
 }

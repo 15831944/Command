@@ -572,8 +572,12 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     if (CommandResolve(Command, 0) == L"Printf")
     {
 #ifdef PRINTF
-        _cwprintf(L"Please don't Look me!\n");
-#endif     
+        for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)
+        {
+            _cwprintf(L"目前地址:%s\n", ((COrder*)pParam)->IntervalTemplateCheck.at(i).Address);
+        }    
+#endif   
+        // _cwprintf(L"目前地址:%s\n", ((COrder*)pParam)->GetCommandAddress());
         //((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));
     }
     /************************************************************程序**************************************************************/
@@ -2220,7 +2224,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             }
             LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d)", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
 #endif
 #ifdef MOVE
             ((COrder*)pParam)->m_Action.DecideWaitPoint(
@@ -3589,6 +3593,66 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->LaserSwitch.LaserSkip = _ttol(CommandResolve(Command, 1));
         }
     }
+    /************************************************************檢測****************************************************************/
+    if (CommandResolve(Command, 0) == L"TemplateCheck")
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下動作
+        {
+            if (_ttol(CommandResolve(Command, 1)) == 1)//即時開啟
+            {
+                ((COrder*)pParam)->CheckSwitch.Templateing = TRUE;//即時檢測開關開啟
+                ((COrder*)pParam)->TemplateChecking.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                ((COrder*)pParam)->TemplateChecking.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
+                    ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                    ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
+                ModelLoad(1, pParam, CommandResolve(Command, 3), ((COrder*)pParam)->TemplateChecking);//載入OK模板(指針、數量)
+                ModelLoad(0, pParam, CommandResolve(Command, 4), ((COrder*)pParam)->TemplateChecking);//載入NG模板(指針、數量)
+            }
+            else if (_ttol(CommandResolve(Command, 1)) == 0)//區間有效
+            {
+                //第一次開啟模板檢測
+                if (!((COrder*)pParam)->CheckSwitch.Template && !((COrder*)pParam)->CheckSwitch.Diameter && !((COrder*)pParam)->CheckSwitch.Area && _ttol(CommandResolve(Command, 2)))
+                {
+                    ((COrder*)pParam)->CheckSwitch.Template = TRUE;
+                    TemplateCheck TemplateCheckInit;
+                    TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                    TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
+                        ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                        ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
+                    ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
+                    ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
+                    ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                } 
+                //目前已經有開啟模板檢測並且要關閉
+                else if (((COrder*)pParam)->CheckSwitch.Template && !((COrder*)pParam)->CheckSwitch.Diameter && !((COrder*)pParam)->CheckSwitch.Area && !_ttol(CommandResolve(Command, 2)))
+                {
+                    ((COrder*)pParam)->CheckSwitch.Template = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.RunCheck = TRUE;
+                }
+                //已經有開啟其他檢測模式要轉換成模板檢測或已經是模板檢測
+                else if (_ttol(CommandResolve(Command, 2)))
+                {
+                    ((COrder*)pParam)->CheckSwitch.Template = TRUE;
+                    ((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.Area = FALSE;
+                    TemplateCheck TemplateCheckInit;
+                    TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                    TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
+                        ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                        ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
+                    ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
+                    ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
+                    ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                }
+            }
+        }    
+    }
+    if (CommandResolve(Command, 0) == L"DiameterCheck")
+    {
+    }
+    if (CommandResolve(Command, 0) == L"AreaCheck")
+    {
+    }
     ((COrder*)pParam)->RunStatusRead.StepCommandStatus = FALSE;
     g_pSubroutineThread = NULL;
     return 0;
@@ -4482,6 +4546,23 @@ CString COrder::CommandResolve(CString Command, UINT Choose)
         return CommandResolve(Command.Right(Command.GetLength() - iLength - 1), --Choose);
     }
 }
+/*模板編號分解*/
+CString COrder::ModelNumResolve(CString ModelNum, UINT Choose)
+{
+    int iLength = ModelNum.Find(_T('>'));
+    if (iLength <= 0)
+    {
+        iLength = ModelNum.GetLength();
+    }
+    if (Choose <= 0)
+    {
+        return ModelNum.Left(iLength);
+    }
+    else
+    {
+        return ModelNumResolve(ModelNum.Right(ModelNum.GetLength() - iLength - 1), --Choose);
+    }
+}
 /*命令單位轉換*/
 CString COrder::CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple)
 {
@@ -5016,6 +5097,29 @@ CString COrder::CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE 
         result = Command;
     }
     return result;
+}
+/*命令地址獲取*/
+CString COrder::GetCommandAddress()
+{
+    CString StrBuff, Temp;
+    StrBuff.Format(_T("%d"), RunData.RunCount.at(RunData.MSChange.at(RunData.StackingCount)));
+    if (RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
+    {
+        for (UINT i = 0; i < RepeatData.StepRepeatNum.size(); i++)
+        {
+            Temp.Format(_T(",%d-%d"), RepeatData.StepRepeatCountX.at(i), RepeatData.StepRepeatCountY.at(i));
+            StrBuff = StrBuff + Temp;
+        }
+    }
+    if (!Program.SubroutineStack.empty())//有CallSubroutine時地址紀錄的方式
+    {
+        for (UINT i = 0; i < Program.SubroutineStack.size(); i++)
+        {
+            Temp.Format(_T(",%d"), Program.SubroutineStack.at(i));
+            StrBuff = StrBuff + Temp;
+        }
+    }
+    return StrBuff;
 }
 /**************************************************************************程序變數處理區塊************************************************************************/
 /*參數設為Default*/
@@ -6304,6 +6408,81 @@ CString COrder::BlockResolve(CString String, UINT Choose)
     else
     {
         return BlockResolve(String.Right(String.GetLength() - iLength - 1), --Choose);
+    }
+}
+/**************************************************************************檢測處理區塊*****************************************************************************/
+void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCheck &TemplateCheck)
+{
+    if (Choose)//載入OK模組
+    {
+        std::vector<CString> TempFileName;
+        int Count = 0;
+        int ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;//模組起始編號
+        while (ModelNumber >= 0 && ModelNumber < (int)((COrder*)pParam)->VisionFile.AllModelName.size())
+        {
+            Count++;
+            TempFileName.push_back(((COrder*)pParam)->VisionFile.AllModelName.at(ModelNumber));
+            ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;
+        }
+        //模板數量
+        if (TempFileName.size() > 0)
+        {
+            TemplateCheck.OKModelCount = TempFileName.size() + 1;
+        }
+        //分配模板記憶體
+        TemplateCheck.OKModel = new void*[TempFileName.size()];
+        for (UINT i = 0; i < TempFileName.size(); i++)
+        {
+            TemplateCheck.OKModel[i] = malloc(sizeof(int));
+        }
+        //檔名陣列創建
+        CString *FileName = NULL;
+        FileName = new CString[TempFileName.size()];
+        for (UINT i = 0; i < TempFileName.size(); i++)
+        {
+            FileName[i] = TempFileName.at(i);
+        }
+#ifdef VI                                                                                                   
+        VI_LoadMatrixModel(TemplateCheck.OKModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.OKModelCount);//載入模板
+        VI_SetMultipleModel(TemplateCheck.OKModel, 1, 1, 70, 0, 360, TemplateCheck.OKModelCount);//設定模板參數
+        //VI_FindMatrixModel(TemplateCheck.OKModel, TemplateCheck.OKModelCount);
+        //VI_MatrixModelFree(TemplateCheck.OKModel, TemplateCheck.OKModelCount);
+        //free(TemplateCheck.OKModel);
+#endif
+    }
+    else//載入NG模組
+    {
+        std::vector<CString> TempFileName;
+        int Count = 0;
+        int ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;//模組起始編號
+        while (ModelNumber >= 0 && (UINT)ModelNumber < ((COrder*)pParam)->VisionFile.AllModelName.size())
+        {
+            Count++;
+            TempFileName.push_back(((COrder*)pParam)->VisionFile.AllModelName.at(ModelNumber));
+            ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;
+        }
+        //模板數量
+        if (TempFileName.size() > 0)
+        {
+            TemplateCheck.NGModelCount = TempFileName.size() + 1;
+        }
+        //分配模板記憶體
+        TemplateCheck.NGMOdel = new void*[TempFileName.size()];
+        for (UINT i = 0; i < TempFileName.size(); i++)
+        {
+            TemplateCheck.NGMOdel[i] = malloc(sizeof(int));
+        }
+        //檔名陣列創建
+        CString *FileName = NULL;
+        FileName = new CString[TempFileName.size()];
+        for (UINT i = 0; i < TempFileName.size(); i++)
+        {
+            FileName[i] = TempFileName.at(i);
+        }
+#ifdef VI                                                                                                   
+        VI_LoadMatrixModel(TemplateCheck.NGMOdel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.NGModelCount);//載入模板
+        VI_SetMultipleModel(TemplateCheck.NGMOdel, 1, 1, 70, 0, 360, TemplateCheck.NGModelCount);//設定模板參數
+#endif
     }
 }
 /**************************************************************************額外功能*********************************************************************************/

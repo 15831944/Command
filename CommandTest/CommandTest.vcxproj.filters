@@ -78,6 +78,12 @@
     <ClInclude Include="EmgDlg.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
+    <ClInclude Include="TemplateSet.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="NumEdit.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandTest.cpp">
@@ -132,6 +138,12 @@
       <Filter>原始程式檔</Filter>
     </ClCompile>
     <ClCompile Include="EmgDlg.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="TemplateSet.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="NumEdit.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>

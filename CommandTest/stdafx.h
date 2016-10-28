@@ -40,7 +40,6 @@
 //#define LA
 #define PRINTF
 //#define LOG
-
 #ifdef MOVE
 #include "mcc.h"
 #endif

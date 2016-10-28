@@ -6,11 +6,12 @@
 	#error "對 PCH 包含此檔案前先包含 'stdafx.h'"
 #endif
 
+//MIL初始函數配置差異
 //#define ProjectUse
 #define TestUse
 
 #include "resource.h"		// 主要符號
-
+#include <vector>
 //===================================================================================================
 //
 // Vision DLL 函數
@@ -47,6 +48,8 @@ extern "C" _declspec(dllexport) void VI_DrawCross(BYTE mode, CWnd* DisplayWindow
 extern "C" _declspec(dllexport) void VI_DrawBox(BYTE mode, CWnd* DisplayWindow, int width, int height);
 //依模式顯示繪製
 extern "C" _declspec(dllexport) void VI_DrawFOVFrame(BYTE mode, CWnd* DisplayWindow, int width, int height);
+//影像來源畫面，放大與縮小
+extern "C" _declspec(dllexport) void VI_DisplayZoom(CWnd* DisplayWindow, DOUBLE XFactor, DOUBLE YFactor, BOOL move, BOOL disp);
 
 //---------------------------------------------------------------------------------------------------
 // Pattern Match 相關函數
@@ -62,7 +65,7 @@ extern "C" _declspec(dllexport) void VI_SetSearchAngle(void* MilModel, int start
 //設定PatternMatch 搜尋範圍，視野中心位置，指定寬度、高度
 extern "C" _declspec(dllexport) void VI_SetSearchRange(void* MilModel, int width, int height);
 //搜尋標記，依模式功能
-extern "C" _declspec(dllexport) BOOL VI_FindMarkProc(BYTE mode, void* MilModel, DOUBLE &X, DOUBLE &Y, DOUBLE &A);
+extern "C" _declspec(dllexport) BOOL VI_FindMarkProc(BYTE mode, void* MilModel, DOUBLE &X, DOUBLE &Y, DOUBLE &Angle, DOUBLE &Score);
 //搜尋標記，然後繪製其位置
 extern "C" _declspec(dllexport) BOOL VI_FindMarkDrawResult(CWnd* DisplayWindow, void* MilModel, DOUBLE &Score);
 //搜尋標記，然後回傳其中心位置
@@ -81,8 +84,12 @@ extern "C" _declspec(dllexport) BOOL VI_CreateModelFromInteractiveBox(void* MilM
 extern "C" _declspec(dllexport) void VI_GetInteractiveBoxPos(int &PosX, int &PosY, int &Width, int &Height);
 //取消互動模式，移除互動矩形框
 extern "C" _declspec(dllexport) void VI_RemoveInteractiveBox();
-//載入 PatternMatch Model
-extern "C" _declspec(dllexport) void VI_LoadModel(void* MilModel, CString path, CString name);
+//配置Model空間  (搭配VI_LoadModel使用)
+extern "C" _declspec(dllexport) void VI_ModelAlloc(void* MilModel);
+//載入 PatternMatch Model檔到原有配置好的Model空間 
+extern "C" _declspec(dllexport) void VI_LoadModel(void* MilModel, CString Path, CString name);
+//配置Model空間並且載入PatternMatch Model檔 
+extern "C" _declspec(dllexport) void VI_RestoreModel(void* MilModel, CString path, CString name);
 //儲存 PatternMatch Model
 extern "C" _declspec(dllexport) void VI_SaveModel(void* MilModel, CString path, CString name);
 
@@ -105,6 +112,12 @@ extern "C" _declspec(dllexport) void VI_ModelFree(void* MilModel);
 extern "C" _declspec(dllexport) void VI_ImageBufferFree(void* MilImage);
 //MIL Vision Free
 extern "C" _declspec(dllexport) void VI_VisionFree();
+//量測，資源釋放
+extern "C" _declspec(dllexport) void VI_MmeasFree();
+//MmeasTool All Free
+extern "C" _declspec(dllexport) void VI_MeasureToolFree();
+//點膠檢測 Free
+extern "C" _declspec(dllexport) void CircleBeadFree();
 
 //---------------------------------------------------------------------------------------------------
 // 影像參數，相關函數
@@ -132,8 +145,70 @@ extern "C" _declspec(dllexport) double VI_AngleCount(double LocatX, double Locat
 //計算向量夾角 (符號修改版)
 extern "C" _declspec(dllexport) double VI_AngleOfRotationCalc(double LocatX1, double LocatY1, double LocatX2, double LocatY2, double OffsetX1, double OffsetY1, double  OffsetX2, double  OffsetY2);
 
-//===================================================================================================
-//------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------
+// 滑鼠座標 相關函數
+//---------------------------------------------------------------------------------------------------
+//滑鼠座標事件 Callback Function Eable
+extern "C" _declspec(dllexport)	void VI_MousePosFuncEable();
+//Callback Function Disable
+extern "C" _declspec(dllexport) void VI_MousePosFuncDisable();
+//取得滑鼠座標位置
+extern "C" _declspec(dllexport) BOOL VI_GetMousePos(double &PosX, double &PosY);
+
+//---------------------------------------------------------------------------------------------------
+// 量測相關函數
+//---------------------------------------------------------------------------------------------------
+//量測繪圖配置
+extern "C" _declspec(dllexport) void VI_MmeasGraphicsAlloc();
+//量測工具設置
+extern "C" _declspec(dllexport) void VI_MeasureToolSetup();
+//量測類型配置
+extern "C" _declspec(dllexport) void VI_MeasureMarkerAlloc(BYTE MarkType);
+//量測長度：量測點1設置
+extern "C" _declspec(dllexport) void VI_SetPointMarker1(double PosX, double PosY);
+//量測長度：量測點2設置
+extern "C" _declspec(dllexport) void VI_SetPointMarker2(double PosX, double PosY);
+//量測距離計算
+extern "C" _declspec(dllexport) BOOL VI_MeasureCalculate();
+//量測長度計算
+extern "C" _declspec(dllexport) BOOL VI_MeasureLengthCalc(BYTE Type);
+//繪製量測位置
+extern "C" _declspec(dllexport) void VI_DrawMeasurePos();
+//繪製量測長度
+extern "C" _declspec(dllexport) void VI_DrawMeasureLength();
+//繪製長度距離
+extern "C" _declspec(dllexport)	void VI_DrawLengthDist(BYTE Type);
+//量測圓：量測點1設置
+extern "C" _declspec(dllexport) BOOL VI_SetCircleMarker1(BOOL BlackOrWhite, double PosX, double PosY, double OuterRadius);
+//量測圓：量測點2設置
+extern "C" _declspec(dllexport) BOOL VI_SetCircleMarker2(BOOL BlackOrWhite, double PosX, double PosY, double OuterRadius);
+//量測圓直徑
+extern "C" _declspec(dllexport) BOOL VI_MeasCircleDiameter(BOOL BlackOrWhite, double PosX, double PosY, double OuterRadius);
+//量測圓心位置
+extern "C" _declspec(dllexport) BOOL VI_MeasCircleCenter(BOOL BlackOrWhite, double PosX, double PosY, double OuterRadius, double MotorLocatX, double MotorLocatY);
+//影像畫面，滑鼠點擊，觸碰式移動
+extern "C" _declspec(dllexport) void VI_GetTouchMoveDist(DOUBLE TouchPosX, DOUBLE TouchPosY, DOUBLE &DistX, DOUBLE &DistY);
+
+//---------------------------------------------------------------------------------------------------
+// Bead Inspection 檢測
+//---------------------------------------------------------------------------------------------------
+//點膠檢測樣板建立
+extern "C" _declspec(dllexport) void CircleBeadTrain(double Diameter, double MaxOffset, BOOL WhiteOrBlack, double Threshold);
+//點膠檢測驗證
+extern "C" _declspec(dllexport) BOOL CircleBeadVerify(double MaxOffset);
+
+//---------------------------------------------------------------------------------------------------
+// 檢測(一次比對多個model)
+//---------------------------------------------------------------------------------------------------**
+//載入陣列model
+extern "C" _declspec(dllexport) void 	 VI_LoadMatrixModel(void * Model[], CString Path, CString Name[], int Num);
+//載入陣列model
+extern "C" _declspec(dllexport) void VI_SetMultipleModel(void* Model[], BOOL accuracy, BOOL speed, BYTE score, int startangle, int endangle, int Num);
+//一次比對陣列model
+extern "C" _declspec(dllexport) BOOL VI_FindMatrixModel(void* Model[], int Num);
+//釋放陣列model
+extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
+
 // CVisionApp
 // 這個類別的實作請參閱 Vision.cpp
 //
