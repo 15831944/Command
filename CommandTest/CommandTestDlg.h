@@ -162,6 +162,7 @@ public:
     afx_msg void OnBnClickedBtncommand51();
     afx_msg void OnBnClickedBtncommand52();
     afx_msg void OnBnClickedBtntest();
+    afx_msg void OnBnClickedBtncheck();
 };
 
 

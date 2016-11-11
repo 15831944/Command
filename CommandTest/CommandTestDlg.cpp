@@ -168,6 +168,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNCOMMAND51, &CCommandTestDlg::OnBnClickedBtncommand51)
 	ON_BN_CLICKED(IDC_BTNCOMMAND52, &CCommandTestDlg::OnBnClickedBtncommand52)
 	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
+	ON_BN_CLICKED(IDC_BTNCHECK, &CCommandTestDlg::OnBnClickedBtncheck)
 END_MESSAGE_MAP()
 
 
@@ -184,7 +185,7 @@ BOOL CCommandTestDlg::OnInitDialog()
 	/*終端控制台開啟*/
 #ifdef PRINTF
 	InitConsoleWindow();
-	_cprintf("str = %s\n ", "Debug output goes to terminal\n");
+	_cprintf("str = %s\n", "Debug output goes to terminal\n");
 #endif
 	//命令列表
 	m_CommandList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
@@ -676,7 +677,7 @@ void CCommandTestDlg::OnBnClickedBtndefault()
 	else
 	{
 		((CDefault*)m_pDefaultDlg)->DestroyWindow();
-        m_pDefaultDlg = NULL;
+		m_pDefaultDlg = NULL;
 		m_pDefaultDlg = new CDefault();
 		m_pDefaultDlg->Create(IDD_DIALOG1, this);
 		m_pDefaultDlg->ShowWindow(SW_SHOW);
@@ -697,7 +698,7 @@ void CCommandTestDlg::OnBnClickedBtnvision()
 		{
 			((CCamera*)m_pCameraDlg)->DestroyWindow();
 		}
-        m_pCameraDlg = NULL;
+		m_pCameraDlg = NULL;
 		m_pCameraDlg = new CCamera();
 		m_pCameraDlg->Create(IDD_DIALOG2, this);
 		m_pCameraDlg->ShowWindow(SW_SHOW);
@@ -715,7 +716,7 @@ void CCommandTestDlg::OnBnClickedBtnlaser()
 	else
 	{
 		((CCamera*)m_pLaserDlg)->DestroyWindow();
-        m_pLaserDlg = NULL;
+		m_pLaserDlg = NULL;
 		m_pLaserDlg = new CLaserDlg();
 		m_pLaserDlg->Create(IDD_DIALOG6, this);
 		m_pLaserDlg->ShowWindow(SW_SHOW);
@@ -1872,4 +1873,24 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 /*測試用按鈕*/
 void CCommandTestDlg::OnBnClickedBtntest()
 {
+    for (UINT i = 0; i < a.IntervalCheckCoordinate.size(); i++)
+    {
+        _cwprintf(L"%s,%s,%d,%d,%d", a.IntervalCheckCoordinate.at(i).Address,
+            a.IntervalCheckCoordinate.at(i).CheckModeAddress,
+            a.IntervalCheckCoordinate.at(i).Position.X,
+            a.IntervalCheckCoordinate.at(i).Position.Y,
+            a.IntervalCheckCoordinate.at(i).Position.Z);
+    }
+}
+/*檢測結果顯示*/
+void CCommandTestDlg::OnBnClickedBtncheck()
+{
+	for (UINT i = 0; i < a.CheckFinishRecord.size(); i++)
+	{
+		_cwprintf(L"%s,%s,%s,%d,%d,%d\n", a.CheckFinishRecord.at(i).Result, a.CheckFinishRecord.at(i).CheckData.CheckModeAddress, a.CheckFinishRecord.at(i).CheckData.Address,
+			a.CheckFinishRecord.at(i).CheckData.Position.X, a.CheckFinishRecord.at(i).CheckData.Position.Y, a.CheckFinishRecord.at(i).CheckData.Position.Z);
+	}
+	CString  StrBuff;
+	StrBuff.Format(L"OK_Amount:%d\nNG_Amount :%d\n",a.CheckResult.OKCount,a.CheckResult.NGCount);
+	MessageBox(StrBuff);
 }

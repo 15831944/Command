@@ -5,14 +5,13 @@
 #include "Order.h"
 #include <math.h>
 
-
 // COrder
 
 IMPLEMENT_DYNAMIC(COrder, CWnd)
 
 COrder::COrder()
 {
-    wakeEvent = NULL;
+    //wakeEvent = NULL;
     //系統移動速度
     MoveSpeedSet = { 1200000,80000,6000 };
     LMPSpeedSet = { 1200000,80000,6000 };
@@ -44,6 +43,9 @@ COrder::COrder()
     //IO參數
     IOControl = { 0,0 };
     IOParam = { NULL };
+    //檢測參數
+    CheckResult = { 0,0,0 };
+    CheckSwitch = { 0,0,0,0,0,0 };
     /****************************DemoTemprerily*******************************/
     DemoTemprarilySwitch = FALSE;
 }
@@ -82,7 +84,7 @@ BOOL COrder::Run()
             ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*_*_*_*_*.mod"));
             //出膠控制器模式
             m_Action.g_bIsDispend = TRUE;   
-            wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//事件控制
             g_pThread = AfxBeginThread(Thread, (LPVOID)this);
             return TRUE;
         }  
@@ -122,12 +124,19 @@ BOOL COrder::Stop()
             m_Action.g_bIsStop = TRUE;
             m_Action.g_bIsPause = FALSE;
             g_pThread->ResumeThread();//啟動線程
+            if (g_pCheckCoordinateScanThread)//判斷檢測是否有在運作
+            {
+                if (SuspendThread(g_pCheckCoordinateScanThread) != GetLastError())//判斷是否在區間檢測
+                {
+                    g_pCheckCoordinateScanThread->ResumeThread();//啟動線程
+                }
+            }
             #ifdef MOVE
                 MO_DecSTOP();//立即減速停止運動指令
             #endif
-            //SetEvent(wakeEvent);
-            //WaitForSingleObject(g_pThread->m_hThread, INFINITE);        //等待线程安全返回
-            CloseHandle(wakeEvent);
+            //SetEvent(wakeEvent);//設置事件
+            //WaitForSingleObject(g_pThread->m_hThread, INFINITE);//等待线程安全返回
+            //CloseHandle(wakeEvent);//關閉事件句柄
             return TRUE;
         }
         else
@@ -149,13 +158,18 @@ BOOL COrder::Pause()
 {
     if (g_pThread && RunStatusRead.RunStatus == 1 && RunStatusRead.GoHomeStatus) {
         m_Action.g_bIsPause = TRUE;
-        g_pThread->SuspendThread();
+        g_pThread->SuspendThread();//暫停線程
+        if (g_pCheckCoordinateScanThread)//判斷是否在區間檢測
+        {
+            g_pCheckCoordinateScanThread->SuspendThread();//暫停線程
+        }
         RunStatusRead.RunStatus = 2;//狀態改變成暫停中
         m_Action.g_bIsPause = TRUE;
         if (g_pRunLoopThread && RunStatusRead.RunLoopStatus)
         {
             RunStatusRead.RunLoopStatus = FALSE;
         }
+        
         return TRUE;
     }
     else
@@ -172,6 +186,13 @@ BOOL COrder::Continue()
         {
             m_Action.g_bIsPause = FALSE;
             g_pThread->ResumeThread();//啟動線程
+            if (g_pCheckCoordinateScanThread)//判斷檢測是否有在運作
+            {
+                if (SuspendThread(g_pCheckCoordinateScanThread) != GetLastError())//判斷是否在區間檢測
+                {
+                    g_pCheckCoordinateScanThread->ResumeThread();//啟動線程
+                }
+            }        
             RunStatusRead.RunStatus = 1;//狀態改變成運作中
             if (g_pRunLoopThread && !RunStatusRead.RunLoopStatus)
             {
@@ -235,7 +256,7 @@ BOOL COrder::View(BOOL mode)
             ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*_*_*_*_*.mod"));
             //出膠控制器模式
             m_Action.g_bIsDispend = FALSE;
-            //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件
             g_pThread = AfxBeginThread(Thread, (LPVOID)this);
         }
         return TRUE;
@@ -358,7 +379,7 @@ UINT COrder::HomeThread(LPVOID pParam)
 UINT COrder::Thread(LPVOID pParam)
 {
 #ifdef PRINTF
-    _cwprintf(L"Thread()::是否載入Demo檔:%d\n", ((COrder*)pParam)->DemoTemprarilySwitch);
+    (((COrder*)pParam)->DemoTemprarilySwitch) ? _cwprintf(L"Thread()::有載入Demo檔\n") : _cwprintf(L"Thread()::沒有載入Demo檔\n");
 #endif
     ((COrder*)pParam)->RunStatusRead.RunStatus = 1;//狀態改變成運作中
     while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->ModelControl.Mode != 4/*&& ((COrder*)pParam)->Commanding != _T("End")*/)//新增模式判斷
@@ -375,14 +396,56 @@ UINT COrder::Thread(LPVOID pParam)
             }
             ((COrder*)pParam)->RunData.SubProgramName = _T("");
         }
-        if (((COrder*)pParam)->Program.LabelName != _T(""))//普通標籤
+        /***********程序命令執行***********/
+        if (((COrder*)pParam)->Program.LabelName != _T(""))//Label控制
         {
             ((COrder*)pParam)->Program.LabelCount++;
-            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
-                || ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
-            {  
-                //執行Call子程序，但沒有此子程序時
-                if (((COrder*)pParam)->Program.CallSubroutineStatus && ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
+            if (((COrder*)pParam)->Program.LabelName == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))))
+            {
+                //找到此標籤時
+                if (((COrder*)pParam)->Program.CallSubroutineStatus)//子程序的標籤
+                {
+#ifdef PRINTF
+                    _cwprintf(L"Thread()::找到Subroutine的Label\n");
+#endif
+                    if (((COrder*)pParam)->SubroutinePretreatmentFind(pParam))//執行子程序命令預處理
+                    {
+#ifdef LOG
+                        InitFileLog(L"找到預命令:" + ((COrder*)pParam)->Program.SubroutineCommandPretreatment + L"\n");
+#endif
+                    }
+                    ((COrder*)pParam)->Program.CallSubroutineStatus = FALSE;//清除子程序呼叫狀態
+                }
+                //找到Loop標籤時
+                else if (((COrder*)pParam)->RepeatData.LoopSwitch)
+                {
+#ifdef PRINTF
+                    _cwprintf(L"Thread()::找到Loop的Label\n");
+#endif
+                    ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;//清除Loop呼叫狀態
+                    //判斷StepRepeat是否有強行跳轉
+                    StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                }
+                //找到GotoLabel或Intput標籤
+                else
+                {
+#ifdef PRINTF
+                    _cwprintf(L"Thread()::找到Label\n");
+#endif
+                    //判斷StepRepeat是否有強行跳轉
+                    StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                }
+                //標籤清除
+                ((COrder*)pParam)->Program.LabelName = _T("");
+                ((COrder*)pParam)->Program.LabelCount = 0;
+            }
+            else if (((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
+            {
+                //全部尋找完畢，未找到標籤
+#ifdef PRINTF
+                _cwprintf(L"Thread()::未找到Label\n");
+#endif
+                if (((COrder*)pParam)->Program.CallSubroutineStatus)//子程序的標籤
                 {
                     if (!((COrder*)pParam)->Program.SubroutineStack.empty())
                     {
@@ -405,19 +468,8 @@ UINT COrder::Thread(LPVOID pParam)
                         //將Call子程序狀態設為否
                         ((COrder*)pParam)->Program.CallSubroutineStatus = FALSE;
                     }
-                } 
-                else//有找到Subroutine時
-                {
-                    if (((COrder*)pParam)->SubroutinePretreatmentFind(pParam))
-                    {
-#ifdef LOG
-                        InitFileLog(L"找到Suroutine!\n");
-                        InitFileLog(L"預命令:" + ((COrder*)pParam)->Program.SubroutineCommandPretreatment + L"\n");
-#endif
-                    }
                 }
-                //執行Loop，沒有此標籤時
-                if (((COrder*)pParam)->RepeatData.LoopSwitch && ((COrder*)pParam)->Program.LabelCount == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())
+                else if (((COrder*)pParam)->RepeatData.LoopSwitch)//Loop的標籤
                 {
                     if (!((COrder*)pParam)->RepeatData.LoopAddressNum.empty())
                     {
@@ -426,40 +478,45 @@ UINT COrder::Thread(LPVOID pParam)
                         ((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;
                     }
                 }
-                //判斷StepRepeat是否有強行跳轉
-                StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
                 //標籤清除
                 ((COrder*)pParam)->Program.LabelName = _T("");
                 ((COrder*)pParam)->Program.LabelCount = 0;
             }
-        }
-        else if (((COrder*)pParam)->RepeatData.StepRepeatLabel != _T(""))//StepRepeat專用標籤
-        {
+            else
+            {
 #ifdef PRINTF
-            _cwprintf(L"Thread()::StepRepeatLabel:%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel);
+                //_cwprintf(L"Thread()::Label查找指令(%d)...\n", ((COrder*)pParam)->Program.LabelCount);
 #endif
-            if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
+            }
+        }
+        else if (((COrder*)pParam)->RepeatData.StepRepeatLabel != _T(""))//StepRepeatLabel控制
+        {
+            //讓StepRepeat尋找下一個StepRepeat
+            if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//利用StepRepeaLabel編號尋找是否有下一個StepRepeat
             {
 #ifdef PRINTF
                 _cwprintf(L"Thread()::%s=%s\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel, CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6));
-#endif
-                //讓StepRepeat尋找下一個StepRepeat
+#endif              
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabel ==
                     CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 6) && 
                     (CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"StepRepeatX" ||
                     CommandResolve(((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))), 0) == L"StepRepeatY") )
                 {
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
-                    //++為了讓他執行StepRepeat
+                    //++是為了讓他執行StepRepeat
                     ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))++;
                 }
             }
+            //讓StepRepeat尋找StepRepeatLabel
             else
-            {
+            {   
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabel == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))))
                 {
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");//標籤清除
                 }
+#ifdef PRINTF
+                _cwprintf(L"Thread()::尋找%s中...\n", ((COrder*)pParam)->RepeatData.StepRepeatLabel);
+#endif
             }
         }
         else//執行指令
@@ -478,9 +535,25 @@ UINT COrder::Thread(LPVOID pParam)
                 ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z);
             InitFileLog(Temp);
 #endif
+            /*****命令執行緒*****/
             g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
             while (g_pSubroutineThread) {
                 Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+            }
+            /*****檢測執行緒*****/
+            if (((COrder*)pParam)->CheckModel == 1 && (((COrder*)pParam)->CheckSwitch.Templateing || ((COrder*)pParam)->CheckSwitch.Diametering))//判斷即時檢測是否執行
+            {
+                g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
+                while (g_pCheckActionThread) {
+                    Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+                }
+            }
+            if (((COrder*)pParam)->CheckSwitch.RunCheck)//判斷區間檢測是否執行
+            {
+                g_pCheckCoordinateScanThread = AfxBeginThread(((COrder*)pParam)->CheckCoordinateScan, pParam);
+                while (g_pCheckCoordinateScanThread) {
+                    Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+                }
             }
 #ifdef LOG
             //QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
@@ -488,11 +561,11 @@ UINT COrder::Thread(LPVOID pParam)
             //Temp.Format(L"%s at RunTime:%.6f\n", ((COrder*)pParam)->Commanding,((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
             //InitFileLog(Temp);
 #endif
-        }
-        //在StepRepeat階段用來尋找N層StepRepeat用
-        if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
+        }   
+        /***********程序命令計數***********/    
+        if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//在StepRepeat階段用來尋找N層StepRepeat用
         {
-            if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == 0)
+            if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == 0)//(由下往上掃描)掃描到當命令地址為0時停止
             {
 #ifdef PRINTF
                 _cwprintf(L"Thread()::沒有發現其他StepRepeat\n");
@@ -506,17 +579,24 @@ UINT COrder::Thread(LPVOID pParam)
                 }
                 else
                 {
+                    //將尋找StepRepeat模式改成尋找StepRepeatLabel模式
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + ((COrder*)pParam)->RepeatData.StepRepeatLabel;
+#ifdef PRINTF
+                    _cwprintf(L"Thread()::將模式改成尋找StepRepeatLabel\n");
+#endif
                 }       
                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
             }
             else
             {
                 ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
+#ifdef PRINTF 
+                ((COrder*)pParam)->RepeatData.StepRepeatLabel != _T("") ? _cwprintf(L"Thread()::StepRpeat尋找中...\n") : _cwprintf(L"Thread()::StepRpeat找到了!\n");                    
+#endif        
             }
         }
-        else
-        {
+        else//正常程序命令計數用
+        {                                                   
             if (((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) == ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1)
             {
                 ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;
@@ -545,15 +625,17 @@ UINT COrder::Thread(LPVOID pParam)
     {
         ((COrder*)pParam)->m_Action.BackGOZero(((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
     }
+
     //TODO::DEMO所以加入
     /*if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
     {
         SavePointData(pParam);
-    } */
+    } 
     if (!((COrder*)pParam)->DemoTemprarilySwitch)//如果DemoTemprarilySwitch為FALSE清除
     {
         ((COrder*)pParam)->m_Action.LA_Clear();//清除連續線段陣列
     } 
+    */  
     ((COrder*)pParam)->DecideClear();//清除所有陣列
     ((COrder*)pParam)->m_Action.g_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
     //計算執行時間
@@ -565,20 +647,20 @@ UINT COrder::Thread(LPVOID pParam)
 }
 /*命令動作(子)執行緒*/
 UINT COrder::SubroutineThread(LPVOID pParam) {
-    HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;
+    //HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;
     ((COrder*)pParam)->RunStatusRead.StepCommandStatus = TRUE;//執行命令狀態
     CString Command = ((COrder*)pParam)->Commanding;//命令字串 
     UINT CurrentRunCommandNum = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));//命令地址
     if (CommandResolve(Command, 0) == L"Printf")
     {
 #ifdef PRINTF
-        for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)
+        /*for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)
         {
             _cwprintf(L"目前地址:%s\n", ((COrder*)pParam)->IntervalTemplateCheck.at(i).Address);
-        }    
-#endif   
+        }    */    
         // _cwprintf(L"目前地址:%s\n", ((COrder*)pParam)->GetCommandAddress());
-        //((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));
+#endif  
+        //((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));//啟動事件計時
     }
     /************************************************************程序**************************************************************/
     if (CommandResolve(Command, 0) == L"GotoLabel") 
@@ -610,22 +692,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         ((COrder*)pParam)->Program.SubroutineStack.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
         //新增紀錄目前機械手臂(虛擬座標)位置堆疊
         //實際座標取法
-        /*Buff.X = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 0));
-        Buff.Y = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 1));
-        Buff.Z = _ttol(CommandResolve(((COrder*)pParam)->m_Action.NowLocation(), 2));*/
-        CoordinateData Buff;
-        Buff.X = ((COrder*)pParam)->VirtualCoordinateData.X;
-        Buff.Y = ((COrder*)pParam)->VirtualCoordinateData.Y;
-        Buff.Z = ((COrder*)pParam)->VirtualCoordinateData.Z;  
-        ((COrder*)pParam)->Program.SubroutinePointStack.push_back(Buff);
-        //新增模式堆疊
+        ((COrder*)pParam)->Program.SubroutinePointStack.push_back({ 0,((COrder*)pParam)->VirtualCoordinateData.X ,((COrder*)pParam)->VirtualCoordinateData.Y ,((COrder*)pParam)->VirtualCoordinateData.Z });
+        //新增Subroutine呼叫時模式堆疊
         ((COrder*)pParam)->Program.SubroutineModel.push_back(((COrder*)pParam)->ModelControl.Mode);
         //新增offset堆疊
-        Buff.Status = FALSE;
-        Buff.X = 0;
-        Buff.Y = 0;
-        Buff.Z = 0;
-        ((COrder*)pParam)->OffsetData.push_back(Buff);
+        ((COrder*)pParam)->OffsetData.push_back(((COrder*)pParam)->InitData);
         //新增狀態堆疊
         ((COrder*)pParam)->ArcData.push_back(((COrder*)pParam)->InitData);
         ((COrder*)pParam)->CircleData1.push_back(((COrder*)pParam)->InitData);
@@ -637,7 +708,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         //堆疊計數加1
         ((COrder*)pParam)->Program.SubroutinCount++; 
 #ifdef PRINTF
-        _cwprintf(L"SubroutineThread()::呼叫子程序(%d)地址(%d)\n", CommandResolve(Command, 1), ((COrder*)pParam)->Program.SubroutineStack.back());
+        _cwprintf(L"SubroutineThread()::呼叫子程序:數量(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
 #endif
     }
     if (CommandResolve(Command, 0) == L"SubroutineEnd")
@@ -645,10 +716,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         //判斷子程序堆疊中是否為空
         if (!((COrder*)pParam)->Program.SubroutineStack.empty())
         {
-            if (((COrder*)pParam)->Program.SubroutineModel.back() == ((COrder*)pParam)->ModelControl.Mode)
+            if (((COrder*)pParam)->Program.SubroutineModel.back() == ((COrder*)pParam)->ModelControl.Mode)//判斷跳出模式是否等於目前模式
             {
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::結束子程序(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
+                _cwprintf(L"SubroutineThread()::結束子程序:數量(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
 #endif
                 //TODO::可選擇是否在影像模式不移動回CallSuboutine位置
                 //將機器手臂移動至呼叫時位置
@@ -662,44 +733,34 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
                 }
 #endif
-                //判斷子程序呼叫時模式
-                if (((COrder*)pParam)->Program.SubroutineModel.back() != 2)
+                if (((COrder*)pParam)->Program.SubroutineModelControlSwitch)//用在模式二進入模式三結束子程序
+                {
+                    //將程式地址設為雷射轉換模式地址
+                    ((COrder*)pParam)->ModelControl.Mode = 3;
+                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
+                    //判斷StepRepeat是否有強行跳轉
+                    //StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    //在模式轉換後必須將雷射狀態初始化
+                    ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
+                    ((COrder*)pParam)->Program.SubroutineModelControlSwitch = FALSE;
+#ifdef PRINTF
+                    _cwprintf(L"SubroutineThread()::SubroutineEnd模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+#endif
+                }
+                else//用在相同模式進入和結束子程序
                 {
                     //將程序地址設為呼叫子程序時地址
                     ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
                     //判斷StepRepeat是否有強行跳轉
-                    StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                }
-                else
-                {
-                    if (((COrder*)pParam)->Program.SubroutineModelControlSwitch)//用在模式二呼叫模式三結束子程序
-                    {
-                        //將程式地址設為雷射轉換模式地址
-                        ((COrder*)pParam)->ModelControl.Mode = 3;
-                        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
-                        //判斷StepRepeat是否有強行跳轉
-                        StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                        //TODO::在模式轉換後必須將雷射狀態初始化
-                        ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
-                        ((COrder*)pParam)->Program.SubroutineModelControlSwitch = FALSE;
+                    //StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::SubroutineEnd雷射模式結束跳至轉換地址:%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    _cwprintf(L"SubroutineThread()::SubroutineEnd子程序結束跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-                    }
-                    else//用在模式二進入模式二結束子程序
-                    {
-                        //將程序地址設為呼叫子程序時地址
-                        ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
-                        //判斷StepRepeat是否有強行跳轉
-                        StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                    }
                 }
-                //釋放紀錄程序位置堆疊
-                ((COrder*)pParam)->Program.SubroutineStack.pop_back();
                 //判斷CallSubroutine中動作是否完全
                 LineGotoActionJudge(pParam);
-                
-                
+                //釋放紀錄程序位置堆疊
+                ((COrder*)pParam)->Program.SubroutineStack.pop_back();   
                 //釋放紀錄手臂位置堆疊
                 ((COrder*)pParam)->Program.SubroutinePointStack.pop_back();
                 //釋放記錄呼叫時模式堆疊
@@ -717,15 +778,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 //將堆疊計數減1
                 ((COrder*)pParam)->Program.SubroutinCount--;
             }
-            else
+            else//用在模式三進入模式二結束子程序
             {
                 ((COrder*)pParam)->ModelControl.Mode = 3;
                 ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
-                //TODO::在模式轉換後必須將雷射狀態初始化
+                //在模式轉換後必須將雷射狀態初始化
                 ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
                 ((COrder*)pParam)->Program.SubroutineModelControlSwitch = FALSE;
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::SubroutineEnd雷射模式結束跳至轉換地址:%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                _cwprintf(L"SubroutineThread()::SubroutineEnd模式轉換(3->2)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif           
             }
         }
@@ -737,24 +798,29 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
             _cwprintf(L"SubroutineThread()::進入StepRepeatLabel\n");
 #endif  
-            CString CommandBuff = _T("");
-            
-            for (UINT i = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)); i < ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size(); i++)
+            CString CommandBuff = _T("");   
+            for (UINT i = CurrentRunCommandNum; i < ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size(); i++)
             {
                 CommandBuff = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).at(i);
                 if (_ttol(CommandResolve(CommandBuff, 6)) == _ttol(CommandResolve(Command, 1)) && (CommandResolve(CommandBuff, 0) == L"StepRepeatX" || CommandResolve(CommandBuff, 0) == L"StepRepeatY"))
                 {           
-                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = i + 1;//之後會減1所以+1
-                    ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
+                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = i + 1;//改變目前執行地址(之後會減1所以+1)
+                    ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;//標籤鎖打開                 
+                }
+                //判斷命令是否掃描到最後一項且標籤鎖打開
+                if ((i == (((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1)) && ((COrder*)pParam)->RepeatData.StepRepeatLabelLock)
+                {
                     //判斷StepRepeat是否有強行跳轉
                     StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-                    ((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",CurrentRunCommandNum,i});//新增StepRepeat區間  
-#ifdef PRINTF
+                    //((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",CurrentRunCommandNum, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) - 1 });//新增StepRepeat區間
+                    ((COrder*)pParam)->StepRepeatAddress = CurrentRunCommandNum;
+#ifdef PRINTF        
+                    
                     _cwprintf(L"SubroutineThread()::跳躍至地址為%d的StepRepeat\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-#endif     
+#endif 
                 }
-            }     
-        }  
+            }               
+        }   
     }
     if (CommandResolve(Command, 0) == L"Loop")
     {
@@ -776,6 +842,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         if (((COrder*)pParam)->RepeatData.LoopCount.at(i) > 1)
                         {
+                            ((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
                             ((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
                             --((COrder*)pParam)->RepeatData.LoopCount.at(i);
                         }
@@ -808,7 +875,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
         //StepRepeat陣列是否大於1*1 && 模式是否 1or2 
         if ((_ttol(CommandResolve(Command, 3)) * _ttol(CommandResolve(Command, 4))) > 0 && (_ttol(CommandResolve(Command,5)) == 1 || _ttol(CommandResolve(Command, 5)) == 2))
         {
-            if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())//都沒有RepeatXY時
+            if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())//都沒有StepRepeatXY時
             {
                 if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第一次進入SetpRepeat(代表最外層)
                 {
@@ -836,6 +903,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     //紀錄X、Y計數
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    //記錄StepRepeat區間
+                    ((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->StepRepeatAddress,CurrentRunCommandNum });
                     //S行迴圈狀態初始化
                     ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                     //紀錄Block
@@ -876,9 +945,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif
                 }
             }
-            else//有StepRepeat時
+            else//有StepRepeatX時
             {
-                UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
+                UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();//獲取目前有幾個StepRepeat
 #ifdef PRINTF
                 _cwprintf(L"SubroutineThread()::目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
 #endif 
@@ -995,7 +1064,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             _cwprintf(L"SubroutineThread()::刪除StepRepeatIntervel區間陣列\n");
 #endif 
                             //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                            if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                            if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                             {
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                                 ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -1008,7 +1077,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum )
                         {
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::進入新增內層迴圈\n");
+                            _cwprintf(L"SubroutineThread()::需要新增內層迴圈\n");
 #endif 
                             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
@@ -1021,11 +1090,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         if (i == StepRepeatNumSize - 1)
                         {
-                            //StepRepeatLabel不同時進入
+                            //未執行時新增StepRepeatX
                             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
-                            {
+                            {                         
 #ifdef PRINTF
-                                _cwprintf(L"SubroutineThread()::第一次新增內層StepRepeat\n");
+                                _cwprintf(L"SubroutineThread()::未執行時新增StepRepeatX內層\n");
 #endif 
                                 //StepRepeat新增計數總數++
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
@@ -1044,6 +1113,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 //紀錄X、Y計數
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //記錄StepRepeat區間
+                                ((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->StepRepeatAddress,CurrentRunCommandNum });
                                 //S行迴圈狀態初始化
                                 ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                                 //紀錄Block
@@ -1076,13 +1147,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                 }
                             }
-                            //StepRepeatLabel相同時進入
-                            else //第二次進入StepRepeat時(內層迴圈做第N次)
+                            //執行時新增StepRepeatX
+                            else if(((COrder*)pParam)->RepeatData.StepRepeatLabelLock) //第二次進入StepRepeatX時(內層迴圈做第N次)
                             {
 #ifdef PRINTF
-                                _cwprintf(L"SubroutineThread()::第二次新增內層StepRepeat\n"); 
+                                _cwprintf(L"SubroutineThread()::執行時新增StepRepeatX內層\n"); 
 #endif 
-                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;//執行新增控制關閉
                                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
                                 //紀錄StepRepeat地址
                                 ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
@@ -1119,7 +1190,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     }
                                     _cwprintf(L"\n");
 #endif 
-                                    BlockProcessStartX(Command, pParam , TRUE);
+                                    BlockProcessStartX(Command, pParam, TRUE);
                                 }
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
@@ -1129,7 +1200,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
                                     {
 #ifdef PRINTF
-                                        _cwprintf(L"SubroutineThread()::進入新增內層迴圈2");
+                                        _cwprintf(L"SubroutineThread()::繼續補償內層迴圈\n");
 #endif 
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                                         ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
@@ -1141,7 +1212,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                     {
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
                                     }
-                                }
+                                }                          
                             }                      
                         }
                     }
@@ -1190,6 +1261,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     //紀錄X、Y計數
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    //記錄StepRepeat區間
+                    ((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->StepRepeatAddress,CurrentRunCommandNum });
                     //S行迴圈狀態初始化
                     ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                     //紀錄Block
@@ -1230,7 +1303,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #endif 
                 }
             }
-            else//有StepRepeat時
+            else//有StepRepeatY時
             {
                 UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
 #ifdef PRINTF
@@ -1348,7 +1421,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                             _cwprintf(L"SubroutineThread()::刪除StepRepeatIntervel區間陣列\n");
 #endif 
                             //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                            if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                            if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                             {
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                                 ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -1374,10 +1447,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     {
                         if (i == StepRepeatNumSize - 1)
                         {
+                            //未執行時新增StepRepeatY
                             if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock && !((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch)//第一次進入SetpRepeat時(內層迴圈)
                             {
 #ifdef PRINTF
-                                _cwprintf(L"SubroutineThread()::第一次新增內層StepRepeat\n");
+                                _cwprintf(L"SubroutineThread()::未執行時新增StepRepeatY內層\n");
 #endif 
                                 //StepRepeat計數總數++
                                 ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
@@ -1396,6 +1470,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 //紀錄X、Y計數
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
                                 ((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //記錄StepRepeat區間
+                                ((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->StepRepeatAddress,CurrentRunCommandNum });
                                 //S行迴圈狀態初始化
                                 ((COrder*)pParam)->RepeatData.SSwitch.push_back(TRUE);
                                 //紀錄Block
@@ -1411,7 +1487,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::StepRepeatX 處理阻斷位置:");
+                                    _cwprintf(L"SubroutineThread()::StepRepeatY 處理阻斷位置:");
                                     for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
@@ -1423,17 +1499,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::StepRepeatX 沒有阻斷\n");
+                                    _cwprintf(L"SubroutineThread()::StepRepeatY 沒有阻斷\n");
 #endif 
                                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = CommandResolve(Command, 6);
                                 }
                             }
-                            else //第二次進入StepRepeat時(內層迴圈做第N次)
+                            //執行時新增StepRepeatY
+                            else if (((COrder*)pParam)->RepeatData.StepRepeatLabelLock)//第二次進入StepRepeatY時(內層迴圈做第N次)
                             {
 #ifdef PRINTF
-                                _cwprintf(L"SubroutineThread()::第二次新增內層StepRepeat\n");
+                                _cwprintf(L"SubroutineThread()::執行時新增StepRepeatY內層\n");
 #endif 
-                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;
+                                ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = FALSE;//執行新增控制關閉
                                 ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = FALSE;
                                 //紀錄StepRepeat地址
                                 ((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
@@ -1463,7 +1540,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 if (_ttol(CommandResolve(Command, 7)))//有阻斷
                                 {
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::StepRepeatX 處理阻斷位置:");
+                                    _cwprintf(L"SubroutineThread()::StepRepeatY 處理阻斷位置:");
                                     for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size(); i++)
                                     {
                                         _cwprintf(L"%s,", ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i));
@@ -1475,12 +1552,12 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                 else//無阻斷不記錄繼續往下尋找StepRepeat
                                 {
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::StepRepeatX 沒有阻斷\n");
+                                    _cwprintf(L"SubroutineThread()::StepRepeatY 沒有阻斷\n");
 #endif 
                                     if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
                                     {
 #ifdef PRINTF
-                                        _cwprintf(L"SubroutineThread()::進入新增內層迴圈\n");
+                                        _cwprintf(L"SubroutineThread()::繼續補償內層迴圈\n");
 #endif 
                                         ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
                                         ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
@@ -1525,17 +1602,26 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             if (!((COrder*)pParam)->ModelControl.VisionModeJump)
             {
                 ((COrder*)pParam)->ModelControl.Mode = 1;
+#ifdef PRINTF
+                _cwprintf(L"SubroutineThread()::End模式轉換(0->1)\n\n下一個模式即將開始...\n");
+#endif
             } 
             else
             {
                 ((COrder*)pParam)->ModelControl.Mode = 3;
+#ifdef PRINTF
+                _cwprintf(L"SubroutineThread()::End模式轉換(0->3)\n\n下一個模式即將開始...\n");
+#endif
             }         
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 1)
         {           
             ((COrder*)pParam)->ModelControl.Mode = 3;
-            //TODO::在模式轉換後必須將雷射狀態初始化
+            //在模式轉換後必須將雷射狀態初始化
             ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
+#ifdef PRINTF
+            _cwprintf(L"SubroutineThread()::End模式轉換(1->3)\n\n下一個模式即將開始...\n");
+#endif
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 2)
         {
@@ -1543,20 +1629,31 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             {
                 ((COrder*)pParam)->ModelControl.Mode = 3;
                 ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
-                //TODO::在模式轉換後必須將雷射狀態初始化
+                //在模式轉換後必須將雷射狀態初始化
                 ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::End雷射模式結束跳至轉換地址:%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                _cwprintf(L"SubroutineThread()::End模式轉換(2->3)地址跳至:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
             }
-            else
+            else//代表Subroutine沒有SubroutineEnd
             {
                 AfxMessageBox(L"程式發生違法撰寫");
             }
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 3)
         {
-            ((COrder*)pParam)->ModelControl.Mode = 4;//結束程序
+            if (((COrder*)pParam)->CheckSwitch.Template || ((COrder*)pParam)->CheckSwitch.Diameter || ((COrder*)pParam)->CheckSwitch.Area)
+            {
+                ((COrder*)pParam)->CheckSwitch.RunCheck = TRUE;
+                ((COrder*)pParam)->CheckSwitch.Template = FALSE;
+                ((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
+                ((COrder*)pParam)->CheckSwitch.Area = FALSE;
+                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//讓End指令重新執行一次，為了讓程序可結束
+            }
+            else
+            {
+                ((COrder*)pParam)->ModelControl.Mode = 4;//結束程序
+            }
         }
     }
     /************************************************************動作**************************************************************/
@@ -1606,6 +1703,25 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
             ((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+            if (((COrder*)pParam)->CheckSwitch.Templateing || ((COrder*)pParam)->CheckSwitch.Diametering)//即時檢測(模板、區間)
+            {          
+                ((COrder*)pParam)->CheckModel = 1;//檢測模式設為即時檢測
+            }
+            else//區間檢測(模板、直徑、區域)
+            {
+                if (((COrder*)pParam)->CheckSwitch.Template || ((COrder*)pParam)->CheckSwitch.Diameter)//模板、直徑區間檢測點新增
+                {
+                    CheckCoordinate CheckCoordinateInit;
+                    CheckCoordinateInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入命令地址
+                    CheckCoordinateInit.CheckModeAddress = ((COrder*)pParam)->CurrentCheckAddress;//加入目前區間檢測地址
+                    CheckCoordinateInit.Position = { 0, ((COrder*)pParam)->FinalWorkCoordinateData.X , ((COrder*)pParam)->FinalWorkCoordinateData.Y , 0 };
+                    //加入區間檢測點陣列
+                    ((COrder*)pParam)->IntervalCheckCoordinate.push_back(CheckCoordinateInit);
+                }   
+                else if (((COrder*)pParam)->CheckSwitch.Area)//區域區間檢測點新增
+                {
+                }
+            }
         }
     }
     if (CommandResolve(Command, 0) == L"LineStart")
@@ -2158,8 +2274,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             ((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
            
             ((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
-
-            _cwprintf(L"%ld,%ld,%ld", ((COrder*)pParam)->NVMVirtualCoordinateData.X, ((COrder*)pParam)->NVMVirtualCoordinateData.Y, ((COrder*)pParam)->NVMVirtualCoordinateData.Z);
             
             if (_ttol(CommandResolve(Command, 4)) == 1)
             {
@@ -3203,7 +3317,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
                     ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::第一點找到第二點找到Offset計算完成");
+                    _cwprintf(L"SubroutineThread()::第一點找到第二點找到Offset計算完成\n");
 #endif
 
                     //紀錄影像Offset至影像修正表 
@@ -3301,8 +3415,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             //判斷是否轉換模式
             if (!((COrder*)pParam)->LaserSwitch.LaserHeight && !((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 1)))
             {
-                if (((COrder*)pParam)->ModelControl.ModeChangeAddress == -1)
+                if (((COrder*)pParam)->ModelControl.ModeChangeAddress == -1)//尚未有雷射模式跳轉地址
                 {
+                    //判斷現在是否有StepRepeat
+                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    {
+                        ((COrder*)pParam)->RepeatDataRecord = ((COrder*)pParam)->RepeatData;//保留StepRepeat執行參數
+                    }
                     //將模式轉換為雷射模式
                     ((COrder*)pParam)->ModelControl.Mode = 2;
                     //紀錄模式轉換地址
@@ -3311,14 +3430,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     _cwprintf(L"SubroutineThread()::模式轉換紀錄地址:%d\n", ((COrder*)pParam)->ModelControl.ModeChangeAddress);
 #endif                 
                 }
-                else
+                else//已經有雷射跳轉地址
                 {
 #ifdef PRINTF
                     _cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t雷射執行過紀錄地址:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.ModeChangeAddress);
 #endif
                     if (((COrder*)pParam)->ModelControl.ModeChangeAddress == CurrentRunCommandNum)
                     {
-                        ((COrder*)pParam)->ModelControl.ModeChangeAddress = -1;
+                        ((COrder*)pParam)->ModelControl.ModeChangeAddress = -1;//初始化雷射模式跳轉地址
 #ifdef PRINTF
                         _cwprintf(L"SubroutineThread()::%d\n", ((COrder*)pParam)->ModelControl.ModeChangeAddress);
 #endif
@@ -3328,26 +3447,28 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
                         _cwprintf(L"SubroutineThread()::雷射出現錯誤!\n");
 #endif 
-                    }
+                    } 
                 }
             }
             //判斷雷射高度開，雷射模式中，正要關閉雷射高度
             if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->ModelControl.Mode == 2 && !_ttol(CommandResolve(Command, 1)))
             {
-                if (!((COrder*)pParam)->Program.SubroutineStack.size())//判斷是否有Subroutine存在
+                //判斷是否有Subroutine存在
+                if (!((COrder*)pParam)->Program.SubroutineStack.size())//不存在
                 {                
                     //將模式轉換為運動模式
                     ((COrder*)pParam)->ModelControl.Mode = 3;
-                    //紀錄模式轉換地址
+                    //跳至雷射模式轉換地址
                     ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
                     //判斷StepRepeat是否有強行跳轉
                     StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
                     ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
+                    ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->RepeatDataRecord;//恢復StepRepeat參數
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::模式轉換地址跳至:%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-#endif           
+                    _cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+#endif                         
                 }
-                else
+                else//存在
                 {
                     if (((COrder*)pParam)->Program.SubroutineModel.back() == 2)//判斷存在的Subroutine呼叫時的模式
                     {
@@ -3355,7 +3476,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     }
                 }
             }
-
             //紀錄掃描點和開關
             ((COrder*)pParam)->LaserSwitch.LaserHeight = _ttol(CommandResolve(Command, 1));
             if (((COrder*)pParam)->LaserSwitch.LaserHeight)
@@ -3502,6 +3622,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
             {
                 if (((COrder*)pParam)->ModelControl.ModeChangeAddress == -1)
                 {
+                    //判斷現在是否有StepRepeat
+                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    {
+                        ((COrder*)pParam)->RepeatDataRecord = ((COrder*)pParam)->RepeatData;//保留StepRepeat執行參數
+                    }
                     //將模式轉換為雷射模式
                     ((COrder*)pParam)->ModelControl.Mode = 2;
                     //紀錄模式轉換地址
@@ -3540,9 +3665,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                     ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
                     //判斷StepRepeat是否有強行跳轉
                     StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->RepeatDataRecord;//恢復StepRepeat參數
                     ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::模式轉換地址跳至:%d\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    _cwprintf(L"SubroutineThread()::LaserDetect(0)模式轉換跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
                 }
                 else
@@ -3598,57 +3724,138 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
     {
         if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下動作
         {
-            if (_ttol(CommandResolve(Command, 1)) == 1)//即時開啟
+            if (_ttol(CommandResolve(Command, 1)) == 1)//即時有效
             {
-                ((COrder*)pParam)->CheckSwitch.Templateing = TRUE;//即時檢測開關開啟
+                ((COrder*)pParam)->ClearCheckData(TRUE, FALSE);//即時檢測資料清除
+                ((COrder*)pParam)->CheckSwitch.Templateing = TRUE;//模板即時檢測開關開啟
                 ((COrder*)pParam)->TemplateChecking.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
                 ((COrder*)pParam)->TemplateChecking.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
                     ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
-                    ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
+                    ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0,0 };//加入比對參數          
                 ModelLoad(1, pParam, CommandResolve(Command, 3), ((COrder*)pParam)->TemplateChecking);//載入OK模板(指針、數量)
-                ModelLoad(0, pParam, CommandResolve(Command, 4), ((COrder*)pParam)->TemplateChecking);//載入NG模板(指針、數量)
+                ModelLoad(0, pParam, CommandResolve(Command, 4), ((COrder*)pParam)->TemplateChecking);//載入NG模板(指針、數量) 
             }
             else if (_ttol(CommandResolve(Command, 1)) == 0)//區間有效
             {
-                //第一次開啟模板檢測
-                if (!((COrder*)pParam)->CheckSwitch.Template && !((COrder*)pParam)->CheckSwitch.Diameter && !((COrder*)pParam)->CheckSwitch.Area && _ttol(CommandResolve(Command, 2)))
+                //開啟模板檢測
+                if (_ttol(CommandResolve(Command, 2)))
                 {
                     ((COrder*)pParam)->CheckSwitch.Template = TRUE;
-                    TemplateCheck TemplateCheckInit;
-                    TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
-                    TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
-                        ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
-                        ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
-                    ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
-                    ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
-                    ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                    ((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.Area = FALSE;
+                    ((COrder*)pParam)->CurrentCheckAddress = ((COrder*)pParam)->GetCommandAddress();//更改目前區間檢測地址
+                    //判斷模板檢測是否新增過
+                    if (((COrder*)pParam)->IntervalTemplateCheck.size())
+                    {
+                        BOOL ScanResult = FALSE;
+                        for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)
+                        {
+                            if (((COrder*)pParam)->CurrentCheckAddress == ((COrder*)pParam)->IntervalTemplateCheck.at(i).Address)//判斷是否有重複的模板檢測地址
+                            {
+                                ScanResult = TRUE;
+                            }
+                        }
+                        if (!ScanResult)
+                        {
+                            TemplateCheck TemplateCheckInit;
+                            TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                            TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
+                                ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                                ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0,0 };//加入比對參數
+                            ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
+                            ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
+                            ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                        }
+                    }
+                    else//從未新增過模板檢測
+                    {                
+                        TemplateCheck TemplateCheckInit;
+                        TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                        TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
+                            ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                            ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0,0 };//加入比對參數
+                        ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
+                        ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
+                        ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                    }              
                 } 
                 //目前已經有開啟模板檢測並且要關閉
                 else if (((COrder*)pParam)->CheckSwitch.Template && !((COrder*)pParam)->CheckSwitch.Diameter && !((COrder*)pParam)->CheckSwitch.Area && !_ttol(CommandResolve(Command, 2)))
                 {
                     ((COrder*)pParam)->CheckSwitch.Template = FALSE;
-                    ((COrder*)pParam)->CheckSwitch.RunCheck = TRUE;
-                }
-                //已經有開啟其他檢測模式要轉換成模板檢測或已經是模板檢測
-                else if (_ttol(CommandResolve(Command, 2)))
-                {
-                    ((COrder*)pParam)->CheckSwitch.Template = TRUE;
                     ((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
                     ((COrder*)pParam)->CheckSwitch.Area = FALSE;
-                    TemplateCheck TemplateCheckInit;
-                    TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
-                    TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
-                        ((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
-                        ((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0 };//加入比對參數
-                    ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
-                    ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
-                    ((COrder*)pParam)->IntervalTemplateCheck.push_back(TemplateCheckInit);
+                    ((COrder*)pParam)->CheckSwitch.RunCheck = TRUE;
                 }
             }
         }    
     }
     if (CommandResolve(Command, 0) == L"DiameterCheck")
     {
+        if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下動作
+        {
+            if (_ttol(CommandResolve(Command, 1)) == 1)//即時有效
+            {
+                ((COrder*)pParam)->ClearCheckData(TRUE, FALSE);//即時檢測資料清除
+                ((COrder*)pParam)->CheckSwitch.Diametering = TRUE;//直徑即時檢測開關開啟 
+                ((COrder*)pParam)->DiameterChecking.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                ((COrder*)pParam)->DiameterChecking.Diameter = _tstof(CommandResolve(Command, 3));//設定直徑
+                ((COrder*)pParam)->DiameterChecking.Tolerance = _tstof(CommandResolve(Command, 4));//設定容許誤差
+                ((COrder*)pParam)->DiameterChecking.Color = _ttol(CommandResolve(Command, 5));//設定色階
+                ((COrder*)pParam)->DiameterChecking.Binarization = _tstof(CommandResolve(Command, 6));//設定二值化界限值          
+            }
+            else if (_ttol(CommandResolve(Command, 1)) == 0)//區間有效
+            {
+                //開啟直徑檢測
+                if (_ttol(CommandResolve(Command, 2)))
+                {
+                    ((COrder*)pParam)->CheckSwitch.Template = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.Diameter = TRUE;
+                    ((COrder*)pParam)->CheckSwitch.Area = FALSE;
+                    ((COrder*)pParam)->CurrentCheckAddress = ((COrder*)pParam)->GetCommandAddress();//更改目前區間檢測地址
+                    //判斷直徑檢測是否新增過
+                    if (((COrder*)pParam)->IntervalDiameterCheck.size())
+                    {
+                        BOOL ScanResult = FALSE;
+                        for (UINT i = 0; i < ((COrder*)pParam)->IntervalDiameterCheck.size(); i++)
+                        {
+                            if (((COrder*)pParam)->CurrentCheckAddress == ((COrder*)pParam)->IntervalDiameterCheck.at(i).Address)//判斷是否有重複的直徑檢測地址
+                            {
+                                ScanResult = TRUE;                            
+                            }
+                        }
+                        if (!ScanResult)
+                        {
+                            DiameterCheck DiameterCheckInit;
+                            DiameterCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                            DiameterCheckInit.Diameter = _tstof(CommandResolve(Command, 3));//設定直徑
+                            DiameterCheckInit.Tolerance = _tstof(CommandResolve(Command, 4));//設定容許誤差
+                            DiameterCheckInit.Color = _ttol(CommandResolve(Command, 5));//設定色階
+                            DiameterCheckInit.Binarization = _tstof(CommandResolve(Command, 6));//設定二值化界限值
+                            ((COrder*)pParam)->IntervalDiameterCheck.push_back(DiameterCheckInit);//加入陣列中
+                        }
+                    }
+                    else//從未新增過直徑檢測
+                    {
+                        DiameterCheck DiameterCheckInit;
+                        DiameterCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
+                        DiameterCheckInit.Diameter = _tstof(CommandResolve(Command, 3));//設定直徑
+                        DiameterCheckInit.Tolerance = _tstof(CommandResolve(Command, 4));//設定容許誤差
+                        DiameterCheckInit.Color = _ttol(CommandResolve(Command, 5));//設定色階
+                        DiameterCheckInit.Binarization = _tstof(CommandResolve(Command, 6));//設定二值化界限值
+                        ((COrder*)pParam)->IntervalDiameterCheck.push_back(DiameterCheckInit);//加入陣列中
+                    }                            
+                }
+                //目前已經有開啟模板檢測並且要關閉
+                else if (((COrder*)pParam)->CheckSwitch.Diameter && !((COrder*)pParam)->CheckSwitch.Template && !((COrder*)pParam)->CheckSwitch.Area && !_ttol(CommandResolve(Command, 2)))
+                {
+                    ((COrder*)pParam)->CheckSwitch.Template = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.Area = FALSE;
+                    ((COrder*)pParam)->CheckSwitch.RunCheck = TRUE;
+                }
+            }
+        }
     }
     if (CommandResolve(Command, 0) == L"AreaCheck")
     {
@@ -3707,6 +3914,272 @@ UINT COrder::IODetection(LPVOID pParam)
     }
 #endif
     g_pIODetectionThread = NULL;
+    return 0;
+}
+/*區間檢測點掃描執行續*/
+UINT COrder::CheckCoordinateScan(LPVOID pParam)
+{
+    //判斷是否有模板、直徑的區間檢測點
+    if (((COrder*)pParam)->IntervalCheckCoordinate.size())
+    {    
+        for (UINT i = 0; i < ((COrder*)pParam)->IntervalCheckCoordinate.size(); i++)//掃描檢測點
+        {
+            if (!((COrder*)pParam)->m_Action.g_bIsStop)
+            {
+                ((COrder*)pParam)->CheckCoordinateRun = ((COrder*)pParam)->IntervalCheckCoordinate.at(i);//設定檢測座標
+                ((COrder*)pParam)->CheckModel = 2;//設定檢測模式
+                g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
+                while (g_pCheckActionThread) {
+                    Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+                }
+            } 
+        } 
+        ((COrder*)pParam)->IntervalCheckCoordinate.clear();//清除檢測點陣列
+    }
+    //判斷區域檢測是否有資料
+    //...
+    ((COrder*)pParam)->ClearCheckData(FALSE,TRUE);//區間檢測資料釋放
+    ((COrder*)pParam)->CheckSwitch.RunCheck = FALSE;//區間檢測運行關閉
+    g_pCheckCoordinateScanThread = NULL;
+    return 0;
+}
+/*檢測點執行執行續*/
+UINT COrder::CheckAction(LPVOID pParam)
+{
+    if (((COrder*)pParam)->CheckModel == 1)//即時檢測動作
+    {
+        if (!((COrder*)pParam)->m_Action.g_bIsStop)
+        {
+#ifdef MOVE
+            //影像移動至檢測點上
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                ((COrder*)pParam)->FinalWorkCoordinateData.X - ((COrder*)pParam)->VisionSet.AdjustOffsetX,
+                ((COrder*)pParam)->FinalWorkCoordinateData.Y - ((COrder*)pParam)->VisionSet.AdjustOffsetY,
+                ((COrder*)pParam)->TemplateChecking.VisionParam.FocusHeight,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+#endif 
+        }   
+        if (!((COrder*)pParam)->m_Action.g_bIsStop)
+        {
+            CString Buff = L"";
+            if (((COrder*)pParam)->CheckSwitch.Templateing)//模板即時檢測
+            {
+                BOOL OKCheck = FALSE;
+                BOOL NGCheck = FALSE;
+#ifdef VI
+                //判斷OK是否有模板
+                if (((COrder*)pParam)->TemplateChecking.OKModelCount)
+                {
+                    //OK比對
+                    OKCheck = VI_FindMatrixModel(((COrder*)pParam)->TemplateChecking.OKModel, ((COrder*)pParam)->TemplateChecking.OKModelCount);                 
+                }
+                //判斷NG是否有模板
+                if (((COrder*)pParam)->TemplateChecking.NGModelCount)
+                {
+                    //NG比對
+                    NGCheck = VI_FindMatrixModel(((COrder*)pParam)->TemplateChecking.NGModel, ((COrder*)pParam)->TemplateChecking.NGModelCount);
+                }
+                //判斷OK、NG計數
+                if (((COrder*)pParam)->TemplateChecking.OKModelCount && !((COrder*)pParam)->TemplateChecking.NGModelCount)//只有OK模板
+                {
+                    if (OKCheck)
+                    {
+                        ((COrder*)pParam)->CheckResult.OKCount++;
+                        Buff = L"OK";
+                    }
+                    else
+                    {
+                        ((COrder*)pParam)->CheckResult.NGCount++;
+                        Buff = L"NG";
+                    }
+                }
+                else if (!((COrder*)pParam)->TemplateChecking.OKModelCount && ((COrder*)pParam)->TemplateChecking.NGModelCount)//只有NG模板
+                {
+                    if (NGCheck)
+                    {
+                        ((COrder*)pParam)->CheckResult.NGCount++;
+                        Buff = L"NG";
+                    }
+                    else
+                    {
+                        ((COrder*)pParam)->CheckResult.OKCount++;
+                        Buff = L"OK";
+                    }
+                }
+                else if (((COrder*)pParam)->TemplateChecking.OKModelCount && ((COrder*)pParam)->TemplateChecking.NGModelCount)//OK、NG都模板
+                {
+                    if (OKCheck && !NGCheck)
+                    {
+                        ((COrder*)pParam)->CheckResult.OKCount++;
+                        Buff = L"OK";
+                    }
+                    else
+                    {
+                        if (OKCheck && NGCheck)
+                        {
+                            ((COrder*)pParam)->CheckResult.NOAnswer++;
+                            Buff = L"NOAnswer";
+                        }
+                        else
+                        {
+                            ((COrder*)pParam)->CheckResult.NGCount++;
+                            Buff = L"NG";
+                        }
+                    }
+                }
+                ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
+                { ((COrder*)pParam)->TemplateChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
+                { 1,((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z } } });
+#endif
+            }
+            else if (((COrder*)pParam)->CheckSwitch.Diametering)//直徑即時檢測
+            {
+#ifdef VI                
+                //建立直徑檢測模板
+                VI_CircleBeadTrain(((COrder*)pParam)->DiameterChecking.Diameter, ((COrder*)pParam)->DiameterChecking.Tolerance,
+                    ((COrder*)pParam)->DiameterChecking.Color, ((COrder*)pParam)->DiameterChecking.Binarization);
+                //直徑檢測
+                if (VI_CircleBeadVerify(0, ((COrder*)pParam)->DiameterChecking.Tolerance))
+                {
+                    ((COrder*)pParam)->CheckResult.OKCount++;
+                    Buff = L"OK";
+                }
+                else
+                {
+                    ((COrder*)pParam)->CheckResult.NGCount++;
+                    Buff = L"NG";
+                }
+                ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
+                { ((COrder*)pParam)->DiameterChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
+                { 1,((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z } } });         
+#endif
+            }
+            ((COrder*)pParam)->ClearCheckData(TRUE, FALSE);//即時檢測資料清除
+        }
+    }
+    if (((COrder*)pParam)->CheckModel == 2)//區間檢測動作
+    {
+        if (!((COrder*)pParam)->m_Action.g_bIsStop)
+        {
+#ifdef MOVE
+            //影像移動至檢測點上
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                ((COrder*)pParam)->CheckCoordinateRun.Position.X - ((COrder*)pParam)->VisionSet.AdjustOffsetX,
+                ((COrder*)pParam)->CheckCoordinateRun.Position.Y - ((COrder*)pParam)->VisionSet.AdjustOffsetY,
+                ((COrder*)pParam)->VisionSet.FocusHeight,
+                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+#endif
+        }
+        if (!((COrder*)pParam)->m_Action.g_bIsStop)
+        {
+            CString Buff = L"";
+            //掃描檢測點的檢測模式
+            for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)//模板檢測搜尋
+            {
+                if (((COrder*)pParam)->IntervalTemplateCheck.at(i).Address == ((COrder*)pParam)->CheckCoordinateRun.CheckModeAddress)
+                {
+                    BOOL OKCheck = FALSE;
+                    BOOL NGCheck = FALSE;
+#ifdef VI                                   
+                    //判斷OK是否有模板
+                    if (((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount)
+                    {
+#ifdef PRINTF
+                        _cwprintf(L"CheckAction()::進入OK比對\n");
+#endif
+                        //OK比對
+                        OKCheck = VI_FindMatrixModel(((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModel, ((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount);
+                    }
+                    //判斷NG是否有模板
+                    if (((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount)
+                    {
+#ifdef PRINTF
+                        _cwprintf(L"CheckAction()::進入NG比對\n");
+#endif
+                        //NG比對
+                        NGCheck = VI_FindMatrixModel(((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModel, ((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount);                        
+                    }
+#endif
+                    //判斷OK、NG計數
+                    if (((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount && !((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount)//只有OK模板
+                    {
+                        if (OKCheck)
+                        {
+                            ((COrder*)pParam)->CheckResult.OKCount++;
+                            Buff = L"OK";
+                        }
+                        else
+                        {
+                            ((COrder*)pParam)->CheckResult.NGCount++;
+                            Buff = L"NG";
+                        }                      
+                    }
+                    else if (!((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount && ((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount)//只有NG模板
+                    {
+                        if (NGCheck)
+                        {
+                            ((COrder*)pParam)->CheckResult.NGCount++;
+                            Buff = L"NG";
+                        }
+                        else
+                        {
+                            ((COrder*)pParam)->CheckResult.OKCount++;
+                            Buff = L"OK";
+                        }
+                    }
+                    else if (((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount && ((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount)//OK、NG都模板
+                    {
+                        if (OKCheck && !NGCheck)
+                        {
+                            ((COrder*)pParam)->CheckResult.OKCount++;
+                            Buff = L"OK";
+                        }
+                        else
+                        {
+                            if (OKCheck && NGCheck)
+                            {
+                                ((COrder*)pParam)->CheckResult.NOAnswer++;
+                                Buff = L"NOAnswer";
+                            }
+                            else
+                            {
+                                ((COrder*)pParam)->CheckResult.NGCount++;
+                                Buff = L"NG";
+                            }
+                        }               
+                    }
+                    ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->CheckCoordinateRun });
+                }
+            }
+            for (UINT i = 0; i < ((COrder*)pParam)->IntervalDiameterCheck.size(); i++)//直徑檢測搜尋
+            {
+                if (((COrder*)pParam)->IntervalDiameterCheck.at(i).Address == ((COrder*)pParam)->CheckCoordinateRun.CheckModeAddress)
+                {
+#ifdef VI
+                    //建立直徑檢測模板
+                    VI_CircleBeadTrain(((COrder*)pParam)->IntervalDiameterCheck.at(i).Diameter, ((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance,
+                        ((COrder*)pParam)->IntervalDiameterCheck.at(i).Color, ((COrder*)pParam)->IntervalDiameterCheck.at(i).Binarization);
+                    //直徑檢測
+                    if (VI_CircleBeadVerify(0,((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance))
+                    {
+                        ((COrder*)pParam)->CheckResult.OKCount++;
+                        Buff = L"OK";
+                    }
+                    else
+                    {
+                        ((COrder*)pParam)->CheckResult.NGCount++;                   
+                        Buff = L"NG";                                     
+                    }
+                    ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->CheckCoordinateRun });
+                    //直徑檢測模板清除
+                     VI_CircleBeadFree();
+#endif
+                }
+            }
+        }
+    } 
+    ((COrder*)pParam)->CheckModel = 0;//執行完後檢測模式改為不執行檢測
+    g_pCheckActionThread = NULL;
     return 0;
 }
 /**************************************************************************動作處理區塊*************************************************************************/
@@ -3813,7 +4286,9 @@ CString COrder::VirtualNowOffSet(LPVOID pParam, CString Command)
     lNowY = ((COrder*)pParam)->NVMVirtualCoordinateData.Y;
     lNowZ = ((COrder*)pParam)->NVMVirtualCoordinateData.Z;
     csBuff.Format(_T("%ld,%ld,%ld"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
-    _cwprintf(_T("%ld,%ld,%ld"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
+#ifdef PRINTF
+    _cwprintf(_T("VirtualNowOffSet()::子程序偏差值:%ld,%ld,%ld\n"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
+#endif
     ((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 };//計算完畢後數值規0
     return csBuff;
 }
@@ -3883,9 +4358,9 @@ void COrder::VisionFindMarkError(LPVOID pParam)
                             //紀錄影像Offset至影像修正表 
                             ((COrder*)pParam)->VisionCount++;
                             ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
-
-                            _cwprintf(L"影像定位完畢成功寫入數值VisionCount:%d,VisionAdjust:%d,%d\n", ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetX, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetY);
-
+#ifdef PRINTF
+                            _cwprintf(L"VisionFindMarkError()::影像定位完畢成功寫入數值VisionCount:%d,VisionAdjust:%d,%d\n", ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetX, ((COrder*)pParam)->VisionAdjust.back().VisionOffset.OffsetY);
+#endif
                             //影像釋放記憶體
                             if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
                             {
@@ -3947,7 +4422,9 @@ void COrder::VisionFindMarkError(LPVOID pParam)
             ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
         }
         ((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
-        _cwprintf(L"Tirrger運行完畢\n");
+#ifdef PRINTF
+        _cwprintf(L"VisionFindMarkError()::Tirrger運行完畢\n");
+#endif
         break;
 #endif  
     case 2://停止                                         
@@ -4031,10 +4508,10 @@ void COrder::LaserModify(LPVOID pParam)
 void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 {
     CString CommandBuff = _T("");
-    if (!((COrder*)pParam)->LaserSwitch.LaserSkip && !((COrder*)pParam)->Program.SubroutineModelControlSwitch)//雷射跳過未開啟
+    if (!((COrder*)pParam)->LaserSwitch.LaserSkip && !((COrder*)pParam)->Program.SubroutineModelControlSwitch && !((COrder*)pParam)->LaserPointDetect())//雷射跳過未開啟
     {
         if ((((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust) || 
-            (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust) )//模式一、四
+            (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust))//模式一、四
         {     
             RecordCorrectionTable(pParam);//寫入修正表
         }
@@ -4310,7 +4787,25 @@ void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
     }
     VirtualCoordinateMove(pParam, Command, 1);//虛擬座標移動
 }
-/*虛擬座標移動*/
+/*檢查雷射檢測點是否重複*/
+BOOL COrder::LaserPointDetect()
+{
+    CString CurrentAddress = GetCommandAddress();
+    for (UINT i = 0; i < PositionModifyNumber.size(); i++)
+    {
+        if (PositionModifyNumber.at(i).Address == GetCommandAddress())
+        {
+            if (PositionModifyNumber.at(i).LaserNumber != -1)
+            {
+                return TRUE;//該地址點檢查過               
+            }
+        }
+    }
+    return FALSE;//該地址點未檢查
+}
+/*虛擬座標移動
+*type:保留，目前未使用到
+*/
 void COrder::VirtualCoordinateMove(LPVOID pParam, CString Command ,LONG type)
 {
     if (CommandResolve(Command, 0) == L"Dot" ||
@@ -4369,24 +4864,7 @@ void COrder::VirtualCoordinateMove(LPVOID pParam, CString Command ,LONG type)
 /**************************************************************************資料表處理區塊*************************************************************************/
 /*選擇影像修正*/
 void COrder::ChooseVisionModify(LPVOID pParam) {
-    CString StrBuff,Temp;
-    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
-        {
-            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
-    if (!((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->Program.SubroutineStack.size(); i++)
-        {
-            Temp.Format(_T(",%d"), ((COrder*)pParam)->Program.SubroutineStack.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
     for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)
     {
         if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
@@ -4401,24 +4879,7 @@ void COrder::ChooseVisionModify(LPVOID pParam) {
 }
 /*選擇雷射修正*/
 void COrder::ChooseLaserModify(LPVOID pParam){
-    CString StrBuff, Temp;
-    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
-        {
-            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
-    if (!((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->Program.SubroutineStack.size(); i++)
-        {
-            Temp.Format(_T(",%d"), ((COrder*)pParam)->Program.SubroutineStack.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
     for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)
     {
         if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
@@ -4433,24 +4894,7 @@ void COrder::ChooseLaserModify(LPVOID pParam){
 }
 /*紀錄修正表*/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
-    CString StrBuff,Temp;
-    StrBuff.Format(_T("%d"), ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatNum.size(); i++)
-        {
-            Temp.Format(_T(",%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(i), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
-    if (!((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時地址紀錄的方式
-    {
-        for (UINT i = 0; i < ((COrder*)pParam)->Program.SubroutineStack.size(); i++)
-        {
-            Temp.Format(_T(",%d"), ((COrder*)pParam)->Program.SubroutineStack.at(i));
-            StrBuff = StrBuff + Temp;
-        }
-    }
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
     if (((COrder*)pParam)->PositionModifyNumber.size())//修正表有值
     { 
         for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)//判斷表中地址是否存在
@@ -4563,7 +5007,10 @@ CString COrder::ModelNumResolve(CString ModelNum, UINT Choose)
         return ModelNumResolve(ModelNum.Right(ModelNum.GetLength() - iLength - 1), --Choose);
     }
 }
-/*命令單位轉換*/
+/*命令單位轉換(初始為um)
+*multiple:單位倍數
+*Timemultiple:時間倍數
+*/
 CString COrder::CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple)
 {
     DOUBLE temp = 0;
@@ -5251,7 +5698,11 @@ void COrder::DecideInit()
     //雷射測高數值初始化
     LaserData.LaserMeasureHeight = -999999999;
     LaserData.LaserExecutedAddress = -1;//雷射執行過地址初始化
- 
+    //檢測參數初始化
+    CheckSwitch = { 0,0,0,0,0,0 };//檢測開關初始化
+    CheckResult = { 0,0,0 };//OK、NG檢測計算初始化
+    CheckFinishRecord.clear();//檢測完成資料存放陣列
+    CheckModel = 0;//檢測模式初始化
     /****************************************************************/
     ActionCount = 0;
     V_ActionCount = 0;
@@ -5323,6 +5774,8 @@ void COrder::DecideClear()
         LaserAdjust.clear();      
     }
     VisionAdjust.clear();
+    //檢測資料釋放
+    ClearCheckData(TRUE,TRUE);//清除檢測資料
 #ifdef PRINTF
         _cwprintf(L"DecideClear()::Clear()\n");
 #endif
@@ -5389,7 +5842,10 @@ void COrder::DecideBeginModel()
     }                       
 }
 /**************************************************************************影像檔案處理區塊************************************************************************/
-/*搜尋檔案名*/
+/*搜尋檔案名
+*szPath:目錄路徑
+*szName:搜尋檔名的格式
+*/
 BOOL COrder::ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName) {
     HANDLE hListFile;
     TCHAR szFilePath[MAX_PATH]; //檔案名 
@@ -5421,7 +5877,9 @@ BOOL COrder::ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName) {
     }
     return 0;
 }
-/*判斷檔案是否存在*/
+/*判斷檔案是否存在
+*FilePathName:檔案路徑名稱
+*/
 BOOL COrder::FileExist(LPCWSTR FilePathName)
 {
     HANDLE hFile;
@@ -5474,59 +5932,66 @@ BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
     }
     return FALSE;
 }
-/*StepRepeat強行跳轉判斷(防止跳出StepRepeat區間出現錯誤)*/
+/*StepRepeat強行跳轉判斷(防止跳出StepRepeat區間出現錯誤)
+*Address:跳出的地址
+*/
 void COrder::StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address)
 {
-    //有StepRepeat時且跳出區間
-    if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.size())
+    //判斷是否有StepRepeat時且跳出區間
+    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//判斷是否有StepRepeat
     {
-        for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatIntervel.size(); i++)
+        if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.size())//判斷是否有區間
         {
-            if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress > Address ||
-                Address > ((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().EndAddress)
+            for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatIntervel.size(); i++)
             {
-                //刪除最後一項StepRepeat
-                ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
-                ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
-                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
-                ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
-                ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
-                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
-                ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
-                ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
-                ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
-                ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
-                //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress > Address ||
+                    Address > ((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().EndAddress)
                 {
-                    ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
-                    ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
-#endif 
-                }
-#ifdef PRINTF
-                _cwprintf(L"Thread()::跳出StepRepeat刪除StepRepeat\n");
+                    _cwprintf(L"StepRepeatJumpforciblyJudge()::發生跳出StepRepeat刪除StepRepeat陣列\n");
 #endif
-            }
-            else
-            {
-                break;
+                    //刪除最後一項StepRepeat
+                    ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                    ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                    ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
+                    //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    {
+                        ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+                        ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+#ifdef PRINTF
+                        _cwprintf(L"StepRepeatJumpforciblyJudge()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+#endif 
+                    }
+                }
+                else//越內層區間會越小所以找一個不成立就可以Break
+                {
+                    break;
+                }
             }
         }
     }
 }
 /**************************************************************************阻斷處理區塊****************************************************************************/
-/*阻斷處理方式(加入StepRepeatX時)*/
+/*阻斷處理方式(加入StepRepeatX時)
+*RepeatStatus:判斷要檢查阻斷時是否相同StepRepeatLabel
+*/
 void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatus)
 {
     CString BlockBuff;
-    BOOL DeleteStepRepeat = FALSE;
+    BOOL DeleteStepRepeat = FALSE;//用來判斷是否有刪除StepRepeat
     int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
     for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
     {
 #ifdef PRINTF
-        _cwprintf(_T("BlockProcessStart()::%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
+        _cwprintf(_T("BlockProcessStartX()::%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
 #endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
@@ -5537,7 +6002,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                 BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessStart()::標籤只有Y變X正常:%s\n", BlockBuff);
+                _cwprintf(L"BlockProcessStartX()::標籤只有Y變X正常:%s\n", BlockBuff);
 #endif
             }
             else
@@ -5545,13 +6010,13 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.back()),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.back()));
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessStart()::標籤XY變:%s\n", BlockBuff);
+                _cwprintf(L"BlockProcessStartX()::標籤XY變:%s\n", BlockBuff);
 #endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessStart()::有阻斷\n");
+                _cwprintf(L"BlockProcessStartX()::有阻斷\n");
 #endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
@@ -5578,7 +6043,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.back() = !((COrder*)pParam)->RepeatData.SSwitch.back();
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessStart()::最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
+                    _cwprintf(L"BlockProcessStartX()::最後一個:SSwitch轉換:%d\n", ((COrder*)pParam)->RepeatData.SSwitch.back());
 #endif
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.back() = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
@@ -5587,7 +6052,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                 else
                 {
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessStart()::刪除陣列\n");
+                    _cwprintf(L"BlockProcessStartX()::刪除陣列\n");
 #endif
                     DeleteStepRepeat = TRUE;
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
@@ -5601,12 +6066,12 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                        _cwprintf(L"BlockProcessStartX()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif 
                     }
                 }  
@@ -5621,7 +6086,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.at(i) == BlockBuff)
             {
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessStart()::有阻斷\n");
+                _cwprintf(L"BlockProcessStartX()::有阻斷\n");
 #endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.back() > 1)
                 {
@@ -5639,7 +6104,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                 else
                 {
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessStart()::刪除陣列\n");
+                    _cwprintf(L"BlockProcessStartX()::刪除陣列\n");
 #endif
                     DeleteStepRepeat = TRUE;                   
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
@@ -5653,12 +6118,12 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                        _cwprintf(L"BlockProcessStartX()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif 
                     }
                 }      
@@ -5683,7 +6148,7 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
         if (((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != 0 && ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum != ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum)
         {
 #ifdef PRINTF
-            _cwprintf(L"BlockProcessStart()::進入新增內層迴圈\n");
+            _cwprintf(L"BlockProcessStartX()::進入新增內層迴圈\n");
 #endif
             ((COrder*)pParam)->RepeatData.StepRepeatLabelLock = TRUE;
             ((COrder*)pParam)->RepeatData.AddInStepRepeatSwitch = TRUE;
@@ -5704,7 +6169,9 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
         }
     }
 }
-/*阻斷處理方式(執行中StepRepeatX時)*/
+/*阻斷處理方式(執行中StepRepeatX時)
+*NowCount:StepRepeat要檢查阻斷的陣列編號
+*/
 BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
 {
     CString BlockBuff;
@@ -5712,7 +6179,7 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
     for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
     {
 #ifdef PRINTF
-        _cwprintf(L"BlockProcessExecute()::第%d:%d-%d.StepRepeatX 檢查阻斷\n", NowCount,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+        _cwprintf(L"BlockProcessExecuteX()::第%d:%d-%d.StepRepeatX 檢查阻斷\n", NowCount,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
 #endif
         //S型
         if (_ttol(CommandResolve(Command, 5)) == 1)
@@ -5723,7 +6190,7 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                 BlockBuff.Format(_T("%d-%d"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessExecute()::第%d:標籤只有Y變X正常:%s\n", NowCount, BlockBuff);
+                _cwprintf(L"BlockProcessExecuteX()::第%d:標籤只有Y變X正常:%s\n", NowCount, BlockBuff);
 #endif
             }
             else
@@ -5731,13 +6198,13 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                 BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                     (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessExecute()::第%d:標籤XY變:%s\n", NowCount, BlockBuff);
+                _cwprintf(L"BlockProcessExecuteX()::第%d:標籤XY變:%s\n", NowCount, BlockBuff);
 #endif
             }
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessExecute()::第%d:有阻斷\n", NowCount);
+                _cwprintf(L"BlockProcessExecuteX()::第%d:有阻斷\n", NowCount);
 #endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
@@ -5761,31 +6228,31 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
 #endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
                 {
                     ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount) = !((COrder*)pParam)->RepeatData.SSwitch.at(NowCount);
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:SSwitch轉換:%d\n", i, ((COrder*)pParam)->RepeatData.SSwitch.at(NowCount));
 #endif
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) = _ttol(CommandResolve(Command, 3));
                     ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y + _ttol(CommandResolve(Command, 2));
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
 #endif
                 }
                 else
                 {
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:刪除所有陣列\n", NowCount);
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:刪除所有陣列\n", NowCount);
 #endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    _cwprintf(L"BlockProcessExecuteX()::刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
@@ -5798,17 +6265,17 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-                        _cwprintf(L"BlockProcessExecute()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                        _cwprintf(L"BlockProcessExecuteX()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif 
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:刪除成功\n", NowCount);
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:刪除成功\n", NowCount);
 #endif
                     return FALSE;
                 }
@@ -5821,12 +6288,12 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
             BlockBuff.Format(_T("%d-%d"), (_ttol(CommandResolve(Command, 3)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)),
                 (_ttol(CommandResolve(Command, 4)) + 1 - ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)));
 #ifdef PRINTF
-            _cwprintf(L"BlockProcessExecute():第%d::標籤:%s\n", NowCount, BlockBuff);
+            _cwprintf(L"BlockProcessExecuteX():第%d::標籤:%s\n", NowCount, BlockBuff);
 #endif
             if (((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.at(i) == BlockBuff)
             {
 #ifdef PRINTF
-                _cwprintf(L"BlockProcessExecute():第%d::有阻斷\n", NowCount);
+                _cwprintf(L"BlockProcessExecuteX():第%d::有阻斷\n", NowCount);
 #endif
                 if (((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount) > 1)
                 {
@@ -5834,7 +6301,7 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
 #endif
                 }
                 else if (((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount) > 1)
@@ -5846,17 +6313,17 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount)--;
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("StepRepeatLabel,") + CommandResolve(Command, 6);
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:執行%d-%d\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
 #endif
                 }
                 else
                 {
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:刪除所有陣列\n", NowCount);
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:刪除所有陣列\n", NowCount);
 #endif
                     ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum++;
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                    _cwprintf(L"BlockProcessExecuteX()::刪除總數+1=%d\n", ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif
                     ((COrder*)pParam)->RepeatData.StepRepeatBlockData.erase(((COrder*)pParam)->RepeatData.StepRepeatBlockData.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.SSwitch.erase(((COrder*)pParam)->RepeatData.SSwitch.begin() + NowCount);
@@ -5869,17 +6336,17 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-                        _cwprintf(L"BlockProcessExecute()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                        _cwprintf(L"BlockProcessExecuteX()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif 
                     }
                     ((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
 #ifdef PRINTF
-                    _cwprintf(L"BlockProcessExecute()::第%d:刪除成功\n", NowCount);
+                    _cwprintf(L"BlockProcessExecuteX()::第%d:刪除成功\n", NowCount);
 #endif
                     return FALSE;
                 }
@@ -5891,7 +6358,9 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
 #endif
     return TRUE;
 }
-/*阻斷處理方式(加入StepRepeatY時)*/
+/*阻斷處理方式(加入StepRepeatY時)
+*RepeatStatus:判斷要檢查阻斷時是否相同StepRepeatLabel
+*/
 void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatus)
 {
     CString BlockBuff;
@@ -5980,7 +6449,7 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -6032,7 +6501,7 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -6083,7 +6552,9 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
         }
     }
 }
-/*阻斷處理方式(執行中StepRepeatY時)*/
+/*阻斷處理方式(執行中StepRepeatY時)
+*NowCount:StepRepeat要檢查阻斷的陣列編號
+*/
 BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
 {
     CString BlockBuff;
@@ -6177,7 +6648,7 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -6248,7 +6719,7 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
                     ((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
                     ((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
                     //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-                    if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                    if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
                     {
                         ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
                         ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
@@ -6270,7 +6741,10 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
 #endif
     return TRUE;
 } 
-/*阻斷陣列排序*/
+/*阻斷陣列排序
+*Type:選擇排序的StepRepeat類型(X or Y)
+*mode:選擇排序的StepRepeat路徑模式(S or N)
+*/
 void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
 {
     CString temp;
@@ -6326,9 +6800,6 @@ void COrder::BlockSort(std::vector<CString> &BlockPosition, int Type, int mode)
                 }
             }
         }    
-#ifdef PRINTF
-        _cwprintf(L"\n");
-#endif
     }
     else if (Type == 2)
     {
@@ -6411,10 +6882,17 @@ CString COrder::BlockResolve(CString String, UINT Choose)
     }
 }
 /**************************************************************************檢測處理區塊*****************************************************************************/
+/*模板載入
+*Choose:選擇載入的模板(OK or NG)
+*ModelNum:模板編號字串
+*/
 void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCheck &TemplateCheck)
 {
     if (Choose)//載入OK模組
     {
+#ifdef PRINTF
+        _cwprintf(L"ModelLoad()::載入OK模組\n");
+#endif
         std::vector<CString> TempFileName;
         int Count = 0;
         int ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;//模組起始編號
@@ -6424,34 +6902,40 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
             TempFileName.push_back(((COrder*)pParam)->VisionFile.AllModelName.at(ModelNumber));
             ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;
         }
-        //模板數量
+        //判斷模板數量
         if (TempFileName.size() > 0)
-        {
-            TemplateCheck.OKModelCount = TempFileName.size() + 1;
-        }
-        //分配模板記憶體
-        TemplateCheck.OKModel = new void*[TempFileName.size()];
-        for (UINT i = 0; i < TempFileName.size(); i++)
-        {
-            TemplateCheck.OKModel[i] = malloc(sizeof(int));
-        }
-        //檔名陣列創建
-        CString *FileName = NULL;
-        FileName = new CString[TempFileName.size()];
-        for (UINT i = 0; i < TempFileName.size(); i++)
-        {
-            FileName[i] = TempFileName.at(i);
-        }
+        {       
+            //配置模板數量
+            TemplateCheck.OKModelCount = TempFileName.size();
+            //分配模板記憶體
+            TemplateCheck.OKModel = new void*[TempFileName.size()];
+            for (UINT i = 0; i < TempFileName.size(); i++)
+            {
+                TemplateCheck.OKModel[i] = malloc(sizeof(int));
+            }
+            //檔名陣列創建
+            CString *FileName = NULL;
+            FileName = new CString[TempFileName.size()];
+            for (UINT i = 0; i < TempFileName.size(); i++)
+            {
+                FileName[i] = TempFileName.at(i);
+            }
+            //載入模板、配置屬性
 #ifdef VI                                                                                                   
-        VI_LoadMatrixModel(TemplateCheck.OKModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.OKModelCount);//載入模板
-        VI_SetMultipleModel(TemplateCheck.OKModel, 1, 1, 70, 0, 360, TemplateCheck.OKModelCount);//設定模板參數
-        //VI_FindMatrixModel(TemplateCheck.OKModel, TemplateCheck.OKModelCount);
-        //VI_MatrixModelFree(TemplateCheck.OKModel, TemplateCheck.OKModelCount);
-        //free(TemplateCheck.OKModel);
+            VI_LoadMatrixModel(TemplateCheck.OKModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.OKModelCount);//載入模板
+            VI_SetMultipleModel(TemplateCheck.OKModel, 1, 1, 70, 0, 360, TemplateCheck.OKModelCount);//設定模板參數    
 #endif
+        }   
+        else
+        {
+            TemplateCheck.OKModelCount = 0;
+        }
     }
     else//載入NG模組
     {
+#ifdef PRINTF
+        _cwprintf(L"ModelLoad()::載入NG模組\n");
+#endif
         std::vector<CString> TempFileName;
         int Count = 0;
         int ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;//模組起始編號
@@ -6461,29 +6945,101 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
             TempFileName.push_back(((COrder*)pParam)->VisionFile.AllModelName.at(ModelNumber));
             ModelNumber = _ttol(ModelNumResolve(ModelNum, Count)) - 1;
         }
-        //模板數量
+        //判斷模板數量
         if (TempFileName.size() > 0)
         {
-            TemplateCheck.NGModelCount = TempFileName.size() + 1;
-        }
-        //分配模板記憶體
-        TemplateCheck.NGMOdel = new void*[TempFileName.size()];
-        for (UINT i = 0; i < TempFileName.size(); i++)
-        {
-            TemplateCheck.NGMOdel[i] = malloc(sizeof(int));
-        }
-        //檔名陣列創建
-        CString *FileName = NULL;
-        FileName = new CString[TempFileName.size()];
-        for (UINT i = 0; i < TempFileName.size(); i++)
-        {
-            FileName[i] = TempFileName.at(i);
-        }
+            //配置模板數量
+            TemplateCheck.NGModelCount = TempFileName.size();
+            //分配模板記憶體
+            TemplateCheck.NGModel = new void*[TempFileName.size()];
+            for (UINT i = 0; i < TempFileName.size(); i++)
+            {
+                TemplateCheck.NGModel[i] = malloc(sizeof(int));
+            }
+            //檔名陣列創建
+            CString *FileName = NULL;
+            FileName = new CString[TempFileName.size()];
+            for (UINT i = 0; i < TempFileName.size(); i++)
+            {
+                FileName[i] = TempFileName.at(i);
+            }
+            //載入模板、配置屬性
 #ifdef VI                                                                                                   
-        VI_LoadMatrixModel(TemplateCheck.NGMOdel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.NGModelCount);//載入模板
-        VI_SetMultipleModel(TemplateCheck.NGMOdel, 1, 1, 70, 0, 360, TemplateCheck.NGModelCount);//設定模板參數
+            VI_LoadMatrixModel(TemplateCheck.NGModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.NGModelCount);//載入模板
+            VI_SetMultipleModel(TemplateCheck.NGModel, 1, 1, 70, 0, 360, TemplateCheck.NGModelCount);//設定模板參數
 #endif
+        } 
+        else
+        {
+            TemplateCheck.NGModelCount = 0;
+        }
     }
+}
+/*檢測資料清除
+*Moment:即時資料是否清除
+*Interval:區間資料是否清除
+*/
+BOOL COrder::ClearCheckData(BOOL Moment,BOOL Interval)
+{
+    if (Moment == TRUE)
+    {
+        //清除即時模板檢測資料
+        if (CheckSwitch.Templateing)
+        {
+            CheckSwitch.Templateing = FALSE;//關閉模板檢測
+#ifdef VI
+            //釋放影像
+            VI_MatrixModelFree(TemplateChecking.OKModel, TemplateChecking.OKModelCount);
+            VI_MatrixModelFree(TemplateChecking.NGModel, TemplateChecking.NGModelCount);
+#endif
+            //釋放記憶體         
+            free(TemplateChecking.OKModel);
+            free(TemplateChecking.NGModel);
+            TemplateChecking = { L"",0,NULL,0,NULL,{ 0,0,0,0,0,0,0,0,0,0,0 } };//初始化模板即時檢測資料
+        }
+        //清除即時直徑檢測資料
+        if (CheckSwitch.Diametering)
+        {
+            CheckSwitch.Diametering = FALSE;//關閉直徑即時檢測
+            DiameterChecking = { L"",0,0,0,0 };//初始化直徑即時檢測資料
+        }
+    }
+    if (Interval == TRUE)
+    {
+        //清除區間模板檢測資料
+        if (IntervalTemplateCheck.size())//判斷模板是否有資料
+        {
+            for (UINT i = 0; i < IntervalTemplateCheck.size(); i++)//釋放陣列影像、記憶體
+            {
+                //判斷OK是否有模板
+#ifdef VI
+                if (IntervalTemplateCheck.at(i).OKModelCount)
+                {
+                    //釋放影像
+                    VI_MatrixModelFree(IntervalTemplateCheck.at(i).OKModel, IntervalTemplateCheck.at(i).OKModelCount);
+                    //釋放記憶體         
+                    free(IntervalTemplateCheck.at(i).OKModel);
+                }
+                //判斷NG是否有模板
+                if (IntervalTemplateCheck.at(i).NGModelCount)
+                {
+
+                    //釋放影像
+                    VI_MatrixModelFree(IntervalTemplateCheck.at(i).NGModel, IntervalTemplateCheck.at(i).NGModelCount);
+                    //釋放記憶體         
+                    free(IntervalTemplateCheck.at(i).NGModel);
+                }
+#endif
+            }
+            IntervalTemplateCheck.clear();
+        }
+        //清除區間直徑檢測資料
+        if (IntervalDiameterCheck.size())//判斷模板是否有資料
+        {
+            IntervalDiameterCheck.clear();
+        }
+    }
+    return 0;
 }
 /**************************************************************************額外功能*********************************************************************************/
 /*儲存所有陣列*/

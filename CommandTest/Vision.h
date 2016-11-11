@@ -11,7 +11,7 @@
 #define TestUse
 
 #include "resource.h"		// 主要符號
-#include <vector>
+
 //===================================================================================================
 //
 // Vision DLL 函數
@@ -57,11 +57,11 @@ extern "C" _declspec(dllexport) void VI_DisplayZoom(CWnd* DisplayWindow, DOUBLE 
 //從視野矩形框建立PatternMatch Model
 extern "C" _declspec(dllexport) void VI_CreateModelFromBox(BYTE mode, CWnd* DisplayWindow, void* MilModel, int width, int height);
 //輸入搜尋起始角度、結束角度。計算搜尋原點、逆時針(positive正方向為逆)、順時針搜尋角度(negaitive負方向為順). 
-extern "C" _declspec(dllexport) void VI_SearchAngleCalc(int startangle, int endangle, int &origin, int &delta);
+extern "C" _declspec(dllexport) void VI_SearchAngleCalc(double startangle, double endangle, double &origin, double &delta);
 //PatternMatch 參數設置
-extern "C" _declspec(dllexport) void VI_SetPatternMatch(void* MilModel, BOOL accuracy, BOOL speed, BYTE score, int startangle, int endangle);
+extern "C" _declspec(dllexport) void VI_SetPatternMatch(void* MilModel, BOOL accuracy, BOOL speed, BYTE score, double startangle, double endangle);
 //設定PatternMatch 搜尋角度
-extern "C" _declspec(dllexport) void VI_SetSearchAngle(void* MilModel, int startangle, int endangle);
+extern "C" _declspec(dllexport) void VI_SetSearchAngle(void* MilModel, double startangle, double endangle);
 //設定PatternMatch 搜尋範圍，視野中心位置，指定寬度、高度
 extern "C" _declspec(dllexport) void VI_SetSearchRange(void* MilModel, int width, int height);
 //搜尋標記，依模式功能
@@ -87,7 +87,7 @@ extern "C" _declspec(dllexport) void VI_RemoveInteractiveBox();
 //配置Model空間  (搭配VI_LoadModel使用)
 extern "C" _declspec(dllexport) void VI_ModelAlloc(void* MilModel);
 //載入 PatternMatch Model檔到原有配置好的Model空間 
-extern "C" _declspec(dllexport) void VI_LoadModel(void* MilModel, CString Path, CString name);
+extern "C" _declspec(dllexport) void VI_LoadModel(void* MilModel, CString path, CString name);
 //配置Model空間並且載入PatternMatch Model檔 
 extern "C" _declspec(dllexport) void VI_RestoreModel(void* MilModel, CString path, CString name);
 //儲存 PatternMatch Model
@@ -117,7 +117,7 @@ extern "C" _declspec(dllexport) void VI_MmeasFree();
 //MmeasTool All Free
 extern "C" _declspec(dllexport) void VI_MeasureToolFree();
 //點膠檢測 Free
-extern "C" _declspec(dllexport) void CircleBeadFree();
+extern "C" _declspec(dllexport) void VI_CircleBeadFree();
 
 //---------------------------------------------------------------------------------------------------
 // 影像參數，相關函數
@@ -190,25 +190,49 @@ extern "C" _declspec(dllexport) BOOL VI_MeasCircleCenter(BOOL BlackOrWhite, doub
 extern "C" _declspec(dllexport) void VI_GetTouchMoveDist(DOUBLE TouchPosX, DOUBLE TouchPosY, DOUBLE &DistX, DOUBLE &DistY);
 
 //---------------------------------------------------------------------------------------------------
+// 陣列式樣版載入、設置、比對
+//---------------------------------------------------------------------------------------------------
+//載入陣列 Model
+extern "C" _declspec(dllexport) void VI_LoadMatrixModel(void * Model[], CString Path, CString Name[], int Num);
+//載入陣列 Model
+extern "C" _declspec(dllexport) void VI_SetMultipleModel(void* Model[], BOOL accuracy, BOOL speed, BYTE score, int startangle, int endangle, int Num);
+//一次比對陣列 Model
+extern "C" _declspec(dllexport) BOOL VI_FindMatrixModel(void* Model[], int Num);
+//釋放陣列 Model
+extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
+
+//---------------------------------------------------------------------------------------------------
 // Bead Inspection 檢測
 //---------------------------------------------------------------------------------------------------
 //點膠檢測樣板建立
-extern "C" _declspec(dllexport) void CircleBeadTrain(double Diameter, double MaxOffset, BOOL WhiteOrBlack, double Threshold);
+extern "C" _declspec(dllexport) void VI_CircleBeadTrain(double Diameter, double MaxOffset, BOOL WhiteOrBlack, double Threshold);
 //點膠檢測驗證
-extern "C" _declspec(dllexport) BOOL CircleBeadVerify(double MaxOffset);
+extern "C" _declspec(dllexport) BOOL VI_CircleBeadVerify(BOOL UnitsEnable, double MaxOffset);
 
 //---------------------------------------------------------------------------------------------------
-// 檢測(一次比對多個model)
-//---------------------------------------------------------------------------------------------------**
-//載入陣列model
-extern "C" _declspec(dllexport) void 	 VI_LoadMatrixModel(void * Model[], CString Path, CString Name[], int Num);
-//載入陣列model
-extern "C" _declspec(dllexport) void VI_SetMultipleModel(void* Model[], BOOL accuracy, BOOL speed, BYTE score, int startangle, int endangle, int Num);
-//一次比對陣列model
-extern "C" _declspec(dllexport) BOOL VI_FindMatrixModel(void* Model[], int Num);
-//釋放陣列model
-extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
+// 影像拼接重組 Registration & 影像尋邊 Edge Finder 
+//---------------------------------------------------------------------------------------------------
+//影像拼接重組配置
+extern "C" _declspec(dllexport) void VI_MosaicingImagesAlloc();
+//影像拼接重組，移動量設置
+extern "C" _declspec(dllexport) void VI_MosaicingMoveSet(double FOVx, double FOVy, double FOVPercent, double &MoveX, double &MoveY);
+//影像拼接重組，機台座標原點計算
+extern "C" _declspec(dllexport) void VI_MosaicingImagesOriginCalc(double LocatX, double LocatY);
+//影像拼接，重組數量計算
+extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesSizeCalc(double StartPointX, double StartPointY, double EndPointX, double EndPointY, int &MovXcnt, int &MovYcnt);
+//記錄待拼接重組的影像
+extern "C" _declspec(dllexport) void VI_MosaicingImagesCapture();
+//影像拼接重組，資源釋放
+extern "C" _declspec(dllexport) void VI_MosaicingImagesFree(int MaxCNT);
+//取得DXF檔，座標轉換參數
+extern "C" _declspec(dllexport) void VI_GetMosaicingImagesDXFinfo(double &OriginX, double &OriginY, double &ScaleX, double &ScaleY);
+//影像拼接重組處理
+extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesProcess();
+//拼接重組影像，影像尋邊處理
+extern "C" _declspec(dllexport) void VI_MosaicingImagesEdgeFind(BOOL type, BOOL WhiteOrBlack, double Threshold);
 
+//===================================================================================================
+//------------------------------------------------------------------------------
 // CVisionApp
 // 這個類別的實作請參閱 Vision.cpp
 //
