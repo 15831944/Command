@@ -38,6 +38,8 @@ extern "C" _declspec(dllexport) void VI_DisplayAlloc(CWnd* DisplayWindow, BOOL m
 extern "C" _declspec(dllexport) void VI_DisplaySet(CWnd* DisplayWindow, BOOL move);
 //顯示位置配置，含左上原點offset偏移控制
 extern "C" _declspec(dllexport) void VI_DisplayPosSet(CWnd* DisplayWindow, DOUBLE OffsetX, DOUBLE OffsetY);
+//即時影像縮小顯示,自動Fit顯示視窗
+extern "C" _declspec(dllexport) void VI_DisplayFitWindow(CWnd* DisplayWindow, BOOL move, double objwidth, double objheight);
 //設置繪製用的透明圖層
 extern "C" _declspec(dllexport) void VI_SetOverlayImage();
 //清除透明圖層內容
@@ -76,6 +78,8 @@ extern "C" _declspec(dllexport) BOOL VI_FindMarkRelDist(void* MilModel, BOOL Pix
 extern "C" _declspec(dllexport) BOOL VI_FindMark(void* MilModel, DOUBLE &DistX, DOUBLE &DistY);
 //動態查找標記，CameraTrigger指令。
 extern "C" _declspec(dllexport) BOOL VI_CameraTrigger(void* MilModel, long &MarkPointX, long &MarkPointY, long TriggerPointX, long TriggerPointY, DOUBLE &DistX, DOUBLE &DistY);
+//建立互動矩形框: 影像重組圖 or 參考來源圖大小
+extern "C" _declspec(dllexport) void VI_SetInteractiveBoxRefImg(BOOL Source, CString path, CString name);
 //建立互動矩形框
 extern "C" _declspec(dllexport) void VI_SetInteractiveBox(int width, int height);
 //從互動矩形框建立PatternMatch Model 
@@ -124,6 +128,8 @@ extern "C" _declspec(dllexport) void VI_CircleBeadFree();
 //---------------------------------------------------------------------------------------------------
 //設定1個像素的單位
 extern "C" _declspec(dllexport) void VI_SetOnePixelUnit(DOUBLE xUnit, DOUBLE yUnit);
+//設定影像像素和實際距離的關係 (Uniform)
+extern "C" _declspec(dllexport) void VI_SetUniform(BOOL ImgOrCal, double xUnits, double yUnits);
 //建立Pixel、Pulse轉換關係
 extern "C" _declspec(dllexport) void VI_SetPixelPulseRelation(CWnd* DisplayWindow, void* MilModel, double LocatX1, double LocatY1, double LocatX2, double LocatY2, double &xUnit, double &yUnit);
 ////設定攝影機和點膠針頭之間的距離Camera-to-Needle(Tip) Offset 
@@ -195,7 +201,7 @@ extern "C" _declspec(dllexport) void VI_GetTouchMoveDist(DOUBLE TouchPosX, DOUBL
 //載入陣列 Model
 extern "C" _declspec(dllexport) void VI_LoadMatrixModel(void * Model[], CString Path, CString Name[], int Num);
 //載入陣列 Model
-extern "C" _declspec(dllexport) void VI_SetMultipleModel(void* Model[], BOOL accuracy, BOOL speed, BYTE score, int startangle, int endangle, int Num);
+extern "C" _declspec(dllexport) void VI_SetMultipleModel(void * Model[], BOOL accuracy, BOOL speed, BYTE score, double startangle, double endangle, int Num);
 //一次比對陣列 Model
 extern "C" _declspec(dllexport) BOOL VI_FindMatrixModel(void* Model[], int Num);
 //釋放陣列 Model
@@ -213,23 +219,50 @@ extern "C" _declspec(dllexport) BOOL VI_CircleBeadVerify(BOOL UnitsEnable, doubl
 // 影像拼接重組 Registration & 影像尋邊 Edge Finder 
 //---------------------------------------------------------------------------------------------------
 //影像拼接重組配置
-extern "C" _declspec(dllexport) void VI_MosaicingImagesAlloc();
+extern "C" _declspec(dllexport) void VI_MosaicingImagesAlloc(int MaxCNT);
+//影像拼接重組配置 (除錯測試用)
+extern "C" _declspec(dllexport) void VI_MosaicAllocDebugUse(int MaxCNT);
 //影像拼接重組，移動量設置
-extern "C" _declspec(dllexport) void VI_MosaicingMoveSet(double FOVx, double FOVy, double FOVPercent, double &MoveX, double &MoveY);
+extern "C" _declspec(dllexport) void VI_MosaicingMoveSet(double FOVx, double FOVy, double FOVPercent, long &MoveX, long &MoveY);
 //影像拼接重組，機台座標原點計算
-extern "C" _declspec(dllexport) void VI_MosaicingImagesOriginCalc(double LocatX, double LocatY);
+extern "C" _declspec(dllexport) void VI_MosaicingImagesOriginCalc(long LocatX, long LocatY);
 //影像拼接，重組數量計算
-extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesSizeCalc(double StartPointX, double StartPointY, double EndPointX, double EndPointY, int &MovXcnt, int &MovYcnt);
+extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesSizeCalc(long StartPointX, long StartPointY, long EndPointX, long EndPointY, int &MovXcnt, int &MovYcnt);
 //記錄待拼接重組的影像
-extern "C" _declspec(dllexport) void VI_MosaicingImagesCapture();
+extern "C" _declspec(dllexport) void VI_MosaicingImagesCapture(long POsitionX, long PositionY);
 //影像拼接重組，資源釋放
 extern "C" _declspec(dllexport) void VI_MosaicingImagesFree(int MaxCNT);
 //取得DXF檔，座標轉換參數
 extern "C" _declspec(dllexport) void VI_GetMosaicingImagesDXFinfo(double &OriginX, double &OriginY, double &ScaleX, double &ScaleY);
 //影像拼接重組處理
-extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesProcess();
-//拼接重組影像，影像尋邊處理
-extern "C" _declspec(dllexport) void VI_MosaicingImagesEdgeFind(BOOL type, BOOL WhiteOrBlack, double Threshold);
+extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesProcess(CString path, CString name);
+//Registration Context、Result Free
+extern "C" _declspec(dllexport) void VI_RegistrationFree();
+//中止影像拼接重組計算
+extern "C" _declspec(dllexport) void VI_MosaicingImagesProcessStop();
+//影像拼接重組，手動裁切處理
+extern "C" _declspec(dllexport) BOOL VI_SetCutMosaicingImages(CString path, CString name);
+//拼接重組影像顯示
+extern "C" _declspec(dllexport) void VI_MosaicingImagesDisplay(CWnd* DisplayWindow, CString path, CString name, BOOL move, double objwidth, double objheight);
+//拼接重組影像顯示，資源釋放
+extern "C" _declspec(dllexport) void VI_MosaicingImagesDisplayFree();
+//影像拼接重組圖,二值化處理
+extern "C" _declspec(dllexport) void VI_BinarizeMosaicImage(double Threshold);
+//影像拼接重組圖,尋邊處理
+extern "C" _declspec(dllexport) BOOL VI_EdgeProcessMosaicImage(CString path, CString name, BOOL type, BOOL WhiteOrBlack, double Threshold, double EdgelSize, BOOL SimpleEnable, double tolerance);
+//載入影像拼接重組圖，尋邊處理
+extern "C" _declspec(dllexport) BOOL VI_LoadMosaicImageEdgeFind(CString path, CString name, BOOL type, BOOL WhiteOrBlack, double Threshold, double EdgelSize, BOOL SimpleEnable, double tolerance);
+
+//---------------------------------------------------------------------------------------------------
+// 區域Bead檢測 (單點點膠直徑和塗膠線段膠寬) 
+//---------------------------------------------------------------------------------------------------
+//區域Bead檢測：單點點膠直徑，檢測訓練
+extern "C" _declspec(dllexport) void VI_ImagesCircleBeadTrain(CString DotPath, CString DotName, CPoint DotPosition[], double Diameter, double MaxOffset, BOOL WhiteOrBlack, double Threshold, int DotPositionNum);
+//區域Bead檢測：塗膠線段膠寬，檢測訓練
+extern "C" _declspec(dllexport) void VI_ImagesLineBeadTrain(CString LinePath, CString LineName, CPoint LinePosition[], double LineWidth, double MaxOffset, BOOL WhiteOrBlack, int LinePositionNum);
+//區域Bead檢測與驗證
+extern "C" _declspec(dllexport) BOOL VI_AreaBeadVerify(CString ImagePath, CString ImageName, CString DotPath, CString DotName, CString LinePath, CString LineName, CString ResultImagePath, CString ResultImageName, int Mode);
+
 
 //===================================================================================================
 //------------------------------------------------------------------------------

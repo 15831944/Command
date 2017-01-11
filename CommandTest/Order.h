@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "Action.h"
+#include "CInterpolationCircle.h"
 // COrder
 static CWinThread* g_pThread = NULL;
 static CWinThread* g_pSubroutineThread = NULL;
@@ -95,6 +96,7 @@ private:
 		ZSet            ZSet;
 		GlueData        GlueData;
 		GoHome          GoHome;
+		CleanerData     CleanerData;
 	};
 	//修正表結構(命令地址、影像修正編號、雷射修正編號)
 	struct PositionModifyNumber {
@@ -205,18 +207,18 @@ private:
 	/************************************************************檢測參數結構*******************************************************/
 	//檢測座標結構(檢測模式地址、命令地址、座標位置)
 	struct CheckCoordinate{
+        CString CheckMode;
 		CString CheckModeAddress;
 		CString Address;
 		CoordinateData Position;
 	};
-	//模板開關結構(模板檢測、直徑檢測、區域檢測、運行檢測、即時檢測)
+	//模板開關結構(模板檢測、直徑檢測、區域檢測、運行檢測、即時檢測(0:不檢測1:模板2:直徑))
 	struct CheckSwitch {
 		BOOL Template;
 		BOOL Diameter;
 		BOOL Area;
 		BOOL RunCheck;
-		BOOL Templateing;
-		BOOL Diametering;
+        UINT ImmediateCheck;
 	};
 	//模板檢測結構(模板檢測地址、OK模板數量、OK模板指針陣列、NG模板數量、NG模板指針陣列、比對參數)
 	struct TemplateCheck {
@@ -235,25 +237,76 @@ private:
 		BOOL Color;
 		DOUBLE Binarization;
 	};
-	//紀錄數量結構(OK數量、NG數量)
+	//紀錄檢測結果數量結構(OK數量、NG數量、都否數量、OK重組圖、NG重組圖)
 	struct CheckResult {
 		LONG OKCount;
 		LONG NGCount;
 		LONG NOAnswer;
+		LONG OKMosaicingImage;
+		LONG NGMosaicingImage;
 	};
-	//紀錄完成檢測點結構()
+	//紀錄完成點檢測結構(檢測結果字串,檢測座標結構{檢測模式地址,檢測地址,檢測座標})
 	struct CheckFinishRecord {
 		CString Result;
 		CheckCoordinate CheckData;
 	};
+	//檢測設置目標結構(檢測結果目標數量、目標達成動作)
+	struct CheckSetGoal{
+		CheckResult Goal;
+		LONG Action;
+	};
+	//檔案結構(檔案路徑、檔案名稱)
+	struct File{
+		CString Path;
+		CString Name;
+	};
+	//訓練結構(儲存檔案結構、點資料、測量限制(直徑、線寬)、容許誤差量、色階、二值化界限值)
+	struct TrainData {
+		File TrainSave;
+		std::vector<CPoint> PointData;
+		DOUBLE MeasureLimit;
+		DOUBLE MaxOffset;
+		BOOL WhiteOrBlack;
+		DOUBLE Threshold;
+	};
+	//重組結構(儲存檔案結構、視野移動量、起始位置、結束位置、移動數量X,移動數量Y)
+	struct MosaicingData {
+		File ImageSave;
+		POINT ViewMove;
+		POINT Start;
+		POINT End;
+		int MoveCountX;
+		int MoveCountY;
+	};
+	//區域檢測結構(區域檢測地址、重組圖結構、點訓練結構、線訓練結構、儲存結果檔案結構)
+	struct AreaCheck {
+		CString Address;
+		MosaicingData Image;
+		TrainData DotTrain;
+		TrainData LineTrain;
+		File Result;
+	};
+	//紀錄完成區域檢測結果結構(檢測模式地址、檢測結果檔案結構、檢測結果)
+	struct AreaCheckFinishRecord {
+		CString CheckModeAddress;
+		File ResultImage;
+		BOOL CheckResult;
+	};
+	//區域檢測人機預設值結構
+	struct AreaCheckParamterDefault {
+		POINT ViewMove;
+		File ImageSave;
+		File DotTrainSave;
+		File LineTrainSave;
+		File Result;
+	};
 	/************************************************************模組參數結構*******************************************************/
-	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射模組跳過)
+	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射和檢測模組跳過)
 	struct ModelControl{
 		UINT Mode;
 		int  ModeChangeAddress;
-		
-		UINT VisionModeJump;
-		UINT LaserModeJump;
+		BOOL VisionModeJump;
+		BOOL LaserAndCheckModeJump;
 	};
 	/************************************************************程序參數結構*******************************************************/
 	//區間資料結構(類別、起始地址、結束地址)
@@ -323,10 +376,13 @@ private:
 		int BlockNumber;
 		std::vector<CString> BlockPosition;
 	};
-	/*Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈刪除次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
+	/*Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、步驟標籤起始地址、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈
+	
+	次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
 	*步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
+	*步驟標籤起始地址:用來記錄當前StepRepeatLabel地址
 	*增加步驟內層迴圈開關:用於判斷是否第二次新增內層迴圈
 	*記錄步驟內層迴圈新增次數:記錄總共有幾個內層，用於判斷刪除後須新增最大數
 	*記錄步驟內層迴圈刪除次數:記錄刪除掉幾個內層，用於必須在新增回來
@@ -340,8 +396,9 @@ private:
 		std::vector<UINT> LoopAddressNum;
 		std::vector<UINT> LoopCount;
 		CString StepRepeatLabel;
-        CString StepRepeatLabelPrevious;
+		CString StepRepeatLabelPrevious;
 		BOOL StepRepeatLabelLock;
+		UINT StepRepeatAddress;
 		BOOL AddInStepRepeatSwitch;
 		int AllNewStepRepeatNum;
 		int AllDeleteStepRepeatNum;
@@ -361,8 +418,15 @@ private:
 		int LoopCount;
 		int MaxRunNumber;
 	};
+    //外部函式呼叫結構
+	typedef void(*CDrawFunction) (void*,CPoint,int);
+    struct CallFunction {
+        CDrawFunction CDrawFunction;
+        void* pObject;
+    };
 private:    //變數
 	HANDLE          wakeEvent;
+	/*運行時間計算*/
 	LARGE_INTEGER   startTime, endTime, fre;
 	/*代換暫存變數*/ 
 	StepRepeatBlockData InitBlockData;
@@ -372,20 +436,24 @@ private:    //變數
 	std::vector<CString> CommandSwap;
 	std::vector<std::vector<CString>> Command;
 	/*程序*/
-    RepeatData      RepeatDataRecord;
+	RepeatData      RepeatDataRecord;
 	RepeatData      RepeatData;
 	Program         Program;
 	RunData         RunData;
+	/*模組控管*/
+	ModelControl    ModelControl;
 	/*狀態*/
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 	/*IO*/
 	IOControl       IOControl;
-	/*未修正虛擬模擬座標*/
+	/*未修正虛擬模擬座標(目前用在拿來計算Subroutine偏差量)*/
 	CoordinateData  NVMVirtualCoordinateData; 
 	/*系統移動速度*/
 	Speed           MoveSpeedSet,LMPSpeedSet,LMCSpeedSet,VMSpeedSet;
+	/*(暫存)判斷影像是否修正(Subroutine使用)*/
+	BOOL            VisioModifyJudge;
 	
-private:    //函數
+private:    //函式
 	/*執行續*/
 	static  UINT    HomeThread(LPVOID pParam);//原點賦歸程序
 	static  UINT    Thread(LPVOID pParam);//主程序
@@ -402,8 +470,10 @@ private:    //函數
 	void            VisionFindMarkError(LPVOID pParam);//影像未找到處理方法
 	static  void    LaserModify(LPVOID pParam);//雷射修正
 	static  void    LaserDetectHandle(LPVOID pParam, CString Command);//雷射檢測處理
-    BOOL            LaserPointDetect();//檢查雷射檢測點是否重複
-	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標模擬移動
+	BOOL            LaserPointDetect();//檢查雷射檢測點是否重複
+	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標移動
+    BOOL            CheckDraw();//點檢測畫圖
+    //虛擬座標模擬移動
 	/*資料表處理區塊*/
 	static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
 	static  void    ChooseLaserModify(LPVOID pParam);//選擇雷射修正值
@@ -411,18 +481,22 @@ private:    //函數
 	/*命令處理*/
 	static  CString CommandResolve(CString Command, UINT Choose);//命令分解
 	static  CString ModelNumResolve(CString ModelNum, UINT Choose);//模版編號分解
-	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);
-	CString         GetCommandAddress();
-	//命令單位轉換
+	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);//命令單位轉換
+	CString         GetCommandAddress();//獲取編碼過命令地址
 	/*程序變數處理區塊*/
 	void            ParameterDefult();//運動參數初始化
 	void            DecideInit();//程序初始化
 	void            DecideClear();//程序結束清除
 	void            MainSubProgramSeparate();//劃分主副程序
-	void            DecideBeginModel();//起始模組判斷
+	void            DecideBeginModel(BOOL ViewMode);//判斷起始模組
 	/*檔案處理*/
 	BOOL            ListAllFileInDirectory(LPTSTR szPath, LPTSTR szName);//搜尋目錄檔案
-	static  BOOL    FileExist(LPCWSTR FilePathName);//判斷檔案是否存在
+	static  BOOL    FileExist(LPCWSTR FilePathName);
+	static  BOOL    FilePathExist(CString FilePathName);
+	static  CString GetDataFileName();
+	static  BOOL    FileDelete(CString FilePathName);
+	static  BOOL    SearchDirectory(CString FilePathName);
+	//判斷檔案是否存在
 	/*StepRepeat處理*/
 	BOOL            SubroutinePretreatmentFind(LPVOID pParam);//CallSubroutin預處理尋找
 	static  void    StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address);//StepRepeat強行跳轉判斷
@@ -434,10 +508,13 @@ private:    //函數
 	static  void    BlockSort(std::vector<CString> &BlockPosition, int Type, int mode);
 	static  CString BlockResolve(CString String, UINT Choose);
 	/*檢測處理*/
-	static void     ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum, TemplateCheck &TemplateCheck);
+	static  void    ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum, TemplateCheck &TemplateCheck);
 	BOOL            ClearCheckData(BOOL Moment, BOOL Interval);
+	static  void    LineTrainDataCheck(LPVOID pParam);
+	static  void    NewCutPathPoint(CoordinateData Start, CoordinateData Passing, CoordinateData End, std::vector<CPoint> &PointData, int Type);
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
+
 public:     //變數
 	//主運動物件
 	CAction         m_Action;
@@ -450,6 +527,7 @@ public:     //變數
 	//運動參數值
 	Default         Default;
 
+	/*測試用暫時放在public*/
 	DispenseDotSet  DispenseDotSet;
 	DispenseDotEnd  DispenseDotEnd;
 	DispenseLineSet DispenseLineSet;
@@ -459,6 +537,7 @@ public:     //變數
 	GlueData        GlueData;
 	GoHome          GoHome;
 	CleanerData     CleanerData;
+	/********************/
 
 	//運行程序資料
 	RunStatusRead   RunStatusRead;
@@ -467,10 +546,10 @@ public:     //變數
 	//影像參數
 	VisionDefault   VisionDefault;
 
+	/*測試用暫時放在public*/
 	VisionSet       VisionSet;
 	VisionFile      VisionFile;
 	VisionSerchError VisionSerchError;
-
 	//影像資料
 	Vision          FindMark, FiducialMark1, FiducialMark2;
 	VisionOffset    VisionOffset;
@@ -479,54 +558,54 @@ public:     //變數
 	LaserSwitch     LaserSwitch;
 	LaserData       LaserData;
 	LaserContinuousControl LaserContinuousControl;
-
-	//影像雷射修正後工作座標
+	/*影像雷射修正後工作座標*/
 	CoordinateData  FinalWorkCoordinateData;
-	                                                        
-	//虛擬模擬座標 (目前只用在CallSubroutine回歸點)
+	/*虛擬模擬座標 (目前只用在CallSubroutine回歸點)*/
 	CoordinateData  VirtualCoordinateData;
 	
-	//模組控管資料
-	ModelControl    ModelControl;
-
 	//動作修正表
 	std::vector<PositionModifyNumber> PositionModifyNumber;
 	//影像修正資料
 	std::vector<VisionAdjust> VisionAdjust;
 	//雷射修正資料
 	std::vector<LaserAdjust> LaserAdjust;
-
 	//影像、雷射資料計數
-	int             VisionCount;
-	int             LaserCount;
-
+	int             VisionCount;//用來計數第幾次的影像對位
+	int             LaserCount;//用來計數第幾次的雷射測高
 	//檢測資料                                                     
 	CheckSwitch     CheckSwitch;
-	CString         CurrentCheckAddress;
+	CString         CurrentCheckAddress;//存放目前檢測地址(新增時用來判斷是否有重複的檢測區間資料和用於點資訊區間檢測資料的新增)
 	TemplateCheck   TemplateChecking;
 	std::vector<TemplateCheck> IntervalTemplateCheck;
 	DiameterCheck   DiameterChecking;
 	std::vector<DiameterCheck> IntervalDiameterCheck;
-
-	CheckCoordinate CheckCoordinateRun;
-	LONG            CheckModel;
 	std::vector<CheckCoordinate> IntervalCheckCoordinate;//直徑、模板區間檢測所有點資料
+	std::vector<AreaCheck> IntervalAreaCheck;
+	//檢測運行判斷資料
+	CoordinateData  AreaCheckChangTemp;//區域中間點轉換檢測暫存參數
+	CheckCoordinate CheckCoordinateRun;//暫存目前要運行的檢測點座標
+	AreaCheck       AreaCheckRun;//暫存目前要運行的區域檢測資料
+	LONG            CheckModel;//檢測模組判斷
 
-	std::vector<CheckFinishRecord> CheckFinishRecord;
-	CheckResult     CheckResult;
+    //畫圖呼叫函式設定
+    CallFunction    CallFunction;
+	/********************/
+
+	//區域檢測預設值參數
+	AreaCheckParamterDefault AreaCheckParamterDefault;
+	//檢測結果存放
+	std::vector<CheckFinishRecord> CheckFinishRecord;//檢測結果點資訊
+	std::vector<AreaCheckFinishRecord> AreaCheckFinishRecord;//區域檢測結果圖資訊
+	CheckResult     CheckResult;//檢測結果數量
 	
-	//紀錄目前紀錄到表中地址(特殊線段使用)(連續特殊線段使用)
+	//紀錄目前紀錄到表中地址(雷射使用)(連續特殊線段使用)
 	CString         CurrentTableAddress;
-	//(暫存)判斷影像是否修正
-	BOOL            VisioModifyJudge;	
 	//Demo載入用判斷符號(DEMO 用)
 	BOOL            DemoTemprarilySwitch;
 	//IO參數設定
 	IOParam         IOParam;
-	
-
-	UINT StepRepeatAddress;
-public:     //函數
+   
+public:     //函式
 	COrder();
 	virtual ~COrder();
 	//開始命令解譯(成功return 1失敗return 0)
@@ -547,6 +626,10 @@ public:     //函數
 	BOOL    IODetectionSwitch(BOOL Switch, int mode);
 	//載入檔案
 	void    LoadPointData();
+	//檢查命令規則(return 錯誤代碼 , ErrorAddress 為錯誤命令地址)
+	int     CheckCommandRule(int &ErrorAddress);
+    //設置畫圖呼叫函式(成功return 1失敗return 0)
+    BOOL    SetDrawFunction(CDrawFunction Funtion,void* pObject);
 protected:
 	DECLARE_MESSAGE_MAP()
 };

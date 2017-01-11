@@ -21,7 +21,6 @@ public: //≈‹º∆
 	UINT RaiChoose;
 	void* MilModel;
 	CDialog* m_pCModel;
-    LONG FocusPoint;
 public:// ®Áº∆
 	void MoveXYZ(int MoveX, int MoveY, int MoveZ);
 	virtual BOOL OnInitDialog();
@@ -42,8 +41,9 @@ public:
 	afx_msg void OnBnClickedButton4();
 
 	virtual void OnOK();
-	afx_msg void OnBnClickedBtnfocus();
     afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
     afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
     virtual BOOL DestroyWindow();
+    afx_msg void OnBnClickedBtnfocusset();
+    afx_msg void OnBnClickedBtnfocus();
 };

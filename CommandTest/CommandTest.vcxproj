@@ -96,7 +96,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>mcc.lib;Vision.lib;Laser.lib;C:\Program Files (x86)\Windows Kits\8.0\Lib\win8\um\x86\odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>mcc.lib;Vision.lib;Laser.lib;C:\Program Files (x86)\Windows Kits\8.1\Lib\winv6.3\um\x86\odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -194,6 +194,7 @@
     <ClInclude Include="Action.h" />
     <ClInclude Include="Block.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CInterpolationCircle.h" />
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
     <ClInclude Include="Default.h" />
@@ -218,6 +219,7 @@
     <ClCompile Include="Action.cpp" />
     <ClCompile Include="Block.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CInterpolationCircle.cpp" />
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
     <ClCompile Include="Default.cpp" />

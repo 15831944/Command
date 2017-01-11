@@ -15,7 +15,8 @@
 
 
 #ifdef SERIALPORT
-#define OMRON_ZX2_LD100
+//#define OMRON_ZX2_LD100
+#define PANASONIC_HL_G105_S_J
 #endif
 
 #ifndef LAS_DLL
@@ -27,7 +28,7 @@
 #endif
 
 #ifndef LAS_MEASURE_RANGE
-#define LAS_MEASURE_RANGE 30000
+#define LAS_MEASURE_RANGE 20000
 #endif
 
 // CLaserApp

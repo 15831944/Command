@@ -1373,41 +1373,41 @@ void CAction::DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis
 void CAction::DecideVirtualHome(LONG lX, LONG lY, LONG lZ, LONG lZBackDistance, BOOL bZDisType, LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy)
 {
 #ifdef MOVE
-    if (lZBackDistance <= 0)
-    {
-        return;
-    }
-    if (bZDisType)
-    {
-        //相對座標
-        if (!g_bIsStop)
-        {
-            //lZBackDistance超過可移動距離
-            lZBackDistance = (lZBackDistance > MO_ReadLogicPosition(2)) ? MO_ReadLogicPosition(2) : lZBackDistance;
-            //z go back
-            MO_Do3DLineMove(0, 0, -lZBackDistance, lWorkVelociy, lAcceleration, lInitVelociy);
-            PreventMoveError();//防止軸卡出錯
-        }
-    }
-    else
-    {
-        //絕對座標
-        if (!g_bIsStop)
-        {
-            if (lZBackDistance < MO_ReadLogicPosition(2))
-            {
-                //z go back
-                MO_Do3DLineMove(0, 0, lZBackDistance - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
-                PreventMoveError();//防止軸卡出錯
-            }
-        }
-    }
-    if (!g_bIsStop)
-    {
-        //xyz move
-        MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
-        PreventMoveError();//防止軸卡出錯
-    }
+	if (lZBackDistance <= 0)
+	{
+		return;
+	}
+	if (bZDisType)
+	{
+		//相對座標
+		if (!g_bIsStop)
+		{
+			//lZBackDistance超過可移動距離
+			lZBackDistance = (lZBackDistance > MO_ReadLogicPosition(2)) ? MO_ReadLogicPosition(2) : lZBackDistance;
+			//z go back
+			MO_Do3DLineMove(0, 0, -lZBackDistance, lWorkVelociy, lAcceleration, lInitVelociy);
+			PreventMoveError();//防止軸卡出錯
+		}
+	}
+	else
+	{
+		//絕對座標
+		if (!g_bIsStop)
+		{
+			if (lZBackDistance < MO_ReadLogicPosition(2))
+			{
+				//z go back
+				MO_Do3DLineMove(0, 0, lZBackDistance - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
+				PreventMoveError();//防止軸卡出錯
+			}
+		}
+	}
+	if (!g_bIsStop)
+	{
+		//xyz move
+		MO_Do3DLineMove(lX - MO_ReadLogicPosition(0), lY - MO_ReadLogicPosition(1), lZ - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
+		PreventMoveError();//防止軸卡出錯
+	}
 #endif
 }
 /*
@@ -1425,7 +1425,7 @@ void CAction::DispenClear(LONG lX, LONG lY, LONG lZ, int ClreaPort, LONG lZBackD
 	系統參數(驅動速度，加速度，初速度)
 	LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy
 	*/
-	if (!bZDisType) //絕對位置
+	if (bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ)
 		{
@@ -1831,6 +1831,7 @@ BOOL CAction::LA_SetZero()
 			MO_Do3DLineMove(0, 0, -LAS_MEASURE_RANGE, 20000, 100000, 1000);//上升3cm再次做雷射歸零
 			PreventMoveError();//防止軸卡出錯
 		}
+		Sleep(1000);
 		if (LAS_SetZero())
 		{
 			g_HeightLaserZero = MO_ReadLogicPosition(2);//雷射用Z軸歸零點高度
@@ -1967,64 +1968,64 @@ void CAction::LA_Line2D(LONG lStartVe, LONG lStartAcc, LONG lStartInitVe, LONG l
 {
 #ifdef LA
 #ifdef MOVE
-    if (g_LaserAverage == FALSE)
-    {
-        g_LaserCnt++;
-    }
-    LA_AbsToOppo2Move(LA_m_ptVec2D);
-    if (!g_bIsStop)
-    {
-        MO_Do3DLineMove(0, 0, g_HeightLaserZero - MO_ReadLogicPosition(2), lStartVe, lStartAcc, lStartInitVe);
-        PreventMoveError();//起始點準備移動
-    }
-    if (!g_bIsStop)
-    {
-        MO_Do3DLineMove(LA_m_ptVec2D.at(0).EndP.x - g_OffSetLaserX,
-            LA_m_ptVec2D.at(0).EndP.y - g_OffSetLaserY, 0, lStartVe, lStartAcc, lStartInitVe);
-        PreventMoveError();//起始點準備移動
-    }
+	if (g_LaserAverage == FALSE)
+	{
+		g_LaserCnt++;
+	}
+	LA_AbsToOppo2Move(LA_m_ptVec2D);
+	if (!g_bIsStop)
+	{
+		MO_Do3DLineMove(0, 0, g_HeightLaserZero - MO_ReadLogicPosition(2), lStartVe, lStartAcc, lStartInitVe);
+		PreventMoveError();//起始點準備移動
+	}
+	if (!g_bIsStop)
+	{
+		MO_Do3DLineMove(LA_m_ptVec2D.at(0).EndP.x - g_OffSetLaserX,
+			LA_m_ptVec2D.at(0).EndP.y - g_OffSetLaserY, 0, lStartVe, lStartAcc, lStartInitVe);
+		PreventMoveError();//起始點準備移動
+	}
 
-    /*停止觸發時，結束掃描*/
-    if (g_bIsStop)
-    {
-        return;
-    }
+	/*停止觸發時，結束掃描*/
+	if (g_bIsStop)
+	{
+		return;
+	}
 
-    MO_InterruptCase(1, 2);
-    MO_InterruptCase(1, 3);
-    MO_Timer(0, 100000);//設定計時器(0.1s觸發一次)
-                        /*插入開始點一筆*/
-    LONG lCalcData1;
+	MO_InterruptCase(1, 2);
+	MO_InterruptCase(1, 3);
+	MO_Timer(0, 100000);//設定計時器(0.1s觸發一次)
+						/*插入開始點一筆*/
+	LONG lCalcData1;
 
-    if (LAS_GetLaserData(lCalcData1))
-    {
-        if (lCalcData1 == LAS_LONGMIN)
-        {
-            g_LaserErrCnt++;
-        }
-        else
-        {
-            DATA_3Do[0].EndPX = MO_ReadLogicPosition(0) + g_OffSetLaserX;
-            DATA_3Do[0].EndPY = MO_ReadLogicPosition(1) + g_OffSetLaserY;
-            DATA_3Do[0].EndPZ = MO_ReadLogicPosition(2) - lCalcData1 + g_OffSetLaserZ;//30000為感測範圍
-            if (g_LaserAverage == FALSE)
-            {
-                LA_m_ptVec.push_back(DATA_3Do[0]);
-            }
-            if (g_LaserCnt == 1 && g_LaserAverage == FALSE)
-            {
-                LA_m_iVecSP.push_back(g_LaserCnt);//main
-            }
-        }
-    }
-    for (UINT i = 1; i < LA_m_ptVec2D.size(); i++)
-    {
-        DATA_2Do[i - 1] = LA_m_ptVec2D.at(i);
-    }
-    MO_DO2Curve(DATA_2Do, LA_m_ptVec2D.size() - 1, lWorkVelociy);
-    PreventMoveError();
-    Sleep(200);
-    LA_m_ptVec2D.clear();
+	if (LAS_GetLaserData(lCalcData1))
+	{
+		if (lCalcData1 == LAS_LONGMIN)
+		{
+			g_LaserErrCnt++;
+		}
+		else
+		{
+			DATA_3Do[0].EndPX = MO_ReadLogicPosition(0) + g_OffSetLaserX;
+			DATA_3Do[0].EndPY = MO_ReadLogicPosition(1) + g_OffSetLaserY;
+			DATA_3Do[0].EndPZ = MO_ReadLogicPosition(2) - lCalcData1 + g_OffSetLaserZ;//30000為感測範圍
+			if (g_LaserAverage == FALSE)
+			{
+				LA_m_ptVec.push_back(DATA_3Do[0]);
+			}
+			if (g_LaserCnt == 1 && g_LaserAverage == FALSE)
+			{
+				LA_m_iVecSP.push_back(g_LaserCnt);//main
+			}
+		}
+	}
+	for (UINT i = 1; i < LA_m_ptVec2D.size(); i++)
+	{
+		DATA_2Do[i - 1] = LA_m_ptVec2D.at(i);
+	}
+	MO_DO2Curve(DATA_2Do, LA_m_ptVec2D.size() - 1, lWorkVelociy);
+	PreventMoveError();
+	Sleep(200);
+	LA_m_ptVec2D.clear();
 #endif
 #endif
 }
@@ -2125,14 +2126,14 @@ void CAction::LA_AverageZ(LONG lStrX, LONG lStrY, LONG lEndX, LONG lEndY, LONG &
 {
 #ifdef LA
 #ifdef MOVE
-    g_LaserAverage = TRUE;
-    g_LaserAveBuffZ = 0;
-    LA_Do2dDataLine(lStrX, lStrY);
-    LA_Do2dDataLine(lEndX, lEndY);
-    LA_Line2D(lStartVe, lStartAcc, lStartInitVe, lWorkVelociy, lAcceleration, lInitVelociy);
-    Sleep(200);
-    lZ = g_LaserAveBuffZ;
-    g_LaserAverage = FALSE;
+	g_LaserAverage = TRUE;
+	g_LaserAveBuffZ = 0;
+	LA_Do2dDataLine(lStrX, lStrY);
+	LA_Do2dDataLine(lEndX, lEndY);
+	LA_Line2D(lStartVe, lStartAcc, lStartInitVe, lWorkVelociy, lAcceleration, lInitVelociy);
+	Sleep(200);
+	lZ = g_LaserAveBuffZ;
+	g_LaserAverage = FALSE;
 #endif
 #endif
 }

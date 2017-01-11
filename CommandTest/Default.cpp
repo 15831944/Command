@@ -62,8 +62,11 @@ BOOL CDefault::OnInitDialog()
 	StrTable.Add(_T("影像尋找精度")); StrTable.Add(_T("影像尋找速度")); StrTable.Add(_T("影像比對分數"));
 	StrTable.Add(_T("影像尋找寬度")); StrTable.Add(_T("影像尋找高度")); StrTable.Add(_T("影像尋找起始角度")); StrTable.Add(_T("影像尋找結束角度")); StrTable.Add(_T("影像未搜尋到方法"));
 	StrTable.Add(_T("最大運行次數")); StrTable.Add(_T("循環次數"));
+    StrTable.Add(_T("清潔開關")); StrTable.Add(_T("清潔I/O"));
+    StrTable.Add(_T("清潔點X")); StrTable.Add(_T("清潔點Y")); StrTable.Add(_T("清潔點Z"));
+    
 	
-	for (int i = 0; i < 46; i++) {
+	for (int i = 0; i < 51; i++) {
 		m_ListDefault.InsertItem(i, NULL);
 		m_ListDefault.SetItemText(i, 0, StrTable[i]);
 	}
@@ -74,7 +77,7 @@ BOOL CDefault::OnInitDialog()
 void CDefault::ParamShow()
 {
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	LONG ParamArray[46];
+	LONG ParamArray[51];
 	ParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1;
 	ParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2;
 	ParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis;
@@ -121,7 +124,12 @@ void CDefault::ParamShow()
 	ParamArray[43] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError;
 	ParamArray[44] = ((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber;
 	ParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
-	for (int i = 0; i < 46; i++) {
+    ParamArray[46] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch;
+    ParamArray[47] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort;
+    ParamArray[48] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X;
+    ParamArray[49] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y;
+    ParamArray[50] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z;
+	for (int i = 0; i < 51; i++) {
 		CString StrBuff;
 		StrBuff.Format(_T("%d"), ParamArray[i]);
 		m_ListDefault.SetItemText(i, 1, StrBuff);
@@ -186,12 +194,18 @@ void CDefault::ParamModify()
 	//最大運行次數
 	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
 	((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
+
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch = _ttol(m_ListDefault.GetItemText(46, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort = _ttol(m_ListDefault.GetItemText(47, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X = _ttol(m_ListDefault.GetItemText(48, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y = _ttol(m_ListDefault.GetItemText(49, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z = _ttol(m_ListDefault.GetItemText(50, 1));
 }
 //#include "ExcelToList.h"
 //#include "ListToExcel.h"
 void CDefault::OnBnClickedButton2()
 {
-	for (int i = 0; i < 46; i++) {
+	for (int i = 0; i < 51; i++) {
 		m_ListDefault.SetItemText(i, 1, _T("0"));
 	}
 	ParamModify();

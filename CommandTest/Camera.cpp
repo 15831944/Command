@@ -16,7 +16,6 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG2, pParent)
 {
 	RaiChoose = 1;
-	FocusPoint = 0;
 	MilModel = malloc(sizeof(int));
 	*((int*)MilModel) = 0;
 }
@@ -46,9 +45,11 @@ BEGIN_MESSAGE_MAP(CCamera, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON2, &CCamera::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CCamera::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CCamera::OnBnClickedButton4)
+	ON_BN_CLICKED(IDC_BTNFOCUSSET, &CCamera::OnBnClickedBtnfocusset)
 	ON_BN_CLICKED(IDC_BTNFOCUS, &CCamera::OnBnClickedBtnfocus)
 	ON_WM_SHOWWINDOW()
 	ON_WM_MOUSEACTIVATE()
+	
 END_MESSAGE_MAP()
 
 // CCamera 訊息處理常式
@@ -72,6 +73,8 @@ BOOL CCamera::OnInitDialog()
 	SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 	StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
 	SetDlgItemText(IDC_TIPTOCCD, StrBuff);
+	StrBuff.Format(_T("FocusHeight:%d"), ((CCommandTestDlg*)pMain)->FocusPoint);
+	SetDlgItemText(IDC_FOCUSHEIGHT, StrBuff);
 	//影像開啟
 #ifdef VI
 	VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
@@ -146,13 +149,12 @@ void CCamera::OnBnClickedBtnmodel()
 	/*建立model*/
 #ifdef VI
 	void* Model = NULL;
-    //TODO::記憶體配置在Debug中須注意型態
+	//TODO::記憶體配置在Debug中須注意型態
 	Model = malloc(4);
 	VI_CreateModelFromBox(1, GetDlgItem(IDC_PIC), Model, 150, 150);
 	VI_SaveModel(Model, path, StrBuff + _T(".mod"));
 	VI_ModelFree(Model);
 	free(Model);
-    MessageBox(L"asdasd");
 	VI_GetPicture(path, StrBuff + _T(".bmp"), 0, 150, 150);
 #endif
 }
@@ -194,19 +196,19 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 			|| pMsg->wParam == VK_HOME || pMsg->wParam == VK_END) {
 #ifdef MOVE
 			CWnd* pMain = AfxGetApp()->m_pMainWnd;
-            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
-            {
-                if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
-                {
-                    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
-                    {
-                        if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
-                        {
-                            MO_DecSTOP();
-                        }
-                    }
-                }
-            }
+			if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
+			{
+				if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+				{
+					if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+					{
+						if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+						{
+							MO_DecSTOP();
+						}
+					}
+				}
+			}
 #endif // MOVE
 			pMsg->message = WM_NULL;
 		}
@@ -217,39 +219,39 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
 void CCamera::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-    if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
-    {
-        if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
-        {
-            if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
-            {
-                if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
-                {
-                    switch (RaiChoose)
-                    {
-                    case 1:
-                        if (!MO_ReadIsDriving(7))
-                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
-                        break;
-                    case 2:
-                        if (!MO_ReadIsDriving(7))
-                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
-                        break;
-                    case 3:
-                        if (!MO_ReadIsDriving(7))
-                            MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
-                        break;
-                    default:
-                        //MessageBox(_T("程式出現錯誤!"));
-                        break;
-                    }
+	if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunLoopStatus == 0)
+	{
+		if (((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 0 || ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus == 2)
+		{
+			if (((CCommandTestDlg*)pMain)->a.RunStatusRead.GoHomeStatus == TRUE)
+			{
+				if (!((CCommandTestDlg*)pMain)->a.RunStatusRead.StepCommandStatus)
+				{
+					switch (RaiChoose)
+					{
+					case 1:
+						if (!MO_ReadIsDriving(7))
+							MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
+						break;
+					case 2:
+						if (!MO_ReadIsDriving(7))
+							MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
+						break;
+					case 3:
+						if (!MO_ReadIsDriving(7))
+							MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
+						break;
+					default:
+						//MessageBox(_T("程式出現錯誤!"));
+						break;
+					}
 #ifdef PRINTF
-                    //_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
+					//_cwprintf("進來了:%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
-                }         
-            }
-        }
-    }
+				}         
+			}
+		}
+	}
 #ifdef PRINTF
 	//_cprintf("%d", ((CCommandTestDlg*)pMain)->a.RunStatusRead.RunStatus);
 #endif
@@ -335,6 +337,9 @@ void CCamera::OnBnClickedButton3()
 			*((int*)MilModel) = 0;
 			SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls"));
 			VI_DrawFOVFrame(1, GetDlgItem(IDC_PIC), 150, 150);
+
+			//計算重組圖移動量
+			VI_MosaicingMoveSet(((CCommandTestDlg*)pMain)->PixToPulsX * 640 / 1000, ((CCommandTestDlg*)pMain)->PixToPulsY * 480 / 1000, 50, ((CCommandTestDlg*)pMain)->a.AreaCheckParamterDefault.ViewMove.x, ((CCommandTestDlg*)pMain)->a.AreaCheckParamterDefault.ViewMove.y);
 		}    
 	}
 	else
@@ -343,24 +348,26 @@ void CCamera::OnBnClickedButton3()
 	}
 #endif
 }   
-//對焦點設置
+//對焦
 void CCamera::OnBnClickedBtnfocus()
 {
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
+#ifdef MOVE
+	MO_Do3DLineMove(0, 0, ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.FocusHeight - MO_ReadLogicPosition(2), 30000, 100000, 5000);
+#endif
+}
+//對焦點設置
+void CCamera::OnBnClickedBtnfocusset()
+{
 	CString StrBuff;
-	GetDlgItemText(IDC_BTNFOCUS, StrBuff);
-	if (StrBuff == L"對焦點\r設置")
-	{
-		SetDlgItemText(IDC_BTNFOCUS, L"對焦點\r移動");
+	CWnd* pMain = AfxGetApp()->m_pMainWnd;
 #ifdef MOVE
-		FocusPoint = MO_ReadLogicPosition(2);
+	((CCommandTestDlg*)pMain)->FocusPoint = MO_ReadLogicPosition(2);
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.FocusHeight = ((CCommandTestDlg*)pMain)->FocusPoint;
+	StrBuff.Format(_T("FocusHeight:%d"), ((CCommandTestDlg*)pMain)->FocusPoint);
+	SetDlgItemText(IDC_FOCUSHEIGHT, StrBuff); 
 #endif
-	}
-	else
-	{
-#ifdef MOVE
-		MO_Do3DLineMove(0, 0, FocusPoint - MO_ReadLogicPosition(2), 30000, 100000, 5000);
-#endif
-	}
+	
 }
 //模組管理
 void CCamera::OnBnClickedButton4()
@@ -372,7 +379,13 @@ void CCamera::OnBnClickedButton4()
 //關閉對話框
 void CCamera::OnCancel()
 {
-	DestroyWindow();
+	if (*((int*)MilModel) != 0)
+	{
+#ifdef VI
+		VI_ModelFree(MilModel);
+		*((int*)MilModel) = 0;
+#endif
+	}
 	CDialogEx::OnCancel();
 }
 void CCamera::OnOK()
@@ -396,19 +409,22 @@ int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 
 BOOL CCamera::DestroyWindow()
 {
-	_cwprintf(_T("VI_ModelFree"));
 #ifdef VI
 	//VI_DisplayAlloc(NULL, 1);
 	if (*((int*)MilModel) == 0)
 	{
 		free(MilModel);
+#ifdef PRINTF
 		_cwprintf(_T("free"));
+#endif
 	}
 	else
 	{
 		VI_ModelFree(MilModel);
 		free(MilModel);
+#ifdef PRINTF
 		_cwprintf(_T("VI_ModelFree"));
+#endif
 	}
 #endif
 	return CDialogEx::DestroyWindow();

@@ -37,7 +37,7 @@
 
 #define MOVE
 #define VI                                                     
-//#define LA
+#define LA
 #define PRINTF
 //#define LOG
 #ifdef MOVE
