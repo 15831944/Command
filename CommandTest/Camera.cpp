@@ -50,6 +50,7 @@ BEGIN_MESSAGE_MAP(CCamera, CDialogEx)
 	ON_WM_SHOWWINDOW()
 	ON_WM_MOUSEACTIVATE()
 	
+    ON_BN_CLICKED(IDC_BTNTABLESET, &CCamera::OnBnClickedBtntableset)
 END_MESSAGE_MAP()
 
 // CCamera 訊息處理常式
@@ -69,12 +70,14 @@ BOOL CCamera::OnInitDialog()
 	((CButton *)GetDlgItem(IDC_RADH))->SetCheck(TRUE);
 	RaiChoose = 1;
 	CString StrBuff;
-	StrBuff.Format(_T("%.6f,%.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
+	StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
 	SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 	StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
 	SetDlgItemText(IDC_TIPTOCCD, StrBuff);
 	StrBuff.Format(_T("FocusHeight:%d"), ((CCommandTestDlg*)pMain)->FocusPoint);
 	SetDlgItemText(IDC_FOCUSHEIGHT, StrBuff);
+    StrBuff.Format(_T("TableZ:%d"), ((CCommandTestDlg*)pMain)->a.m_Action.g_TablelZ);
+    SetDlgItemText(IDC_TABLEZ, StrBuff);
 	//影像開啟
 #ifdef VI
 	VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
@@ -369,6 +372,16 @@ void CCamera::OnBnClickedBtnfocusset()
 #endif
 	
 }
+//平台高度設置
+void CCamera::OnBnClickedBtntableset()
+{
+    CString StrBuff;
+    int TableZ = 0;
+    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    ((CCommandTestDlg*)pMain)->a.SetTabelZ(&TableZ);
+    StrBuff.Format(L"TableZ:%d", TableZ);
+    SetDlgItemText(IDC_TABLEZ, StrBuff);
+}
 //模組管理
 void CCamera::OnBnClickedButton4()
 {
@@ -406,7 +419,7 @@ int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
-
+//銷毀視窗事件
 BOOL CCamera::DestroyWindow()
 {
 #ifdef VI
@@ -429,3 +442,4 @@ BOOL CCamera::DestroyWindow()
 #endif
 	return CDialogEx::DestroyWindow();
 }
+

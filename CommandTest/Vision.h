@@ -39,11 +39,13 @@ extern "C" _declspec(dllexport) void VI_DisplaySet(CWnd* DisplayWindow, BOOL mov
 //顯示位置配置，含左上原點offset偏移控制
 extern "C" _declspec(dllexport) void VI_DisplayPosSet(CWnd* DisplayWindow, DOUBLE OffsetX, DOUBLE OffsetY);
 //即時影像縮小顯示,自動Fit顯示視窗
-extern "C" _declspec(dllexport) void VI_DisplayFitWindow(CWnd* DisplayWindow, BOOL move, double objwidth, double objheight);
+extern "C" _declspec(dllexport) void VI_DisplayFitWindow(CWnd* DisplayWindow, BOOL move, double objwidth, double objheight, double Yoffset);
 //設置繪製用的透明圖層
 extern "C" _declspec(dllexport) void VI_SetOverlayImage();
 //清除透明圖層內容
 extern "C" _declspec(dllexport) void VI_ClearOverlayImage();
+////攝影機預設顯示繪製
+extern "C" _declspec(dllexport) void VI_DrawFOVDefault();
 //繪製視野十字
 extern "C" _declspec(dllexport) void VI_DrawCross(BYTE mode, CWnd* DisplayWindow);
 //繪製矩形框
@@ -88,6 +90,8 @@ extern "C" _declspec(dllexport) BOOL VI_CreateModelFromInteractiveBox(void* MilM
 extern "C" _declspec(dllexport) void VI_GetInteractiveBoxPos(int &PosX, int &PosY, int &Width, int &Height);
 //取消互動模式，移除互動矩形框
 extern "C" _declspec(dllexport) void VI_RemoveInteractiveBox();
+//讀取檔案，檢測檔案存在與否
+extern "C" _declspec(dllexport) BOOL VI_CheckFileExist(CString path, CString name);
 //配置Model空間  (搭配VI_LoadModel使用)
 extern "C" _declspec(dllexport) void VI_ModelAlloc(void* MilModel);
 //載入 PatternMatch Model檔到原有配置好的Model空間 
@@ -213,7 +217,7 @@ extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
 //點膠檢測樣板建立
 extern "C" _declspec(dllexport) void VI_CircleBeadTrain(double Diameter, double MaxOffset, BOOL WhiteOrBlack, double Threshold);
 //點膠檢測驗證
-extern "C" _declspec(dllexport) BOOL VI_CircleBeadVerify(BOOL UnitsEnable, double MaxOffset);
+extern "C" _declspec(dllexport) int VI_CircleBeadVerify(BOOL UnitsEnable, double MaxOffset);
 
 //---------------------------------------------------------------------------------------------------
 // 影像拼接重組 Registration & 影像尋邊 Edge Finder 
@@ -229,7 +233,7 @@ extern "C" _declspec(dllexport) void VI_MosaicingImagesOriginCalc(long LocatX, l
 //影像拼接，重組數量計算
 extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesSizeCalc(long StartPointX, long StartPointY, long EndPointX, long EndPointY, int &MovXcnt, int &MovYcnt);
 //記錄待拼接重組的影像
-extern "C" _declspec(dllexport) void VI_MosaicingImagesCapture(long POsitionX, long PositionY);
+extern "C" _declspec(dllexport) void VI_MosaicingImagesCapture();
 //影像拼接重組，資源釋放
 extern "C" _declspec(dllexport) void VI_MosaicingImagesFree(int MaxCNT);
 //取得DXF檔，座標轉換參數
@@ -243,7 +247,7 @@ extern "C" _declspec(dllexport) void VI_MosaicingImagesProcessStop();
 //影像拼接重組，手動裁切處理
 extern "C" _declspec(dllexport) BOOL VI_SetCutMosaicingImages(CString path, CString name);
 //拼接重組影像顯示
-extern "C" _declspec(dllexport) void VI_MosaicingImagesDisplay(CWnd* DisplayWindow, CString path, CString name, BOOL move, double objwidth, double objheight);
+extern "C" _declspec(dllexport) BOOL VI_MosaicingImagesDisplay(CWnd* DisplayWindow, CString path, CString name, BOOL move, double objwidth, double objheight);
 //拼接重組影像顯示，資源釋放
 extern "C" _declspec(dllexport) void VI_MosaicingImagesDisplayFree();
 //影像拼接重組圖,二值化處理

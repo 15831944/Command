@@ -194,6 +194,7 @@
     <ClInclude Include="Action.h" />
     <ClInclude Include="Block.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CheckResult.h" />
     <ClInclude Include="CInterpolationCircle.h" />
     <ClInclude Include="CommandTest.h" />
     <ClInclude Include="CommandTestDlg.h" />
@@ -214,11 +215,13 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TemplateSet.h" />
+    <ClInclude Include="XListCtrl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Action.cpp" />
     <ClCompile Include="Block.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CheckResult.cpp" />
     <ClCompile Include="CInterpolationCircle.cpp" />
     <ClCompile Include="CommandTest.cpp" />
     <ClCompile Include="CommandTestDlg.cpp" />
@@ -242,6 +245,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TemplateSet.cpp" />
+    <ClCompile Include="XListCtrl.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CommandTest.rc" />

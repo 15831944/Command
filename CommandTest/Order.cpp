@@ -6,8 +6,8 @@
 #include <math.h>
 
 #define VI_MICaptureDelayTime 200
-#define VI_DCheckDelayTime 100
-#define VI_TCheckDelayTime 100
+#define VI_DCheckDelayTime 400
+#define VI_TCheckDelayTime 400
 
 // COrder
 
@@ -402,9 +402,14 @@ UINT COrder::HomeThread(LPVOID pParam)
 UINT COrder::Thread(LPVOID pParam)
 {
 #ifdef PRINTF
-	(((COrder*)pParam)->DemoTemprarilySwitch) ? _cwprintf(L"Thread()::有載入Demo檔\n") : _cwprintf(L"Thread()::沒有載入Demo檔\n");
+    (((COrder*)pParam)->DemoTemprarilySwitch) ? _cwprintf(L"Thread()::有載入Demo檔\n") : _cwprintf(L"Thread()::沒有載入Demo檔\n");
 #endif
-	((COrder*)pParam)->RunStatusRead.RunStatus = 1;//狀態改變成運作中
+    ((COrder*)pParam)->RunStatusRead.RunStatus = 1;//狀態改變成運作中
+#ifdef MOVE
+        //運行前先抬升至工件高度上
+        ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0, ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+            ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed,1);
+#endif
 	while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->ModelControl.Mode != 4/*&& ((COrder*)pParam)->Commanding != _T("End")*/)//新增模式判斷
 	{
 		if (((COrder*)pParam)->RunData.SubProgramName != _T(""))//雙程式使用
@@ -702,7 +707,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	}
 	else if (CommandResolve(Command, 0) == L"CallSubroutine")
 	{    
-		//TODO::可思考 如果LS->CallSubroutine 結果沒有此Subroutine時還是會移到LS
+		//TODO::可思考 如果LS->CallSubroutine 結果沒有此Subroutine時還是會移到LS，已使用限制命令解決
 		if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS時 移動至LS虛擬點
 		{
 			((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
@@ -2542,6 +2547,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
 			{
 #ifdef MOVE
+                //先移動到(0,0,0)位置 Z軸抬升目前35000絕對 
+                ((COrder*)pParam)->m_Action.DecideVirtualHome(0, 0, 0, 35000, 0,
+                    ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
 				((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
 #endif   
 				((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0 };//紀錄移動虛擬座標
@@ -4039,7 +4047,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->CheckSwitch.ImmediateCheck = 1;//模板即時檢測開關開啟
 				((COrder*)pParam)->TemplateChecking.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
 				((COrder*)pParam)->TemplateChecking.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
-					((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+					(BYTE)_ttoi(CommandResolve(Command,5)),((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
 					((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0,0 };//加入比對參數          
 				ModelLoad(1, pParam, CommandResolve(Command, 3), ((COrder*)pParam)->TemplateChecking);//載入OK模板(指針、數量)
 				ModelLoad(0, pParam, CommandResolve(Command, 4), ((COrder*)pParam)->TemplateChecking);//載入NG模板(指針、數量) 
@@ -4052,7 +4060,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					LineTrainDataCheck(pParam);//判斷是否有新增換線點
 					((COrder*)pParam)->CheckSwitch.Template = TRUE;
 					((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
-					((COrder*)pParam)->CheckSwitch.Area = FALSE;
+					((COrder*)pParam)->CheckSwitch.Area = FALSE; 
 					((COrder*)pParam)->CurrentCheckAddress = ((COrder*)pParam)->GetCommandAddress();//更改目前區間檢測地址
 					//判斷模板檢測是否新增過
 					BOOL ScanResult = FALSE;
@@ -4068,7 +4076,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						TemplateCheck TemplateCheckInit;
 						TemplateCheckInit.Address = ((COrder*)pParam)->GetCommandAddress();//加入檢測地址
 						TemplateCheckInit.VisionParam = { 0,((COrder*)pParam)->VisionSet.Accuracy,((COrder*)pParam)->VisionSet.Speed,
-							((COrder*)pParam)->VisionSet.Score,((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
+                            (BYTE)_ttoi(CommandResolve(Command,5)),((COrder*)pParam)->VisionSet.width,((COrder*)pParam)->VisionSet.height,
 							((COrder*)pParam)->VisionSet.Startangle,((COrder*)pParam)->VisionSet.Endangle,0,0,0 };//加入比對參數
 						ModelLoad(1, pParam, CommandResolve(Command, 3), TemplateCheckInit);//載入OK模板(指針、數量)
 						ModelLoad(0, pParam, CommandResolve(Command, 4), TemplateCheckInit);//載入NG模板(指針、數量)
@@ -4294,6 +4302,9 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 			} 
 		} 
 		((COrder*)pParam)->IntervalCheckCoordinate.clear();//清除檢測點陣列
+#ifdef VI
+        VI_DrawFOVDefault();//清除CCD畫面 
+#endif
 	}
 	//判斷區域檢測是否有資料
 	if (((COrder*)pParam)->IntervalAreaCheck.size())
@@ -4343,11 +4354,13 @@ UINT COrder::CheckAction(LPVOID pParam)
 				//判斷OK是否有模板
 				if (((COrder*)pParam)->TemplateChecking.OKModelCount)
 				{	
+                    Sleep(VI_TCheckDelayTime);
 					OKCheck = VI_FindMatrixModel(((COrder*)pParam)->TemplateChecking.OKModel, ((COrder*)pParam)->TemplateChecking.OKModelCount);//OK比對                 
 				}
 				//判斷NG是否有模板
 				if (((COrder*)pParam)->TemplateChecking.NGModelCount)
 				{
+                    Sleep(VI_TCheckDelayTime);
 					NGCheck = VI_FindMatrixModel(((COrder*)pParam)->TemplateChecking.NGModel, ((COrder*)pParam)->TemplateChecking.NGModelCount);//NG比對
 				}
 				//判斷OK、NG計數
@@ -4386,10 +4399,10 @@ UINT COrder::CheckAction(LPVOID pParam)
 					}
 					else
 					{
-						if (OKCheck && NGCheck)
+						if (OKCheck && NGCheck)//兩種模板都找到跳Err
 						{
-							((COrder*)pParam)->CheckResult.NOAnswer++;
-							Buff = L"NOAnswer";
+							((COrder*)pParam)->CheckResult.Error++;
+							Buff = L"Err";
 						}
 						else
 						{
@@ -4398,6 +4411,10 @@ UINT COrder::CheckAction(LPVOID pParam)
 						}
 					}
 				}
+                else
+                {
+                    AfxMessageBox(L"請選擇模板!");
+                }
 				//紀錄檢測結果
 				((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
 				{ L"TemplateCheck",((COrder*)pParam)->TemplateChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
@@ -4418,16 +4435,24 @@ UINT COrder::CheckAction(LPVOID pParam)
 				//檢測延遲
 				Sleep(VI_DCheckDelayTime);
 				//直徑檢測
-				if (VI_CircleBeadVerify(0, ((COrder*)pParam)->DiameterChecking.Tolerance))
+                int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->DiameterChecking.Tolerance);
+				if (tmpBeadVerify == 1)
 				{
 					((COrder*)pParam)->CheckResult.OKCount++;
 					Buff = L"OK";
 				}
-				else
+				else if(tmpBeadVerify == 0)
 				{
 					((COrder*)pParam)->CheckResult.NGCount++;
 					Buff = L"NG";
 				}
+                else
+                {
+                    ((COrder*)pParam)->CheckResult.Error++;
+                    Buff = L"Err";
+                }
+                //直徑檢測訓練清除
+                VI_CircleBeadFree();
 				//紀錄檢測結果
 				((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
 				{ L"DiameterCheck",((COrder*)pParam)->DiameterChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
@@ -4440,6 +4465,9 @@ UINT COrder::CheckAction(LPVOID pParam)
 #endif
 			}
 			((COrder*)pParam)->ClearCheckData(TRUE, FALSE);//即時檢測資料清除
+#ifdef VI
+            VI_DrawFOVDefault();//清除CCD畫面 
+#endif
 		}
 	}
 	if (((COrder*)pParam)->CheckModel == 2)//區間檢測動作
@@ -4469,11 +4497,13 @@ UINT COrder::CheckAction(LPVOID pParam)
 					//判斷OK是否有模板
 					if (((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount)
 					{			
+                        Sleep(VI_TCheckDelayTime);
 						OKCheck = VI_FindMatrixModel(((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModel, ((COrder*)pParam)->IntervalTemplateCheck.at(i).OKModelCount);//OK比對
 					}
 					//判斷NG是否有模板
 					if (((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount)
-					{			
+					{		
+                        Sleep(VI_TCheckDelayTime);
 						NGCheck = VI_FindMatrixModel(((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModel, ((COrder*)pParam)->IntervalTemplateCheck.at(i).NGModelCount);//NG比對                        
 					}
 #endif
@@ -4515,8 +4545,8 @@ UINT COrder::CheckAction(LPVOID pParam)
 						{
 							if (OKCheck && NGCheck)
 							{
-								((COrder*)pParam)->CheckResult.NOAnswer++;
-								Buff = L"NOAnswer";
+								((COrder*)pParam)->CheckResult.Error++;
+								Buff = L"Err";
 							}
 							else
 							{
@@ -4525,6 +4555,10 @@ UINT COrder::CheckAction(LPVOID pParam)
 							}
 						}               
 					}
+                    else
+                    {
+                        AfxMessageBox(L"請選擇模板!");
+                    }
 					//紀錄檢測結果
 					((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->CheckCoordinateRun });
 					//畫出檢測結果
@@ -4545,16 +4579,22 @@ UINT COrder::CheckAction(LPVOID pParam)
 					//檢測延遲
 					Sleep(VI_DCheckDelayTime);
 					//直徑檢測
-					if (VI_CircleBeadVerify(0,((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance))
+                    int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance);
+					if (tmpBeadVerify == 1)
 					{
 						((COrder*)pParam)->CheckResult.OKCount++;
 						Buff = L"OK";
 					}
-					else
+					else if (tmpBeadVerify == 0)
 					{
 						((COrder*)pParam)->CheckResult.NGCount++;                   
 						Buff = L"NG";                                     
 					}
+                    else
+                    {
+                        ((COrder*)pParam)->CheckResult.Error++;
+                        Buff = L"Err";
+                    }
 					//直徑檢測訓練清除
 					VI_CircleBeadFree();
 					//紀錄檢測結果
@@ -4618,7 +4658,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 						}
 #ifdef VI
 						Sleep(VI_MICaptureDelayTime);
-						VI_MosaicingImagesCapture(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y);//擷取影像
+						VI_MosaicingImagesCapture();//擷取影像
 #endif             
 					}
 					Switch = !Switch;//S形開關轉換
@@ -5412,7 +5452,7 @@ BOOL COrder::CheckDraw()
 			Pencolor = 1;
 		else if(CheckFinishRecord.back().Result == L"OK")
 			Pencolor = 2;
-		else if (CheckFinishRecord.back().Result == L"NOAnswer")
+		else if (CheckFinishRecord.back().Result == L"Err")
 			Pencolor = 3;
 		(*CallFunction.CDrawFunction)(CallFunction.pObject, { CheckFinishRecord.back().CheckData.Position.X,CheckFinishRecord.back().CheckData.Position.Y }, Pencolor);
 		return 1;
@@ -6339,6 +6379,7 @@ void COrder::DecideClear()
 	VisionAdjust.clear();
 	//檢測資料釋放
 	ClearCheckData(TRUE,TRUE);//清除檢測資料 
+    IntervalCheckCoordinate.clear();//清除直徑、模板檢測點陣列
 #ifdef PRINTF
 		_cwprintf(L"DecideClear()::Clear()\n");
 #endif
@@ -7570,7 +7611,7 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
 			//載入模板、配置屬性
 #ifdef VI                                                                                                   
 			VI_LoadMatrixModel(TemplateCheck.OKModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.OKModelCount);//載入模板
-			VI_SetMultipleModel(TemplateCheck.OKModel, 1, 1, 70, 0, 360, TemplateCheck.OKModelCount);//設定模板參數    
+			VI_SetMultipleModel(TemplateCheck.OKModel, 1, 1, TemplateCheck.VisionParam.Score, 0, 360, TemplateCheck.OKModelCount);//設定模板參數    
 #endif
 		}   
 		else
@@ -7613,7 +7654,7 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
 			//載入模板、配置屬性
 #ifdef VI                                                                                                   
 			VI_LoadMatrixModel(TemplateCheck.NGModel, ((COrder*)pParam)->VisionFile.ModelPath, FileName, TemplateCheck.NGModelCount);//載入模板
-			VI_SetMultipleModel(TemplateCheck.NGModel, 1, 1, 70, 0, 360, TemplateCheck.NGModelCount);//設定模板參數
+			VI_SetMultipleModel(TemplateCheck.NGModel, 1, 1, TemplateCheck.VisionParam.Score, 0, 360, TemplateCheck.NGModelCount);//設定模板參數
 #endif
 		} 
 		else
@@ -7683,7 +7724,7 @@ BOOL COrder::ClearCheckData(BOOL Moment,BOOL Interval)
 		if (IntervalDiameterCheck.size())//判斷模板是否有資料
 		{
 			IntervalDiameterCheck.clear();
-		}
+		}     
 	}
 	return 0;
 }
@@ -8279,7 +8320,7 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 	_cwprintf(L"第三次檢查完畢\n");
 	for (UINT i = 0; i < IntervalQueue.size(); i++)
 	{
-		_cwprintf(L"%s:%d:%d\n", IntervalQueue.at(i).Command, IntervalQueue.at(i).Begin, IntervalQueue.at(i).End);
+		_cwprintf(L"CheckCommandRule():%s:%d:%d\n", IntervalQueue.at(i).Command, IntervalQueue.at(i).Begin, IntervalQueue.at(i).End);
 	}
 #endif
 	return 0;
@@ -8292,4 +8333,20 @@ BOOL COrder::SetDrawFunction(CDrawFunction Funtion, void * pObject)
 	if (CallFunction.pObject)
 		return 1;
 	return 0;
+}
+/*設置平台高度Z值*/
+BOOL COrder::SetTabelZ(int *TableZ)
+{
+    if (TableZ != NULL)
+    {
+#ifdef MOVE
+        m_Action.g_TablelZ = MO_ReadLogicPosition(2);
+        *TableZ = m_Action.g_TablelZ;
+#endif
+    }
+    else
+    {
+        return 0;
+    }
+    return 1;
 }

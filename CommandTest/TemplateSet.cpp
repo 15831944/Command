@@ -148,5 +148,7 @@ void CTemplateSet::OnBnClickedOk()
             ((CCommandTestDlg*)pMain)->CheckStrBuff += StrBuff;
         }
     }	
+    StrBuff.Format(L",%d", GetDlgItemInt(IDC_EDITSCORE));
+    ((CCommandTestDlg*)pMain)->CheckStrBuff += StrBuff;
 	CDialogEx::OnOK();
 }

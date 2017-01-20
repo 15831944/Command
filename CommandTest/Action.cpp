@@ -1,11 +1,12 @@
 /*
-*檔案名稱:Action.cpp(3D用)
+*檔案名稱:Action.cpp(NOVA三軸機使用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/09/26
-*@更新內容三軸兩軸連續差補&雷射API*/
+*＠data 更新日期:2017/01/12
+*@更新Z軸回升高度__g_TablelZ*/
 #include "stdafx.h"
 #include "Action.h"
+#include "Laser.h"
 #define LA_SCANEND -99999
 BOOL CAction::g_ZtimeOutGlueSet = FALSE;
 BOOL CAction::g_YtimeOutGlueSet = FALSE;
@@ -32,6 +33,7 @@ CAction::CAction()
 	g_OffSetScan = 500;//雷射位移補償
 	g_LaserAverage = FALSE; //雷射平均(1使用/0不使用)
 	g_LaserAveBuffZ = 0; // 雷射用平均暫存值(絕對位置z值)
+    g_TablelZ = 60850;//工作平台高度(Z軸總工作高度)
 	m_hComm = NULL;
 #ifdef MOVE
 	LA_m_ptVec2D.clear();
@@ -61,27 +63,18 @@ void CAction::WaitTime(HANDLE wakeEvent, int Time)
 			break;
 		}
 	}
-	//for (int i = 0; i < 10; i++)
-	//{
-	//    if (!((COrder*)pParam)->StopFlag)
-	//    {
-	//        DWORD rc = WaitForSingleObject(wakeEvent, 1000);
-	//        switch (rc)
-	//        {
-	//        case WAIT_OBJECT_0:
-	//            // wakeEvent signaled
-	//            ((COrder*)pParam)->Time = 100;
-	//            break;
-	//        case WAIT_TIMEOUT:
-	//            // 10-second timer passed 
-	//            ((COrder*)pParam)->Time++;
-	//            break;
-	//        case WAIT_ABANDONED:
-	//            // main thread ended 
-	//            return 0;
-	//        }
-	//    }
-	//}
+}
+CString CAction::ShowVersion()
+{
+    CString csbuf, csa, csb, csc, csd;
+#ifdef MOVE
+    MO_DllVersion(csa);
+    MO_DllDate(csb);
+    LAS_DllVersion(csc);
+    LAS_DllDate(csd);
+    csbuf.Format(_T("運動版本=%s、運動時間=%s\n雷射版本=%s、雷射時間=%s\n"), csa, csb, csc, csd);
+#endif	
+    return csbuf;
 }
 /*
 *單點點膠動作(多載-結束設置+加速度+點到點速度)
@@ -122,6 +115,12 @@ void CAction::DecidePointGlue(LONG lX, LONG lY, LONG lZ, LONG lDoTime, LONG lDel
 	{
 		lLowVelocity = lWorkVelociy;
 	}
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ)
@@ -300,6 +299,12 @@ void CAction::DecideLineEndMove(LONG lX, LONG lY, LONG lZ, LONG lCloseOffDelayTi
 	LONG lHighVelocity
 	*/
 #ifdef MOVE
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if(!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ)
@@ -435,6 +440,12 @@ void CAction::DecideLineEndMove(LONG lCloseOffDelayTime,
 	lNowX = MO_ReadLogicPosition(0);
 	lNowY = MO_ReadLogicPosition(1);
 	lNowZ = MO_ReadLogicPosition(2);
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lNowZ)
@@ -650,6 +661,12 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, LONG lX2, LONG lY2, LONG
 	{
 		lCloseDistance = LineLength;
 	}
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType)//絕對位置
 	{
 		if (lZBackDistance > lZ)
@@ -968,6 +985,12 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 	{
 		lLowVelocity = lWorkVelociy;
 	}
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType)//絕對位置
 	{
 		if (lZBackDistance > lNowZ)
@@ -1045,7 +1068,7 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 			MO_Do2DArcMove(0, 0, lCircleX - lNowX, lCircleY - lNowY, lInitVelociy, lWorkVelociy, bRev);//圓
 			PreventMoveError();//防止軸卡出錯
 		}
-		DecideLineEndMove(lX3, lY3, lNowZ, lCloseOffDelayTime, lCloseDistance, lCloseONDelayTime, lZBackDistance, bZDisType, lHighVelocity, lDistance, lHigh, lLowVelocity, iType, lWorkVelociy, lAcceleration, lInitVelociy);
+		DecideLineEndMove(lX3, lY3, lNowZ, lCloseOffDelayTime, lCloseDistance, lCloseONDelayTime, lZBackDistance, 0, lHighVelocity, lDistance, lHigh, lLowVelocity, iType, lWorkVelociy, lAcceleration, lInitVelociy);//已經轉換成絕對了
 		PreventMoveError();//防止軸卡出錯
 	}
 #endif
@@ -1122,6 +1145,12 @@ void CAction::DecideArcleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lClo
 	{
 		lLowVelocity = lWorkVelociy;
 	}
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType)//絕對位置
 	{
 		if (lZBackDistance > lNowZ)
@@ -1267,6 +1296,12 @@ void CAction::DecideParkPoint(LONG lX, LONG lY, LONG lZ, LONG lTimeGlue, LONG lW
 	{
 		lLowVelocity = lWorkVelociy;
 	}
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ)
@@ -1377,31 +1412,22 @@ void CAction::DecideVirtualHome(LONG lX, LONG lY, LONG lZ, LONG lZBackDistance, 
 	{
 		return;
 	}
-	if (bZDisType)
-	{
-		//相對座標
-		if (!g_bIsStop)
-		{
-			//lZBackDistance超過可移動距離
-			lZBackDistance = (lZBackDistance > MO_ReadLogicPosition(2)) ? MO_ReadLogicPosition(2) : lZBackDistance;
-			//z go back
-			MO_Do3DLineMove(0, 0, -lZBackDistance, lWorkVelociy, lAcceleration, lInitVelociy);
-			PreventMoveError();//防止軸卡出錯
-		}
-	}
-	else
-	{
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 		//絕對座標
-		if (!g_bIsStop)
-		{
-			if (lZBackDistance < MO_ReadLogicPosition(2))
-			{
-				//z go back
-				MO_Do3DLineMove(0, 0, lZBackDistance - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
-				PreventMoveError();//防止軸卡出錯
-			}
-		}
-	}
+    if (!g_bIsStop)
+    {
+        if (lZBackDistance < MO_ReadLogicPosition(2))
+        {
+            //z go back
+            MO_Do3DLineMove(0, 0, lZBackDistance - MO_ReadLogicPosition(2), lWorkVelociy, lAcceleration, lInitVelociy);
+            PreventMoveError();//防止軸卡出錯
+        }
+    }
 	if (!g_bIsStop)
 	{
 		//xyz move
@@ -1425,7 +1451,13 @@ void CAction::DispenClear(LONG lX, LONG lY, LONG lZ, int ClreaPort, LONG lZBackD
 	系統參數(驅動速度，加速度，初速度)
 	LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy
 	*/
-	if (bZDisType) //絕對位置
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
+	if (!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ)
 		{
@@ -1509,8 +1541,12 @@ void CAction::DecideFill(LONG lX1, LONG lY1, LONG lZ1, LONG lX2, LONG lY2, LONG 
 	{
 		lCloseONDelayTime = 0;
 	}
-
-
+    if (bZDisType)//當使用相對位置的時候
+    {
+        LONG lbuf = g_TablelZ - lZBackDistance;//從平台最低往上相對距離
+        lZBackDistance = lbuf;
+        bZDisType = 0;//改為絕對位置
+    }
 	if (!bZDisType) //絕對位置
 	{
 		if (lZBackDistance > lZ1)
@@ -1762,7 +1798,8 @@ void CAction::LA_SetInit()
 		// MessageBox(L"Open failed");
 		return;
 	}
-	LAS_SetInit(&m_hComm);
+	//LAS_SetInit(&m_hComm);
+    LAS_SetInit();
 
 #pragma endregion //Omron
 	////LAS_SetInit();

@@ -1,14 +1,22 @@
+/*
+*檔案名稱:Order.h
+*用途:用於解譯命令執行運動、影像、雷射控制
+*適用軸卡:Nova 
+*適用雷射:松下
+*/
+
 #pragma once
 #include <vector>
 #include "Action.h"
 #include "CInterpolationCircle.h"
-// COrder
+
 static CWinThread* g_pThread = NULL;
 static CWinThread* g_pSubroutineThread = NULL;
 static CWinThread* g_pRunLoopThread = NULL;
 static CWinThread* g_pIODetectionThread = NULL;
 static CWinThread* g_pCheckCoordinateScanThread = NULL;
 static CWinThread* g_pCheckActionThread = NULL;
+
 class COrder : public CWnd
 {
 	DECLARE_DYNAMIC(COrder)
@@ -207,7 +215,7 @@ private:
 	/************************************************************檢測參數結構*******************************************************/
 	//檢測座標結構(檢測模式地址、命令地址、座標位置)
 	struct CheckCoordinate{
-        CString CheckMode;
+		CString CheckMode;
 		CString CheckModeAddress;
 		CString Address;
 		CoordinateData Position;
@@ -218,7 +226,7 @@ private:
 		BOOL Diameter;
 		BOOL Area;
 		BOOL RunCheck;
-        UINT ImmediateCheck;
+		UINT ImmediateCheck;
 	};
 	//模板檢測結構(模板檢測地址、OK模板數量、OK模板指針陣列、NG模板數量、NG模板指針陣列、比對參數)
 	struct TemplateCheck {
@@ -241,7 +249,7 @@ private:
 	struct CheckResult {
 		LONG OKCount;
 		LONG NGCount;
-		LONG NOAnswer;
+		LONG Error;
 		LONG OKMosaicingImage;
 		LONG NGMosaicingImage;
 	};
@@ -281,7 +289,7 @@ private:
 	//區域檢測結構(區域檢測地址、重組圖結構、點訓練結構、線訓練結構、儲存結果檔案結構)
 	struct AreaCheck {
 		CString Address;
-		MosaicingData Image;
+		MosaicingData Image;                    
 		TrainData DotTrain;
 		TrainData LineTrain;
 		File Result;
@@ -290,7 +298,7 @@ private:
 	struct AreaCheckFinishRecord {
 		CString CheckModeAddress;
 		File ResultImage;
-		BOOL CheckResult;
+		BOOL Result;
 	};
 	//區域檢測人機預設值結構
 	struct AreaCheckParamterDefault {
@@ -418,12 +426,12 @@ private:
 		int LoopCount;
 		int MaxRunNumber;
 	};
-    //外部函式呼叫結構
+	//外部函式呼叫結構
 	typedef void(*CDrawFunction) (void*,CPoint,int);
-    struct CallFunction {
-        CDrawFunction CDrawFunction;
-        void* pObject;
-    };
+	struct CallFunction {
+		CDrawFunction CDrawFunction;
+		void* pObject;
+	};
 private:    //變數
 	HANDLE          wakeEvent;
 	/*運行時間計算*/
@@ -472,8 +480,8 @@ private:    //函式
 	static  void    LaserDetectHandle(LPVOID pParam, CString Command);//雷射檢測處理
 	BOOL            LaserPointDetect();//檢查雷射檢測點是否重複
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標移動
-    BOOL            CheckDraw();//點檢測畫圖
-    //虛擬座標模擬移動
+	BOOL            CheckDraw();//點檢測畫圖
+	//虛擬座標模擬移動
 	/*資料表處理區塊*/
 	static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
 	static  void    ChooseLaserModify(LPVOID pParam);//選擇雷射修正值
@@ -587,8 +595,8 @@ public:     //變數
 	AreaCheck       AreaCheckRun;//暫存目前要運行的區域檢測資料
 	LONG            CheckModel;//檢測模組判斷
 
-    //畫圖呼叫函式設定
-    CallFunction    CallFunction;
+	//畫圖呼叫函式設定
+	CallFunction    CallFunction;
 	/********************/
 
 	//區域檢測預設值參數
@@ -605,7 +613,7 @@ public:     //變數
 	//IO參數設定
 	IOParam         IOParam;
    
-public:     //函式
+public:     //運行類函式
 	COrder();
 	virtual ~COrder();
 	//開始命令解譯(成功return 1失敗return 0)
@@ -628,8 +636,12 @@ public:     //函式
 	void    LoadPointData();
 	//檢查命令規則(return 錯誤代碼 , ErrorAddress 為錯誤命令地址)
 	int     CheckCommandRule(int &ErrorAddress);
-    //設置畫圖呼叫函式(成功return 1失敗return 0)
-    BOOL    SetDrawFunction(CDrawFunction Funtion,void* pObject);
+public:    //設定類函式
+	//設置畫圖呼叫函式(成功return 1失敗return 0)
+	BOOL    SetDrawFunction(CDrawFunction Funtion, void* pObject);
+	//設置平台高度Z值(參數:回傳馬達Z值)(成功return 1 失敗 return 0)
+	BOOL    SetTabelZ(int* TableZ);
+	
 protected:
 	DECLARE_MESSAGE_MAP()
 };

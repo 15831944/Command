@@ -46,4 +46,5 @@ public:
     virtual BOOL DestroyWindow();
     afx_msg void OnBnClickedBtnfocusset();
     afx_msg void OnBnClickedBtnfocus();
+    afx_msg void OnBnClickedBtntableset();
 };

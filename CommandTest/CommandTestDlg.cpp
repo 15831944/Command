@@ -301,7 +301,9 @@ void CCommandTestDlg::OnBnClickedStart()
 	dwStyle |= LVS_SHOWSELALWAYS;
 	m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
 	/*設置影像對位目錄*/
-	a.VisionDefault.VisionFile.ModelPath = GetCurrentPath(_T("\\Temp\\")).GetBuffer();
+    LPTSTR lpszText = new TCHAR[GetCurrentPath(_T("\\Temp\\")).GetLength() + 1];
+    lstrcpy(lpszText, GetCurrentPath(_T("\\Temp\\")));
+	a.VisionDefault.VisionFile.ModelPath = lpszText;
 	/*設置區域檢測目錄*/
 	a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
 	a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
@@ -1774,7 +1776,7 @@ void CCommandTestDlg::SaveParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeCreate | CFile::modeWrite))
 	{
 		CArchive ar(&File, CArchive::store);//儲存檔案
-		ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.VisionDefault.VisionSet.FocusHeight << a.m_Action.g_HeightLaserZero;
+		ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.VisionDefault.VisionSet.FocusHeight << a.m_Action.g_HeightLaserZero << a.m_Action.g_TablelZ;
 	}
 	File.Close();
 }
@@ -1791,7 +1793,7 @@ void CCommandTestDlg::LoadParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeRead))
 	{
 		CArchive ar(&File, CArchive::load);//讀取檔案
-		ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.VisionDefault.VisionSet.FocusHeight >> a.m_Action.g_HeightLaserZero;
+		ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.VisionDefault.VisionSet.FocusHeight >> a.m_Action.g_HeightLaserZero >> a.m_Action.g_TablelZ;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -2033,7 +2035,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
 	MessageBox(StrBuff);*/
 	for (UINT i = 0; i < a.AreaCheckFinishRecord.size(); i++)
 	{
-		_cwprintf(L"%s,%s,%s,%d\n", a.AreaCheckFinishRecord.at(i).CheckModeAddress, a.AreaCheckFinishRecord.at(i).ResultImage.Path, a.AreaCheckFinishRecord.at(i).ResultImage.Name, a.AreaCheckFinishRecord.at(i).CheckResult);
+		_cwprintf(L"%s,%s,%s,%d\n", a.AreaCheckFinishRecord.at(i).CheckModeAddress, a.AreaCheckFinishRecord.at(i).ResultImage.Path, a.AreaCheckFinishRecord.at(i).ResultImage.Name, a.AreaCheckFinishRecord.at(i).Result);
 	}
 }
 

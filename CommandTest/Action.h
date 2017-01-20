@@ -1,9 +1,9 @@
 /*
-*檔案名稱:Action.h(3D用)
+*檔案名稱:Action.h(NOVA三軸機使用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2016/09/26
-*@更新內容三軸兩軸連續差補&雷射API*/
+*＠data 更新日期:2017/01/12
+*@更新Z軸回升高度__g_TablelZ*/
 #pragma once
 #include <vector>
 #define _USE_MATH_DEFINES
@@ -34,6 +34,7 @@ public:     //變數
 	BOOL    g_LaserAverage;//雷射平均(1使用/0不使用)
 	BOOL    g_interruptLock;//中斷鎖
 	BOOL    g_getHeightFlag;//雷射測高旗標：允許測高
+    LONG    g_TablelZ;//工作平台高度
 	std::vector<UINT>  LA_m_iVecSP;//主要雷射vector(SP:Scan End)
 	static BOOL    g_YtimeOutGlueSet;//Y計時器中斷時出斷膠控制
 	static BOOL    g_ZtimeOutGlueSet;//Z計時器中斷時出斷膠控制
@@ -55,6 +56,8 @@ public:     //析構函數
 	virtual ~CAction();
 public:     //運動API
 	void WaitTime(HANDLE wakeEvent, int Time);
+    //顯示版本
+    CString ShowVersion();
 	//單點點膠動作--(單點點膠X,單點點膠Y,單點點膠Z,出膠時間,斷膠延遲,Z軸回升高度(相對)最高點,Z軸距離(相對),高速度,低速度,驅動速度,加速度,初速度)
 	void DecidePointGlue(LONG lX, LONG lY, LONG lZ, LONG lDoTime, LONG lDelayStopTime,LONG lZBackDistance,BOOL bZDisType, LONG lZdistance, LONG lHighVelocity, LONG lLowVelocity, LONG lWorkVelociy,LONG lAcceleration, LONG lInitVelociy);
 	//線段開始動作--(線段開始X,線段開始Y,線段開始Z,移動前延遲,驅動速度,加速度,初速度)
