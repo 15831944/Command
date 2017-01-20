@@ -289,7 +289,7 @@ private:
 	//區域檢測結構(區域檢測地址、重組圖結構、點訓練結構、線訓練結構、儲存結果檔案結構)
 	struct AreaCheck {
 		CString Address;
-		MosaicingData Image;                    
+		MosaicingData Image;
 		TrainData DotTrain;
 		TrainData LineTrain;
 		File Result;
