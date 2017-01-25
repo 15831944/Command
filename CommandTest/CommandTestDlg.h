@@ -13,7 +13,7 @@ class CCommandTestDlg : public CDialogEx
 // 建構
 public:
 	CCommandTestDlg(CWnd* pParent = NULL);	// 標準建構函式
-
+    virtual ~CCommandTestDlg();
 // 對話方塊資料
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_COMMANDTEST_DIALOG };
@@ -44,6 +44,7 @@ public:
 	CDialog* m_pPositionModifyDlg;
 	CDialog* m_pLaserAdjustDlg;
 	CDialog* m_pLineContinuousDlg;
+    CDialog* m_pCheckResultDlg;
 	DOUBLE PixToPulsX, PixToPulsY;
 	BOOL InputAuto;
 	CPoint TipOffset,LaserOffset;
@@ -92,6 +93,9 @@ public:
 	afx_msg void OnInsert();
 	afx_msg void OnDelete();
 	afx_msg void OnMove();
+    afx_msg void OnCutout();
+    afx_msg void OnPaste();
+    afx_msg void OnCopy();
 	afx_msg void OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult);
 	afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
 	void ListRefresh(BOOL ScrollBarRefresh);
@@ -166,9 +170,7 @@ public:
 	afx_msg void OnDestroy();
     //外部畫圖函式
     static void myDrawFunction(void* pParam, CPoint pt, int pencolor);
-    afx_msg void OnCutout();
-    afx_msg void OnPaste();
-    afx_msg void OnCopy();
+    
 };
 
 

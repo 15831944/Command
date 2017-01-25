@@ -62,6 +62,10 @@ COrder::COrder()
 }
 COrder::~COrder()
 {
+    if (VisionDefault.VisionSerchError.pQuestion != NULL)
+        delete VisionDefault.VisionSerchError.pQuestion;
+    if (IOParam.pEMGDlg != NULL)
+        delete IOParam.pEMGDlg;
 }
 BEGIN_MESSAGE_MAP(COrder, CWnd)
 END_MESSAGE_MAP()
@@ -4704,6 +4708,8 @@ UINT COrder::CheckAction(LPVOID pParam)
 
 				}
 #endif
+                if (DotPosition != NULL)
+                    delete DotPosition;//釋放記憶體
 			}
 			//線訓練
 			if (((COrder*)pParam)->AreaCheckRun.LineTrain.PointData.size())
@@ -4721,6 +4727,8 @@ UINT COrder::CheckAction(LPVOID pParam)
 						LinePosition, ((COrder*)pParam)->AreaCheckRun.LineTrain.MeasureLimit, ((COrder*)pParam)->AreaCheckRun.LineTrain.MaxOffset, ((COrder*)pParam)->AreaCheckRun.LineTrain.WhiteOrBlack, ((COrder*)pParam)->AreaCheckRun.LineTrain.PointData.size());
 				}
 #endif
+                if (LinePosition != NULL)
+                    delete LinePosition;//釋放記憶體
 			}
 			//判斷檢測模式
 			if (DotSwitch && LineSwitch)
@@ -6538,6 +6546,7 @@ BOOL COrder::FileDelete(CString FilePathName)
 	}
 	system(nstringw);//刪除該文件夾所有資料
 	//RemoveDirectory(NewFilePathName);//刪除空的資料夾
+    delete nstringw;//釋放記憶體
 	return 0;
 }
 /*資料夾搜尋檔案刪除所有檔案*/
@@ -7974,10 +7983,13 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 	LaserIntervalQueue  LaserIntervalQueue;
 	LaserIntervalQueue = { 0,0,0 };
 	//判斷命令列是否有End沒有自動加入
-	if (CommandMemory.at(CommandMemory.size() - 1) != _T("End"))
-	{
-		CommandMemory.push_back(_T("End"));
-	}
+    if (CommandMemory.size())
+    {
+        if (CommandMemory.at(CommandMemory.size() - 1) != _T("End"))
+        {
+            CommandMemory.push_back(_T("End"));
+        }
+    }
 	//第一次檢查(檢查Label、StepRepeatLabel是否有重複、End是否在最後一項、GotoAddress是否正確)
 	for (UINT i = 0; i < CommandMemory.size(); i++)
 	{

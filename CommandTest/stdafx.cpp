@@ -108,6 +108,8 @@ CString GetCurrentPath(CString Folder)
     path = path.Left(pos) + Folder;
     LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
     lstrcpy(lpszText, path);
+    if(lpszText != NULL)
+        delete lpszText;
     return path;
 }
 /*判斷檔案是否存在*/

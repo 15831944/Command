@@ -22,6 +22,8 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 
 CCamera::~CCamera()
 {
+    if (MilModel != NULL)
+        free(MilModel);
 }
 
 void CCamera::DoDataExchange(CDataExchange* pDX)
@@ -129,13 +131,15 @@ void CCamera::OnBnClickedBtnmove()
 void CCamera::OnBnClickedBtnmodel()
 {
 	/*獲取目前.exe目錄*/
-	CString path;
+	CString path = GetCurrentPath(L"\\Temp");
 	GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
 	path.ReleaseBuffer();
 	int pos = path.ReverseFind('\\');
 	path = path.Left(pos) + _T("\\Temp");
 	LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
 	lstrcpy(lpszText, path);
+    if (lpszText != NULL)
+        delete lpszText;//釋放變數記憶體
 	/*路径不存在则创建该路径*/
 	CFileFind m_FileFind;
 	if (!m_FileFind.FindFile(path))
