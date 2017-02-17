@@ -35,9 +35,9 @@
 #include <afxcontrolbars.h>     // 功能區和控制列的 MFC 支援
 
 
-//#define MOVE
-//#define VI                                                     
-//#define LA
+#define MOVE
+#define VI                                                     
+#define LA
 #define PRINTF
 //#define LOG
 #ifdef MOVE
@@ -72,7 +72,8 @@ BOOL FileExist(LPCWSTR FilePathName);
 #endif
 #endif
 
-
+//定義區塊
+#define CheckEndDlgcode 0x001
 
 
 

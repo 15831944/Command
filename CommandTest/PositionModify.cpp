@@ -240,9 +240,6 @@ void CPositionModify::OnBnClickedBtnclear()
     }
 }
 
-
-
-
 //顯示視窗時設定
 void CPositionModify::OnShowWindow(BOOL bShow, UINT nStatus)
 {
@@ -251,7 +248,6 @@ void CPositionModify::OnShowWindow(BOOL bShow, UINT nStatus)
     this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
 
 }
-
 //非活動轉活動事件
 int CPositionModify::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 {

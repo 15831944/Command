@@ -5,7 +5,7 @@
 #include "CommandTest.h"
 #include "CheckResult.h"
 #include "afxdialogex.h"
-
+#include "PictureViewDlg.h"
 
 // CCheckResult 對話方塊
 
@@ -17,29 +17,22 @@ CCheckResult::CCheckResult(CWnd* pParent /*=NULL*/)
     m_pLoadlist = NULL;
     lEndthread = 0;
     pCCommandTestDlg = (CCommandTestDlg*)AfxGetApp()->m_pMainWnd;
+    m_pPictureViewDlg = NULL;
 }
-
 CCheckResult::~CCheckResult()
 {
 }
-
 void CCheckResult::DoDataExchange(CDataExchange* pDX)
 {
     CDialogEx::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_LIST1, m_ListCheck);
 }
-
-
 BEGIN_MESSAGE_MAP(CCheckResult, CDialogEx)
     ON_WM_CLOSE()
     ON_WM_DESTROY()
+    ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CCheckResult::OnNMDblclkList1)
 END_MESSAGE_MAP()
-
-
 // CCheckResult 訊息處理常式
-
-
-
 BOOL CCheckResult::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
@@ -93,7 +86,79 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 3, str_position);
         ListCount++;
     } 
-    ExitThread(456);
+    int i = 0;
+    while (((CCheckResult*)pParam)->lEndthread == 0 && ((CCheckResult*)pParam)->pCCommandTestDlg->a.AreaCheckFinishRecord.size() > i)
+    {
+        CString str_no, str_position;
+        str_no.Format(L"%d", ListCount + 1);
+        if (((CCheckResult*)pParam)->lEndthread == 0)
+            ((CCheckResult*)pParam)->m_ListCheck.InsertItem(ListCount, str_no);
+        if (((CCheckResult*)pParam)->lEndthread == 0)
+            ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 1, L"AreaCheck");
+        if (((CCheckResult*)pParam)->pCCommandTestDlg->a.AreaCheckFinishRecord.at(i).Result)
+        {
+            if (((CCheckResult*)pParam)->lEndthread == 0)
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 2, L"OK");
+            if (((CCheckResult*)pParam)->lEndthread == 0)
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(0, 255, 0));
+        }
+        else
+        {
+            if (((CCheckResult*)pParam)->lEndthread == 0)
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 2, L"NG");
+            if (((CCheckResult*)pParam)->lEndthread == 0)
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
+        }
+        ListCount++;
+        i++;
+    }
+    ExitThread(CheckEndDlgcode);
+}
+//滑鼠左鍵兩下
+void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
+{
+    LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+    NM_LISTVIEW  *pEditCtrl = (NM_LISTVIEW *)pNMHDR;
+    if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
+        if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"AreaCheck")
+        {
+            _cwprintf(L"%s\n", pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path +
+                pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name);
+            if (m_pPictureViewDlg == NULL)
+            {
+                //秀出圖片:方式ㄧ(呼叫Windowns預設程式)
+                /*
+                ShellExecute(NULL, L"open", _T("rundll32.exe"), _T("shimgvw.dll,ImageView_Fullscreen ") + pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path +
+                    pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name, NULL, SW_SHOW);
+                */
+                //秀出圖片:方式二(使用MIL做好的功能)
+                m_pPictureViewDlg = new CPictureViewDlg();
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path;
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name;
+                m_pPictureViewDlg->Create(IDD_DIALOG13, this); 
+                m_pPictureViewDlg->ShowWindow(SW_SHOW);
+            }
+            else
+            {
+                //秀出圖片:方式二(使用MIL做好的功能)
+                if (::IsWindow(((CPictureViewDlg*)m_pPictureViewDlg)->m_hWnd))//判斷視窗是否有銷毀
+                {
+                    ((CPictureViewDlg*)m_pPictureViewDlg)->OnCancel();
+                }
+                if (m_pPictureViewDlg != NULL)
+                {
+                    delete (CDialog*)m_pPictureViewDlg;
+                    m_pPictureViewDlg = NULL;
+                }
+                m_pPictureViewDlg = new CPictureViewDlg();
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path;
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name;
+                m_pPictureViewDlg->Create(IDD_DIALOG13, this);
+                m_pPictureViewDlg->ShowWindow(SW_SHOW);
+            }
+        }
+    }
+    *pResult = 0;
 }
 //關閉視窗
 void CCheckResult::OnClose()
@@ -120,3 +185,5 @@ void CCheckResult::OnDestroy()
     _cwprintf(L"OnDestroy\n");
     CDialogEx::OnDestroy();
 }
+
+

@@ -3,8 +3,6 @@
 #define _USE_MATH_DEFINES
 #include<math.h>
 
-#define CUTTING_LENGTH 15
-
 CCircleFormula::CCircleFormula()
 {
 
@@ -63,7 +61,7 @@ void CCircleFormula::ArcCutPoint(AxeSpace sp, AxeSpace mp, AxeSpace ep, std::vec
     //於平面做旋轉取值
     std::vector<DPoint> cutPtArr;
     cutPtArr.clear();
-    PlaneRotationGetArray(Pse, Pm2e, r, bRev, abs(Radm2s), cutPtArr);
+    PlaneRotationGetArray(Pse, Pm2e, r, bRev, pm2Rad-psRad, cutPtArr);
     //空間旋轉轉換取值
     SpaceRotationGetArray(D, cutPtArr);
     //Vector轉換，並且從原點平移回去
@@ -141,7 +139,7 @@ void CCircleFormula::CircleCutPoint(AxeSpace sp, AxeSpace mp1, AxeSpace mp2, std
     //於平面做旋轉取值
     std::vector<DPoint> cutPtArr;
     cutPtArr.clear();
-    PlaneRotationGetArray(Pse, r ,bRev,cutPtArr);
+    PlaneRotationGetArray(Pse, r,bRev,cutPtArr);
     //空間旋轉轉換取值
     SpaceRotationGetArray(D, cutPtArr);
     //Vector轉換，並且從原點平移回去
@@ -174,7 +172,7 @@ void CCircleFormula::CircleCutPoint(AxeSpace sp, AxeSpace mp1, AxeSpace mp2, std
 *type       true:圓/false:圓弧
 *cutUnit    切線長度，單位micrometer[um]
 */
-void CCircleFormula::CircleCutPath_2D(AxeSpace P1, AxeSpace P2, AxeSpace P3, bool type, long cutUnit, std::vector<AxeSpace> &cutPathArray)
+void CCircleFormula::CircleCutPath_2D_unit(AxeSpace P1, AxeSpace P2, AxeSpace P3, bool type, long cutUnit, std::vector<AxeSpace> &cutPathArray)
 {
     CCircleFormula cirForm;
     DPoint dp1, dp2, dp3, dcenter;
@@ -188,6 +186,7 @@ void CCircleFormula::CircleCutPath_2D(AxeSpace P1, AxeSpace P2, AxeSpace P3, boo
     dp3.y = P3.y;
     dp3.z = P3.z;
     dcenter = cirForm.SpaceCircleCenterCalculation(dp1, dp2, dp3);
+
     double r = sqrt(pow(dp1.x-dcenter.x, 2)+pow(dp1.y-dcenter.y, 2)+pow(dp1.z-dcenter.z, 2));
     //圓心位移至原點
     DPoint dpt1, dpt2, dpt3;
@@ -199,6 +198,7 @@ void CCircleFormula::CircleCutPath_2D(AxeSpace P1, AxeSpace P2, AxeSpace P3, boo
     p1Rad = fmod(atan2(dpt1.y, dpt1.x)+M_PI*2, M_PI*2);
     p2Rad = fmod(atan2(dpt2.y, dpt2.x)+M_PI*2, M_PI*2);
     p3Rad = fmod(atan2(dpt3.y, dpt3.x)+M_PI*2, M_PI*2);
+
     double Radms, Radm2s;
     Radms = fmod(p2Rad-p1Rad+M_PI*2, M_PI*2);
     Radm2s = fmod(p3Rad-p1Rad+M_PI*2, M_PI*2);
@@ -212,7 +212,84 @@ void CCircleFormula::CircleCutPath_2D(AxeSpace P1, AxeSpace P2, AxeSpace P3, boo
     //以1mm，也就是1000um的弧長做切點
     double deltaRad = cutUnit/r;
     double dAng = 0.0;
-    dAng = (type) ? M_PI*2 : abs(p3Rad - p1Rad);
+    dAng = (type) ? M_PI*2 : ((bRev) ? Radm2s : M_PI*2-Radm2s);
+    if(bRev)
+    {
+        while(rad<dAng)
+        {
+            Pee.x = dpt1.x*cos(rad)-dpt1.y*sin(rad);
+            Pee.y = dpt1.x*sin(rad)+dpt1.y*cos(rad);
+            Pee.z = 0.0;
+
+            Pn.x = (long)round(Pee.x+dcenter.x);
+            Pn.y = (long)round(Pee.y+dcenter.y);
+            Pn.z = 0;
+            cutPathArray.push_back(Pn);
+            rad += deltaRad;
+        }
+    }
+    else
+    {
+        while(rad>-dAng)
+        {
+            Pee.x = dpt1.x*cos(rad)-dpt1.y*sin(rad);
+            Pee.y = dpt1.x*sin(rad)+dpt1.y*cos(rad);
+            Pee.z = 0.0;
+
+            Pn.x = (long)round(Pee.x+dcenter.x);
+            Pn.y = (long)round(Pee.y+dcenter.y);
+            Pn.z = 0;
+            cutPathArray.push_back(Pn);
+            rad -= deltaRad;
+        }
+    }
+
+    if(Pn.x!=P1.x&&Pn.y!=P1.y)
+    {
+        cutPathArray.push_back((type) ? P1 : P3);
+    }
+}
+void CCircleFormula::CircleCutPath_2D_radian(AxeSpace P1, AxeSpace P2, AxeSpace P3, bool type, double cutRad, std::vector<AxeSpace> &cutPathArray)
+{
+    CCircleFormula cirForm;
+    DPoint dp1, dp2, dp3, dcenter;
+    dp1.x = P1.x;
+    dp1.y = P1.y;
+    dp1.z = P1.z;
+    dp2.x = P2.x;
+    dp2.y = P2.y;
+    dp2.z = P2.z;
+    dp3.x = P3.x;
+    dp3.y = P3.y;
+    dp3.z = P3.z;
+    dcenter = cirForm.SpaceCircleCenterCalculation(dp1, dp2, dp3);
+
+    double r = sqrt(pow(dp1.x-dcenter.x, 2)+pow(dp1.y-dcenter.y, 2)+pow(dp1.z-dcenter.z, 2));
+    //圓心位移至原點
+    DPoint dpt1, dpt2, dpt3;
+    dpt1 = { dp1.x-dcenter.x,dp1.y-dcenter.y,dp1.z-dcenter.z,0.0 };
+    dpt2 = { dp2.x-dcenter.x,dp2.y-dcenter.y,dp2.z-dcenter.z,0.0 };
+    dpt3 = { dp3.x-dcenter.x,dp3.y-dcenter.y,dp3.z-dcenter.z,0.0 };
+    //計算圓形正逆轉
+    double p1Rad, p2Rad, p3Rad;
+    p1Rad = fmod(atan2(dpt1.y, dpt1.x)+M_PI*2, M_PI*2);
+    p2Rad = fmod(atan2(dpt2.y, dpt2.x)+M_PI*2, M_PI*2);
+    p3Rad = fmod(atan2(dpt3.y, dpt3.x)+M_PI*2, M_PI*2);
+
+    double Radms, Radm2s;
+    Radms = fmod(p2Rad-p1Rad+M_PI*2, M_PI*2);
+    Radm2s = fmod(p3Rad-p1Rad+M_PI*2, M_PI*2);
+    bool bRev;
+    bRev = (Radms<Radm2s) ? true : false;
+    cutPathArray.clear();
+
+    DPoint Pee;
+    AxeSpace Pn;
+    double rad = 0.0;
+    //以1mm，也就是1000um的弧長做切點
+    double deltaRad = cutRad;
+    double dAng = 0.0;
+    dAng = (type) ? M_PI*2 : ((bRev) ? Radm2s : M_PI*2-Radm2s);
     if(bRev)
     {
         while(rad<dAng)
@@ -257,13 +334,33 @@ DPoint CCircleFormula::rotationMatrix2_2(DPoint P, double rad)
     return Pn;
 }
 
+void CCircleFormula::rotationMatrix2_2(double *point, double rad)
+{
+    double pX, pY;
+    pX = point[0];
+    pY = point[1];
+    point[0] = pX*cos(rad)-pY*sin(rad);
+    point[1] = pX*sin(rad)+pY*cos(rad);
+}
+
 void CCircleFormula::FindNormalVector(DPoint p1, DPoint p2, DPoint p3, double &a, double &b, double &c, double &d)
 {
     a = (p2.y-p1.y)*(p3.z-p1.z)-(p3.y-p1.y)*(p2.z-p1.z);
     b = (p2.z-p1.z)*(p3.x-p1.x)-(p2.x-p1.x)*(p3.z-p1.z);
     c = (p2.x-p1.x)*(p3.y-p1.y)-(p3.x-p1.x)*(p2.y-p1.y);
     d = -(a*p1.x+b*p1.y+c*p1.z);
-    //ax+by+cz-d=0
+    //ax+by+cz-d = 0
+    //ax+by+cz = d
+}
+
+void CCircleFormula::FindNormalVector(double *d1, double *d2, double *d3, double *normalVector)
+{
+    //ax+by+cz-d = 0
+    //ax+by+cz = d
+    normalVector[0] = (d2[1]-d1[1])*(d3[2]-d1[2])-(d3[1]-d1[1])*(d2[2]-d1[2]);
+    normalVector[1] = (d2[2]-d1[2])*(d3[0]-d1[0])-(d2[0]-d1[0])*(d3[2]-d1[2]);
+    normalVector[2] = (d2[0]-d1[0])*(d3[1]-d1[1])-(d3[0]-d1[0])*(d2[1]-d1[1]);
+    normalVector[3] = -(normalVector[0]*d1[0]+normalVector[1]*d1[1]+normalVector[2]*d1[2]);
 }
 
 void CCircleFormula::RotateTransformMatrix(double a, double b, double c, double d, double *matrix3_3)
@@ -307,7 +404,7 @@ void CCircleFormula::PlaneRotationGetArray(DPoint Pe, double r, bool Rev, std::v
     DPoint Pee;
     double rad = 0.0;
     //以1mm，也就是1000um的弧長做切點
-    double deltaRad = CUTTING_LENGTH/r;
+    double deltaRad = (double)m_cuttingLength/r;
     if(Rev)
     {
         while(rad<M_PI*2)
@@ -338,7 +435,7 @@ void CCircleFormula::PlaneRotationGetArray(DPoint Pe, DPoint Pm2e, double r, boo
     DPoint Pee;
     double rad = 0.0;
     //以1mm，也就是1000um的弧長做切點
-    double deltaRad = CUTTING_LENGTH/r;
+    double deltaRad = (double)m_cuttingLength/r;
     if(Rev)
     {
         while(rad<endRad)
@@ -427,3 +524,132 @@ DPoint CCircleFormula::SpaceCircleCenterCalculation(DPoint p1, DPoint p2, DPoint
     //P = MAT‧Pl //C已經是inverse MAT
     return EulerRotation(Pl, MAT, false);
 }
+
+DPoint CCircleFormula::ArcCentCalculation_2D(DPoint p1, DPoint p2, DPoint p3, double &radius, double &angle)
+{
+    //求三維圓心
+    DPoint pCen;
+    pCen = SpaceCircleCenterCalculation(p1, p2, p3);
+    radius = sqrt(pow(pCen.x - p1.x, 2) + pow(pCen.y - p1.y, 2));
+
+    //圓心位移至原點
+    DPoint dpt1, dpt2, dpt3;
+    dpt1 = { p1.x - pCen.x,p1.y - pCen.y,p1.z - pCen.z,0.0 };
+    dpt2 = { p2.x - pCen.x,p2.y - pCen.y,p2.z - pCen.z,0.0 };
+    dpt3 = { p3.x - pCen.x,p3.y - pCen.y,p3.z - pCen.z,0.0 };
+    //計算圓形正逆轉
+    double p1Rad, p2Rad, p3Rad;
+    p1Rad = fmod(atan2(dpt1.y, dpt1.x) + M_PI * 2, M_PI * 2);
+    p2Rad = fmod(atan2(dpt2.y, dpt2.x) + M_PI * 2, M_PI * 2);
+    p3Rad = fmod(atan2(dpt3.y, dpt3.x) + M_PI * 2, M_PI * 2);
+
+    double Radms, Radm2s;
+    Radms = fmod(p2Rad - p1Rad + M_PI * 2, M_PI * 2);
+    Radm2s = fmod(p3Rad - p1Rad + M_PI * 2, M_PI * 2);
+    bool bRev;
+    bRev = (Radms<Radm2s) ? true : false;
+
+    angle = ((bRev) ? Radm2s : M_PI * 2 - Radm2s)*180.0 / M_PI;
+    return pCen;
+}
+
+BOOL CCircleFormula::SpaceRectanglePointCalculation(DPoint p1, DPoint p2, DPoint pA, RectangleSpace & Rectangle,LONG Type)
+{
+    DPoint pCen = { 0,0,0,0 };
+    double radius = 0;
+    double angle = 0;
+    pCen = ArcCentCalculation_2D(p1, pA, p2, radius, angle);
+    if (Type)
+    {
+        if ((int)round(angle) < 180)
+        {
+            SpaceRectanglePointCalculationInside180(p1, p2, pA, pCen, radius, Rectangle);
+        }
+        else if ((int)round(angle) == 180)
+        {
+            SpaceRectanglePointCalculation180(p1, p2, pA, pCen, radius, Rectangle);
+        }
+        else if ((int)round(angle) > 180)
+        {
+            SpaceRectanglePointCalculationOutside180(p1, p2, pA, pCen, radius, Rectangle);
+        }
+    }
+    else
+    {
+        SpaceRectanglePointCalculation360(p1, p2, pA, pCen, radius, Rectangle);
+    }
+    return 0;
+}
+
+BOOL CCircleFormula::SpaceRectanglePointCalculationInside180(DPoint p1, DPoint p2, DPoint pA, DPoint pCen, double radius, RectangleSpace &Rectangle)
+{
+    DPoint MPoint,TPoint,p3,p4;
+    MPoint.x = (p1.x + p2.x) / 2;
+    MPoint.y = (p1.y + p2.y) / 2;
+    TPoint.x = pCen.x + (((MPoint.x - pCen.x)*radius) / sqrt(pow(MPoint.x - pCen.x, 2) + pow(MPoint.y - pCen.y, 2)));
+    TPoint.y = pCen.y + (((MPoint.y - pCen.y)*radius) / sqrt(pow(MPoint.x - pCen.x, 2) + pow(MPoint.y - pCen.y, 2)));
+    p3.x = TPoint.x + p2.x - MPoint.x;
+    p3.y = TPoint.y + p2.y - MPoint.y;
+    p4.x = TPoint.x + p1.x - MPoint.x;
+    p4.y = TPoint.y + p1.y - MPoint.y;
+    Rectangle.P1 = { static_cast<long>(p1.x + 0.5),static_cast<long>(p1.y + 0.5),0,0 };
+    Rectangle.P2 = { static_cast<long>(p2.x + 0.5),static_cast<long>(p2.y + 0.5),0,0 };
+    Rectangle.P3 = { static_cast<long>(p3.x + 0.5),static_cast<long>(p3.y + 0.5),0,0 };
+    Rectangle.P4 = { static_cast<long>(p4.x + 0.5),static_cast<long>(p4.y + 0.5),0,0 };
+    return 0;
+}
+
+BOOL CCircleFormula::SpaceRectanglePointCalculationOutside180(DPoint p1, DPoint p2, DPoint pA, DPoint pCen, double radius, RectangleSpace & Rectangle)
+{
+    DPoint MPoint, TPoint, P1P2U;
+    MPoint.x = (p1.x + p2.x) / 2;
+    MPoint.y = (p1.y + p2.y) / 2;
+    TPoint.x = pCen.x + (((pCen.x - MPoint.x)*radius) / sqrt(pow(pCen.x - MPoint.x, 2) + pow(pCen.y - MPoint.y, 2)));
+    TPoint.y = pCen.y + (((pCen.y - MPoint.y)*radius) / sqrt(pow(pCen.x - MPoint.x, 2) + pow(pCen.y - MPoint.y, 2)));
+    P1P2U.x = (p2.x - p1.x) / sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
+    P1P2U.y = (p2.y - p1.y) / sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
+    Rectangle.P1 = { static_cast<long>(MPoint.x - radius*P1P2U.x + 0.5),static_cast<long>(MPoint.y - radius*P1P2U.y + 0.5),0,0 };
+    Rectangle.P2 = { static_cast<long>(MPoint.x + radius*P1P2U.x + 0.5),static_cast<long>(MPoint.y + radius*P1P2U.y + 0.5),0,0 };                                                                                                                 Rectangle.P1 = { static_cast<long>(MPoint.x - radius*P1P2U.x),static_cast<long>(MPoint.y - radius*P1P2U.y),0,0 };
+    Rectangle.P3 = { static_cast<long>(TPoint.x - radius*P1P2U.x + 0.5),static_cast<long>(TPoint.y - radius*P1P2U.y + 0.5),0,0 };
+    Rectangle.P4 = { static_cast<long>(TPoint.x + radius*P1P2U.x + 0.5),static_cast<long>(TPoint.y + radius*P1P2U.y + 0.5),0,0 };
+    return 0;
+}
+
+BOOL CCircleFormula::SpaceRectanglePointCalculation180(DPoint p1, DPoint p2, DPoint pA, DPoint pCen, double radius, RectangleSpace & Rectangle)
+{
+    DPoint MPoint1, MPoint2;
+    double D1, D2;
+    MPoint1.x = pCen.x - p2.y + pCen.y;
+    MPoint1.y = pCen.y + p2.x - pCen.x;
+    MPoint2.x = pCen.x + p2.y - pCen.y;
+    MPoint2.y = pCen.y - p2.x + pCen.x;
+    D1 = sqrt(pow(MPoint1.x - pA.x, 2) + pow(MPoint1.y - pA.y, 2));
+    D2 = sqrt(pow(MPoint2.x - pA.x, 2) + pow(MPoint2.y - pA.y, 2));
+    Rectangle.P1 = { static_cast<long>(p1.x + 0.5),static_cast<long>(p1.y + 0.5),0,0 };
+    Rectangle.P2 = { static_cast<long>(p2.x + 0.5),static_cast<long>(p2.y + 0.5),0,0 };
+    if (D1 < D2)
+    {
+        Rectangle.P3 = { static_cast<long>(MPoint1.x + p2.x - pCen.x + 0.5),static_cast<long>(MPoint1.y + p2.y - pCen.y + 0.5),0,0 };
+        Rectangle.P4 = { static_cast<long>(MPoint1.x - p2.x + pCen.x + 0.5),static_cast<long>(MPoint1.y - p2.y + pCen.y + 0.5),0,0 };
+    }
+    else if (D2 < D1)
+    {
+        Rectangle.P3 = { static_cast<long>(MPoint2.x + p2.x - pCen.x + 0.5),static_cast<long>(MPoint2.y + p2.y - pCen.y + 0.5),0,0 };
+        Rectangle.P4 = { static_cast<long>(MPoint2.x - p2.x + pCen.x + 0.5),static_cast<long>(MPoint2.y - p2.y + pCen.y + 0.5),0,0 };
+    }
+    else
+    {
+        AfxMessageBox(L"嚴重計算錯誤!");
+    }
+    return 0;
+}
+
+BOOL CCircleFormula::SpaceRectanglePointCalculation360(DPoint p1, DPoint p2, DPoint pA, DPoint pCen, double radius, RectangleSpace & Rectangle)
+{
+    Rectangle.P1 = { static_cast<long>(pCen.x - radius + 0.5),static_cast<long>(pCen.y - radius + 0.5),0,0 };
+    Rectangle.P2 = { static_cast<long>(pCen.x + radius + 0.5),static_cast<long>(pCen.y - radius + 0.5),0,0 };
+    Rectangle.P3 = { static_cast<long>(pCen.x + radius + 0.5),static_cast<long>(pCen.y + radius + 0.5),0,0 };
+    Rectangle.P4 = { static_cast<long>(pCen.x - radius + 0.5),static_cast<long>(pCen.y + radius + 0.5),0,0 };
+    return 0;
+}
+

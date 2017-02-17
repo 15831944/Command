@@ -206,9 +206,12 @@
     <ClInclude Include="LineContinuous.h" />
     <ClInclude Include="ListToExcel.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="MosaicProcessing.h" />
     <ClInclude Include="MoveButton.h" />
     <ClInclude Include="NumEdit.h" />
     <ClInclude Include="Order.h" />
+    <ClInclude Include="PictureCtrl.h" />
+    <ClInclude Include="PictureViewDlg.h" />
     <ClInclude Include="PositionModify.h" />
     <ClInclude Include="Question.h" />
     <ClInclude Include="Resource.h" />
@@ -233,9 +236,12 @@
     <ClCompile Include="LineContinuous.cpp" />
     <ClCompile Include="ListToExcel.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="MosaicProcessing.cpp" />
     <ClCompile Include="MoveButton.cpp" />
     <ClCompile Include="NumEdit.cpp" />
     <ClCompile Include="Order.cpp" />
+    <ClCompile Include="PictureCtrl.cpp" />
+    <ClCompile Include="PictureViewDlg.cpp" />
     <ClCompile Include="PositionModify.cpp" />
     <ClCompile Include="Question.cpp" />
     <ClCompile Include="stdafx.cpp">

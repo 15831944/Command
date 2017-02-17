@@ -17,7 +17,8 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
 {
 	RaiChoose = 1;
 	MilModel = malloc(sizeof(int));
-	*((int*)MilModel) = 0;
+    if(MilModel != NULL)
+	    *((int*)MilModel) = 0;
 }
 
 CCamera::~CCamera()
@@ -72,7 +73,7 @@ BOOL CCamera::OnInitDialog()
 	((CButton *)GetDlgItem(IDC_RADH))->SetCheck(TRUE);
 	RaiChoose = 1;
 	CString StrBuff;
-	StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
+	StrBuff.Format(_T("PixToPuls:X = %.5f,Y = %.5f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
 	SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 	StrBuff.Format(_T("TipToCCD:X = %d,Y = %d"), ((CCommandTestDlg*)pMain)->TipOffset.x, ((CCommandTestDlg*)pMain)->TipOffset.y);
 	SetDlgItemText(IDC_TIPTOCCD, StrBuff);
@@ -337,16 +338,13 @@ void CCamera::OnBnClickedButton3()
 #endif
 		if (((CCommandTestDlg*)pMain)->PixToPulsX != 0.0)
 		{
-			StrBuff.Format(_T("PixToPuls:X = %.6f,Y = %.6f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
+			StrBuff.Format(_T("PixToPuls:X = %.5f,Y = %.5f"), ((CCommandTestDlg*)pMain)->PixToPulsX, ((CCommandTestDlg*)pMain)->PixToPulsY);
 			SetDlgItemText(IDC_PIXTOPULS, StrBuff);
 			VI_ModelFree(MilModel);
 			//free(MilModel);
 			*((int*)MilModel) = 0;
 			SetDlgItemText(IDC_BUTTON3, _T("SetPixToPuls"));
 			VI_DrawFOVFrame(1, GetDlgItem(IDC_PIC), 150, 150);
-
-			//計算重組圖移動量
-			VI_MosaicingMoveSet(((CCommandTestDlg*)pMain)->PixToPulsX * 640 / 1000, ((CCommandTestDlg*)pMain)->PixToPulsY * 480 / 1000, 50, ((CCommandTestDlg*)pMain)->a.AreaCheckParamterDefault.ViewMove.x, ((CCommandTestDlg*)pMain)->a.AreaCheckParamterDefault.ViewMove.y);
 		}    
 	}
 	else
@@ -426,15 +424,17 @@ int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 //銷毀視窗事件
 BOOL CCamera::DestroyWindow()
 {
-#ifdef VI
+
 	//VI_DisplayAlloc(NULL, 1);
 	if (*((int*)MilModel) == 0)
 	{
 		free(MilModel);
+        MilModel = NULL;//釋放後記得將指針賦予初值
 #ifdef PRINTF
 		_cwprintf(_T("free"));
 #endif
 	}
+#ifdef VI
 	else
 	{
 		VI_ModelFree(MilModel);

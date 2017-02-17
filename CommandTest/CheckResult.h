@@ -3,6 +3,7 @@
 #include "XListCtrl.h"
 #include "CommandTestDlg.h"
 
+
 // CCheckResult ¹ï¸Ü¤è¶ô
 
 class CCheckResult : public CDialogEx
@@ -25,13 +26,17 @@ protected:
 public:
 	CXListCtrl m_ListCheck;
     CWinThread* m_pLoadlist;
-    CCommandTestDlg* pCCommandTestDlg;
+    CCommandTestDlg* pCCommandTestDlg;  
+    CDialog* m_pPictureViewDlg;
     long volatile lEndthread;
+    CString m_ImagePath;
+    CString m_ImageName;
+public:
     static UINT LoadListThread(LPVOID pParam);
     virtual BOOL OnInitDialog();
-    afx_msg void OnClose();
     virtual void OnCancel();
-    afx_msg void OnDestroy();
     virtual BOOL DestroyWindow();
-    afx_msg void OnBnClickedButton1();
+    afx_msg void OnClose();
+    afx_msg void OnDestroy();
+    afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
 };

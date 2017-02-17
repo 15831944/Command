@@ -18,6 +18,7 @@
 #include "Question.h"
 #include "TemplateSet.h"
 #include "CheckResult.h"
+#include "MosaicProcessing.h"
 
 #include <math.h>
 #include <valarray>
@@ -255,6 +256,9 @@ BOOL CCommandTestDlg::OnInitDialog()
 		m_ParamList.SetItemText(i, 1, 0);
 	}
 	//TODO:參數修改在這
+#ifdef VI
+    VI_CameraInit(0, 1);//先出始畫影像
+#endif
 	//原點復歸參數
 	LoadDefault();
 	//載入參數檔案
@@ -272,9 +276,7 @@ BOOL CCommandTestDlg::OnInitDialog()
 	a.m_Action.LA_SetInit();//雷射開啟
 	OnBnClickedBtnhome();
 #endif
-#ifdef VI
-	VI_CameraInit(0, 1);
-#endif
+
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
 // 如果將最小化按鈕加入您的對話方塊，您需要下列的程式碼，
@@ -320,10 +322,6 @@ void CCommandTestDlg::OnBnClickedStart()
 	DWORD dwStyle = m_CommandList.GetExtendedStyle();
 	dwStyle |= LVS_SHOWSELALWAYS;
 	m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
-	/*設置影像對位目錄*/
-    LPTSTR lpszText = new TCHAR[GetCurrentPath(_T("\\Temp\\")).GetLength() + 1];
-    lstrcpy(lpszText, GetCurrentPath(_T("\\Temp\\")));
-	a.VisionDefault.VisionFile.ModelPath = lpszText;
 	/*設置區域檢測目錄*/
 	a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
 	a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
@@ -389,15 +387,31 @@ void CCommandTestDlg::OnBnClickedBtnhome()
 /*View*/
 void CCommandTestDlg::OnBnClickedBtnview()
 {
-	/*設置Model當前目錄*/
-	CString path;
-	GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
-	path.ReleaseBuffer();
-	int pos = path.ReverseFind('\\');
-	path = path.Left(pos) + _T("\\Temp\\");
-	LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
-	lstrcpy(lpszText, path);
-	a.VisionDefault.VisionFile.ModelPath = lpszText;
+    /*
+    //設置Model當前目錄
+    //CString path;
+    //GetModuleFileName(NULL, path.GetBufferSetLength(MAX_PATH + 1), MAX_PATH);
+    //path.ReleaseBuffer();
+    //int pos = path.ReverseFind('\\');
+    //path = path.Left(pos) + _T("\\Temp\\");
+    //LPTSTR lpszText = new TCHAR[path.GetLength() + 1];
+    //lstrcpy(lpszText, path);
+    //a.VisionDefault.VisionFile.ModelPath = lpszText;
+    */
+
+    /*列表停用*/
+    m_CommandList.EnableWindow(FALSE);
+    /*列表改為單選*/
+    DWORD dwStyle = m_CommandList.GetExtendedStyle();
+    dwStyle |= LVS_SHOWSELALWAYS;
+    m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+    /*設置區域檢測目錄*/
+    a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
+    a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
+    a.AreaCheckParamterDefault.LineTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
+    a.AreaCheckParamterDefault.Result.Path = GetCurrentPath(_T("\\CheckResult\\")).GetBuffer();
+    /*設置畫圖函式*/
+    a.SetDrawFunction(myDrawFunction, this);
 	/*運行*/
 	a.View(CcdMode);
 }
@@ -814,31 +828,51 @@ void CCommandTestDlg::OnBnClickedBtncheck()
    
     if (m_pCheckResultDlg == NULL)
     {
-        int i = 0;
-        while (i < 5000)
+        //測試用
+        /*
+        static int count = 0;
+        if (count == 0)
         {
-            if (i % 2)
-                a.CheckFinishRecord.push_back({ L"OK",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
-            else
-                a.CheckFinishRecord.push_back({ L"Err",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
-            i++;
+            int i = 0;
+            while (i < 10)
+            {
+                if (i % 2)
+                    a.CheckFinishRecord.push_back({ L"OK",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
+                else
+                    a.CheckFinishRecord.push_back({ L"Err",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
+                i++;
+            }
+            i = 0;
+            while (i < 10)
+            {
+                if (i % 2)
+                    a.AreaCheckFinishRecord.push_back({ L"",{ GetCurrentPath(L"\\CheckResult\\"),L"Result_20170202_17_03_14_885"} ,1 });
+                else
+                    a.AreaCheckFinishRecord.push_back({ L"",{ GetCurrentPath(L"\\CheckResult\\"),L"Result_20170202_17_03_14_885" } ,0 });
+                i++;
+            }
+            count++;
         }
+        */
         m_pCheckResultDlg = new CCheckResult();
-        m_pCheckResultDlg->DoModal();
-        /*m_pCheckResultDlg->Create(IDD_DIALOG12, this);
-        m_pCheckResultDlg->ShowWindow(SW_SHOW);*/
-
+        //模態式對話框
+        //m_pCheckResultDlg->DoModal();
+        //非模態式對話框
+        m_pCheckResultDlg->Create(IDD_DIALOG12, this);
+        m_pCheckResultDlg->ShowWindow(SW_SHOW);
     }
     else
     {
-        //((CCheckResult*)m_pCheckResultDlg)->SendMessage(WM_CLOSE);
+        ((CCheckResult*)m_pCheckResultDlg)->SendMessage(WM_CLOSE);//模態式不需要開
         if (::IsWindow(m_pCheckResultDlg->m_hWnd))
         {
             DWORD Endcode = 0;
             GetExitCodeThread(((CCheckResult*)m_pCheckResultDlg)->m_pLoadlist->m_hThread, &Endcode);
-            if (Endcode != 456)
+            if (Endcode != CheckEndDlgcode)
                 return;
+#ifdef PRINTF
             _cwprintf(L"%d\n", Endcode);
+#endif
         } 
         if (m_pCheckResultDlg != NULL)
         {
@@ -846,9 +880,11 @@ void CCommandTestDlg::OnBnClickedBtncheck()
             m_pCheckResultDlg = NULL;
         }
         m_pCheckResultDlg = new CCheckResult();
-        m_pCheckResultDlg->DoModal();
-       /* m_pCheckResultDlg->Create(IDD_DIALOG12, this);
-        m_pCheckResultDlg->ShowWindow(SW_SHOW);*/
+        //模態式對話框
+        //m_pCheckResultDlg->DoModal();
+        //非模態式對話框
+        m_pCheckResultDlg->Create(IDD_DIALOG12, this);
+        m_pCheckResultDlg->ShowWindow(SW_SHOW);
     }
 }
 /*讀取雷射表*/
@@ -986,7 +1022,7 @@ void CCommandTestDlg::OnDestroy()
     //儲存參數檔案
     SaveParameter();
     SaveDefault();
-    //_CrtDumpMemoryLeaks();
+    //_CrtDumpMemoryLeaks();//查看記憶體洩漏
     CDialogEx::OnDestroy();
 }
 //全部位置偏移
@@ -1810,7 +1846,7 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 		CString EditBuffer1, EditBuffer2, EditBuffer3, EditBuffer4, EditBuffer5;
 		GetDlgItemText(IDC_EDITPARAM2, EditBuffer1); GetDlgItemText(IDC_EDITPARAM3, EditBuffer2);
 		GetDlgItemText(IDC_EDITPARAM4, EditBuffer3); GetDlgItemText(IDC_EDITPARAM5, EditBuffer4);
-		StrBuff.Format(_T("AreaCheck,%d,1000,1000,10000,10000,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
+		StrBuff.Format(_T("AreaCheck,%d,0,0,0,0,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
 			_tstof(EditBuffer1), _tstof(EditBuffer2),
 			_tstof(EditBuffer3), _tstof(EditBuffer4), 
 			GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
@@ -1845,12 +1881,12 @@ void CCommandTestDlg::Counter()
 	double times;
 	QueryPerformanceFrequency(&fre); //取得CPU頻率
 	QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
-										 //doing something
-	_cwprintf(_T("%s"), L"Interrupt");
 	//doing something
 	QueryPerformanceCounter(&endTime); //取得開機到程式執行完成經過幾個CPU Cycle
 	times = ((double)endTime.QuadPart - (double)startTime.QuadPart) / fre.QuadPart;
+#ifdef PRINTF
 	_cwprintf(L"%f", times);
+#endif
 }
 //儲存參數檔案
 void CCommandTestDlg::SaveParameter()
@@ -1865,7 +1901,17 @@ void CCommandTestDlg::SaveParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeCreate | CFile::modeWrite))
 	{
 		CArchive ar(&File, CArchive::store);//儲存檔案
-		ar << PixToPulsX << PixToPulsY << a.VisionDefault.VisionSet.AdjustOffsetX << a.VisionDefault.VisionSet.AdjustOffsetY << a.m_Action.g_OffSetLaserX << a.m_Action.g_OffSetLaserY << a.m_Action.g_OffSetLaserZ << a.VisionDefault.VisionSet.FocusHeight << a.m_Action.g_HeightLaserZero << a.m_Action.g_TablelZ;
+		ar << 
+            PixToPulsX << 
+            PixToPulsY << 
+            a.VisionDefault.VisionSet.AdjustOffsetX << 
+            a.VisionDefault.VisionSet.AdjustOffsetY << 
+            a.m_Action.g_OffSetLaserX << 
+            a.m_Action.g_OffSetLaserY << 
+            a.m_Action.g_OffSetLaserZ << 
+            a.VisionDefault.VisionSet.FocusHeight << 
+            a.m_Action.g_HeightLaserZero << 
+            a.m_Action.g_TablelZ;
 	}
 	File.Close();
 }
@@ -1882,7 +1928,17 @@ void CCommandTestDlg::LoadParameter()
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeRead))
 	{
 		CArchive ar(&File, CArchive::load);//讀取檔案
-		ar >> PixToPulsX >> PixToPulsY >> a.VisionDefault.VisionSet.AdjustOffsetX >> a.VisionDefault.VisionSet.AdjustOffsetY >> a.m_Action.g_OffSetLaserX >> a.m_Action.g_OffSetLaserY >> a.m_Action.g_OffSetLaserZ >> a.VisionDefault.VisionSet.FocusHeight >> a.m_Action.g_HeightLaserZero >> a.m_Action.g_TablelZ;
+		ar >> 
+            PixToPulsX >> 
+            PixToPulsY >> 
+            a.VisionDefault.VisionSet.AdjustOffsetX >> 
+            a.VisionDefault.VisionSet.AdjustOffsetY >> 
+            a.m_Action.g_OffSetLaserX >> 
+            a.m_Action.g_OffSetLaserY >> 
+            a.m_Action.g_OffSetLaserZ >> 
+            a.VisionDefault.VisionSet.FocusHeight >> 
+            a.m_Action.g_HeightLaserZero >> 
+            a.m_Action.g_TablelZ;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -1893,9 +1949,10 @@ void CCommandTestDlg::LoadParameter()
 	LaserOffsetz = a.m_Action.g_OffSetLaserZ;
 	HeightLaserZero = a.m_Action.g_HeightLaserZero;
 #ifdef VI
+    _cwprintf(L"%.6f,%.6f", PixToPulsX, PixToPulsY);
 	VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
 	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);//設定針頭和影像Offset                                              
-	VI_MosaicingMoveSet(PixToPulsX * 640 / 1000, PixToPulsY * 480 / 1000, 50, a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);//設定與計算重組圖移動量
+	//VI_MosaicingMoveSet(PixToPulsX * 640 / 1000, PixToPulsY * 480 / 1000, 50, a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);//設定與計算重組圖移動量
 #endif
 }
 //儲存Default參數檔案
@@ -2032,20 +2089,31 @@ void CCommandTestDlg::LoadDefault()
 			a.RunLoopData.MaxRunNumber >>
 			RunLoopNumber;
 		File.Close();
-		a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
-        a.IODetectionSwitch(TRUE, 0);
-        a.IOParam.pEMGDlg = new CEmgDlg;
+        /*設置影像對位目錄*/
+        LPTSTR lpszText = new TCHAR[GetCurrentPath(_T("\\Temp\\")).GetLength() + 1];
+        lstrcpy(lpszText, GetCurrentPath(_T("\\Temp\\")));
+        a.VisionDefault.VisionFile.ModelPath = lpszText;
+		a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();//設定對位詢問視窗
+        a.IOParam.pEMGDlg = new CEmgDlg;//設定緊急開關視窗
+        a.IODetectionSwitch(TRUE, 0);//開啟IO執行續
+        a.AreaCheckParamterDefault.pMosaicDlg = new CMosaicProcessing();//設定重組中視窗  
+        
 	}
 	else
 	{
-		a.Default.GoHome = { 30000,5000,7,47000,62000,10000 };
-		a.Default.DotSpeedSet = { 100000,30000 };
-		a.Default.LineSpeedSet = { 100000,30000 };
-		a.Default.ZSet = { 5000,1 };
-		a.VisionDefault.VisionSet = { 0,1,1,50,640,480,0,360,0,0 };
-		a.IOParam.pEMGDlg = new CEmgDlg;
-		a.IODetectionSwitch(TRUE, 0);
-		a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();
+		a.Default.GoHome = { 30000,5000,7,47000,62000,10000 };//原點賦歸參數預設
+		a.Default.DotSpeedSet = { 100000,30000 };//點對點移動速度預設
+		a.Default.LineSpeedSet = { 100000,30000 };//線移動速度預設
+		a.Default.ZSet = { 5000,1 };//Z軸抬升參數預設
+		a.VisionDefault.VisionSet = { 0,1,1,50,640,480,0,360,0,0 };//影像對位參數預設
+        /*設置影像對位目錄*/
+        LPTSTR lpszText = new TCHAR[GetCurrentPath(_T("\\Temp\\")).GetLength() + 1];
+        lstrcpy(lpszText, GetCurrentPath(_T("\\Temp\\")));
+        a.VisionDefault.VisionFile.ModelPath = lpszText;
+        a.VisionDefault.VisionSerchError.pQuestion = new CQuestion();//設定對位詢問視窗
+		a.IOParam.pEMGDlg = new CEmgDlg;//設定緊急開關視窗
+		a.IODetectionSwitch(TRUE, 0);//開啟IO執行續
+        a.AreaCheckParamterDefault.pMosaicDlg = new CMosaicProcessing();//設定重組中視窗
 	}
 }
 
@@ -2082,6 +2150,15 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 /*測試用按鈕*/
 void CCommandTestDlg::OnBnClickedBtntest()
 {
+    //檢查記憶體大小
+    /*int *a;
+    a = new int[10];
+    _cwprintf(L"%d", _msize(a));*/
+    //查看區域檢測拍照移動間格
+    /*CString StrBuff;
+    StrBuff.Format(L"X = %d,Y = %d", a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);
+    MessageBox(StrBuff);*/
+    //印出直徑、模板區間檢測的座標
 	for (UINT i = 0; i < a.IntervalCheckCoordinate.size(); i++)
 	{
 		_cwprintf(L"%s,%s,%d,%d,%d", a.IntervalCheckCoordinate.at(i).Address,
@@ -2090,13 +2167,7 @@ void CCommandTestDlg::OnBnClickedBtntest()
 			a.IntervalCheckCoordinate.at(i).Position.Y,
 			a.IntervalCheckCoordinate.at(i).Position.Z);
 	}
-	//檢查記憶體大小
-	/*int *a;
-	a = new int[10];
-	_cwprintf(L"%d", _msize(a));*/
-	/*CString StrBuff;
-	StrBuff.Format(L"X = %d,Y = %d", a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);
-	MessageBox(StrBuff);*/
+	//印出區域檢測的訓練點、線
 	for (UINT i = 0; i < a.IntervalAreaCheck.size(); i++)
 	{
 		_cwprintf(L"區間%s,%.3f,%.3f\n", a.IntervalAreaCheck.at(i).Address, a.IntervalAreaCheck.at(i).DotTrain.MeasureLimit, a.IntervalAreaCheck.at(i).LineTrain.MeasureLimit);
@@ -2109,9 +2180,15 @@ void CCommandTestDlg::OnBnClickedBtntest()
 			_cwprintf(L"(線)訓練點座標(%d):(%d,%d)\n", j, a.IntervalAreaCheck.at(i).LineTrain.PointData.at(j).x, a.IntervalAreaCheck.at(i).LineTrain.PointData.at(j).y);
 		}
 	}
-	//double x, y, theta;
-	//theta = atan2(x, y);
-	//valarray<double>  point1(5, 0);
+    //math.h 測試練習
+	/*double x, y, theta;
+	theta = atan2(x, y);
+	valarray<double>  point1(5, 0);*/
+    //SetLastErrore 測試練習
+    /*SetLastError(123);
+    _cwprintf(L"%d",GetLastError());*/
+    
+
 }
 
 

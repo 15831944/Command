@@ -16,7 +16,7 @@ static CWinThread* g_pRunLoopThread = NULL;
 static CWinThread* g_pIODetectionThread = NULL;
 static CWinThread* g_pCheckCoordinateScanThread = NULL;
 static CWinThread* g_pCheckActionThread = NULL;
-
+static CWinThread* g_pMosaicDlgThread = NULL;
 class COrder : public CWnd
 {
 	DECLARE_DYNAMIC(COrder)
@@ -292,7 +292,7 @@ private:
 		MosaicingData Image;
 		TrainData DotTrain;
 		TrainData LineTrain;
-		File Result;
+		File Result;     
 	};
 	//紀錄完成區域檢測結果結構(檢測模式地址、檢測結果檔案結構、檢測結果)
 	struct AreaCheckFinishRecord {
@@ -300,13 +300,14 @@ private:
 		File ResultImage;
 		BOOL Result;
 	};
-	//區域檢測人機預設值結構
+	//區域檢測人機預設值結構(視野移動量、重組圖儲存路徑、點訓練儲存路徑、線訓練儲存路徑、結果圖儲存路徑、重組中對話窗)
 	struct AreaCheckParamterDefault {
 		POINT ViewMove;
 		File ImageSave;
 		File DotTrainSave;
 		File LineTrainSave;
 		File Result;
+        CDialog* pMosaicDlg;
 	};
 	/************************************************************模組參數結構*******************************************************/
 	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射和檢測模組跳過)
@@ -358,12 +359,13 @@ private:
 		UINT StackingCount;
 		std::vector<UINT> ActionStatus;  
 	};
-	/*運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數、一次程序運行時間、運行迴圈狀態、單次命令運行狀態、畫布刷新關狀態)
+	/*運行狀態讀取結構(運行狀態、目前命令進度、回原點狀態、程序完成計數、一次程序運行時間、運行迴圈狀態、單次命令運行狀態、畫布刷新關狀態、重組狀態)
 	*運作狀態(0:未運作 1 : 運行中 2 : 暫停中)
 	*回原點狀態(TRUE = 賦歸完成 FLASE = 賦歸中)
 	*運行迴圈狀態(0:未運行、暫停中 1:執行中)
 	*單次命令運行狀態(0:執行完畢、未執行 1:正在執行中)
 	*畫布刷新關狀態(0:不關閉 1:關閉清除)//人機要求
+    *重組狀態(-1:重組中 0:重組失敗 1:重組成功 2:未重組)
 	*/
 	struct RunStatusRead {
 		UINT RunStatus;
@@ -374,6 +376,7 @@ private:
 		BOOL RunLoopStatus;
 		BOOL StepCommandStatus;
 		BOOL PaintClearClose;
+        int MosaicStatus;
 		//TODO::之後做總進度使用
 		//BOOL RegistrationStatus;
 		//UINT CommandTotalCount;
@@ -470,6 +473,7 @@ private:    //函式
 	static  UINT    IODetection(LPVOID pParam);//IO偵測程序
 	static  UINT    CheckCoordinateScan(LPVOID pParam);//區間檢測控制程序
 	static  UINT    CheckAction(LPVOID pParam);//區間檢測執行程序
+    static  UINT    MosaicDlg(LPVOID pParam);
 	/*動作處理*/
 	static  void    LineGotoActionJudge(LPVOID pParam);//判斷線段動作轉換
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);//CallSubroutin修正處理
@@ -519,7 +523,12 @@ private:    //函式
 	static  void    ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum, TemplateCheck &TemplateCheck);
 	BOOL            ClearCheckData(BOOL Moment, BOOL Interval);
 	static  void    LineTrainDataCheck(LPVOID pParam);
-	static  void    NewCutPathPoint(CoordinateData Start, CoordinateData Passing, CoordinateData End, std::vector<CPoint> &PointData, int Type);
+	BOOL            NewCutPathPoint(CoordinateData Start, CoordinateData Passing, CoordinateData End, AreaCheck &IntervalAreaCheck, int Type);//新增點成功回傳1 失敗回傳0
+    BOOL            PointAreaJudge(POINT Point, CRect Area);//判斷區域內回傳1 外回傳0
+    BOOL            LineAreaJudge(POINT PointS, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
+    BOOL            ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
+    BOOL            CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area);//判斷區域內回傳1 外回傳0
+    BOOL            AutoCalculationArea(AreaCheck &AreaCheckRun);//自動計算重組區域大小
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
 
