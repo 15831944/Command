@@ -1,10 +1,12 @@
 /*
 *檔案名稱:Order.h
-*用途:用於解譯命令執行運動、影像、雷射控制
-*適用軸卡:Nova 
+*檔案用途:3Axis
+*檔案擁有功能:Move、Laser、Vision、Check
+*適用軸卡:Nova
 *適用雷射:松下
+*更新日期:2017/02/21
+*作者名稱:Rong
 */
-
 #pragma once
 #include <vector>
 #include "Action.h"
@@ -485,6 +487,7 @@ private:    //函式
 	BOOL            LaserPointDetect();//檢查雷射檢測點是否重複
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標移動
 	BOOL            CheckDraw();//點檢測畫圖
+    static  void    PassingException(LPVOID pParam);//中間點例外處理(暫停、執行區域檢測)
 	//虛擬座標模擬移動
 	/*資料表處理區塊*/
 	static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
@@ -529,6 +532,7 @@ private:    //函式
     BOOL            ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
     BOOL            CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area);//判斷區域內回傳1 外回傳0
     BOOL            AutoCalculationArea(AreaCheck &AreaCheckRun);//自動計算重組區域大小
+    CRect           MosaicAreaJudge(AreaCheck &AreaCheck);//判斷重組區域是否為同一點
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
 
@@ -606,6 +610,9 @@ public:     //變數
 
 	//畫圖呼叫函式設定
 	CallFunction    CallFunction;
+
+    //紀錄例外中間點
+    CoordinateData  PassingExceptionTemp;//紀錄中間點
 	/********************/
 
 	//區域檢測預設值參數
@@ -639,7 +646,7 @@ public:     //運行類函式
 	BOOL    Home(BOOL mode);
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
-	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式)
+	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式:目前尚未有功能)
 	BOOL    IODetectionSwitch(BOOL Switch, int mode);
 	//載入檔案
 	void    LoadPointData();

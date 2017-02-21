@@ -7,7 +7,6 @@ CCircleFormula::CCircleFormula()
 {
 
 }
-
 CCircleFormula::~CCircleFormula()
 {
 

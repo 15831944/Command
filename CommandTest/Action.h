@@ -2,7 +2,7 @@
 *檔案名稱:Action.h(NOVA三軸機使用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/01/12
+*＠data 更新日期:2017/02/21
 *@更新Z軸回升高度__g_TablelZ*/
 #pragma once
 #include <vector>

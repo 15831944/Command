@@ -188,7 +188,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNMODEFYZ, &CCommandTestDlg::OnBnClickedBtnmodefyz)
 	ON_NOTIFY(NM_DBLCLK, IDC_LIST1, &CCommandTestDlg::OnNMDblclkList1)
 	ON_BN_CLICKED(IDC_BTNLASER, &CCommandTestDlg::OnBnClickedBtnlaser)
-
+    ON_BN_CLICKED(IDC_BTNCHECK, &CCommandTestDlg::OnBnClickedBtncheck)
 
 	ON_BN_CLICKED(IDC_BTNALLOFFSET, &CCommandTestDlg::OnBnClickedBtnalloffset)
 	ON_BN_CLICKED(IDC_BTNCOMMIT, &CCommandTestDlg::OnBnClickedBtncommit)
@@ -201,7 +201,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNPRINTCLINE, &CCommandTestDlg::OnBnClickedBtnprintcline)
 	
 	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
-	ON_BN_CLICKED(IDC_BTNCHECK, &CCommandTestDlg::OnBnClickedBtncheck)
+	
 END_MESSAGE_MAP()
 
 
@@ -209,16 +209,29 @@ END_MESSAGE_MAP()
 BOOL CCommandTestDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-
 	// 設定此對話方塊的圖示。當應用程式的主視窗不是對話方塊時，
 	// 框架會自動從事此作業
 	SetIcon(m_hIcon, TRUE);			// 設定大圖示
 	SetIcon(m_hIcon, FALSE);		// 設定小圖示
-
 	/*終端控制台開啟*/
 #ifdef PRINTF
 	InitConsoleWindow();
 	_cprintf("str = %s\n", "Debug output goes to terminal\n");
+#endif
+    /*影像開啟*/
+#ifdef VI
+    VI_CameraInit(0, 1);//先出始畫影像
+#endif
+    /*運動開啟*/
+#ifdef MOVE
+    MO_Open(1);//軸卡開啟
+    MO_SetHardLim(7, 1);//極限開啟
+    MO_SetDecOK(1);//開啟減速有效
+    MO_InterruptCase(1, 1, a.m_Action.MoInterrupt, a.m_Action.pAction);//中斷開啟
+    MO_SetSoftLim(7, 1);//軟極限開啟
+    MO_SetCompSoft(1, -47000, -62000, -10000);
+    MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
+    a.m_Action.LA_SetInit();//雷射開啟
 #endif
 	//命令列表
 	m_CommandList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
@@ -256,27 +269,12 @@ BOOL CCommandTestDlg::OnInitDialog()
 		m_ParamList.SetItemText(i, 1, 0);
 	}
 	//TODO:參數修改在這
-#ifdef VI
-    VI_CameraInit(0, 1);//先出始畫影像
-#endif
 	//原點復歸參數
 	LoadDefault();
 	//載入參數檔案
 	LoadParameter();
-	SetTimer(1, 500, NULL);
-	//軸卡運動開啟
-#ifdef MOVE
-	MO_Open(1);//軸卡開啟
-	MO_SetHardLim(7, 1);//極限開啟
-	MO_SetDecOK(1);//開啟減速有效
-	MO_InterruptCase(1, 1, a.m_Action.MoInterrupt,a.m_Action.pAction);//中斷開啟
-	MO_SetSoftLim(7, 1);//軟極限開啟
-	MO_SetCompSoft(1, -47000, -62000, -10000);
-	MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
-	a.m_Action.LA_SetInit();//雷射開啟
-	OnBnClickedBtnhome();
-#endif
-
+    SetTimer(1, 500, NULL);
+	OnBnClickedBtnhome();//呼叫原點賦歸
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
 // 如果將最小化按鈕加入您的對話方塊，您需要下列的程式碼，
@@ -1846,7 +1844,7 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 		CString EditBuffer1, EditBuffer2, EditBuffer3, EditBuffer4, EditBuffer5;
 		GetDlgItemText(IDC_EDITPARAM2, EditBuffer1); GetDlgItemText(IDC_EDITPARAM3, EditBuffer2);
 		GetDlgItemText(IDC_EDITPARAM4, EditBuffer3); GetDlgItemText(IDC_EDITPARAM5, EditBuffer4);
-		StrBuff.Format(_T("AreaCheck,%d,0,0,0,0,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
+		StrBuff.Format(_T("AreaCheck,%d,-1,-1,-1,-1,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
 			_tstof(EditBuffer1), _tstof(EditBuffer2),
 			_tstof(EditBuffer3), _tstof(EditBuffer4), 
 			GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
@@ -1949,7 +1947,6 @@ void CCommandTestDlg::LoadParameter()
 	LaserOffsetz = a.m_Action.g_OffSetLaserZ;
 	HeightLaserZero = a.m_Action.g_HeightLaserZero;
 #ifdef VI
-    _cwprintf(L"%.6f,%.6f", PixToPulsX, PixToPulsY);
 	VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
 	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);//設定針頭和影像Offset                                              
 	//VI_MosaicingMoveSet(PixToPulsX * 640 / 1000, PixToPulsY * 480 / 1000, 50, a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);//設定與計算重組圖移動量

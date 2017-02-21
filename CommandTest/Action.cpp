@@ -2,7 +2,7 @@
 *檔案名稱:Action.cpp(NOVA三軸機使用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/01/12
+*＠data 更新日期:2017/02/21
 *@更新Z軸回升高度__g_TablelZ*/
 #include "stdafx.h"
 #include "Action.h"
@@ -977,7 +977,8 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 	lCircleY = CStringToLong(csBuff, 1);
 	bRev = CStringToLong(csBuff, 2);//取得圓心(X，Y，Rev，)
 	lR = LONG(sqrt(pow(lNowX - lCircleX, 2) + pow(lNowY - lCircleY, 2)));//半徑
-	if (lHighVelocity == 0)
+    LONG zback = lZBackDistance, ztype = bZDisType; //初始值
+    if (lHighVelocity == 0)
 	{
 		lHighVelocity = lWorkVelociy;
 	}
@@ -999,6 +1000,7 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 		}
 		lZBackDistance = abs(lZBackDistance - lNowZ);
 	}
+
 	PauseDoGlue();//暫停恢復後繼續出膠(g_bIsPause=0)
 	if ((lNowX >= lX3 - 5) && (lNowX <= lX3 + 5) && (lNowY >= lY3 - 5) && (lNowY <= lY3 + 5)) //表示結束點在起始點上
 	{
@@ -1068,7 +1070,7 @@ void CAction::DecideCircleToEnd(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lX3
 			MO_Do2DArcMove(0, 0, lCircleX - lNowX, lCircleY - lNowY, lInitVelociy, lWorkVelociy, bRev);//圓
 			PreventMoveError();//防止軸卡出錯
 		}
-		DecideLineEndMove(lX3, lY3, lNowZ, lCloseOffDelayTime, lCloseDistance, lCloseONDelayTime, lZBackDistance, 0, lHighVelocity, lDistance, lHigh, lLowVelocity, iType, lWorkVelociy, lAcceleration, lInitVelociy);//已經轉換成絕對了
+		DecideLineEndMove(lX3, lY3, lNowZ, lCloseOffDelayTime, lCloseDistance, lCloseONDelayTime, zback, ztype, lHighVelocity, lDistance, lHigh, lLowVelocity, iType, lWorkVelociy, lAcceleration, lInitVelociy);//已經轉換成絕對了
 		PreventMoveError();//防止軸卡出錯
 	}
 #endif

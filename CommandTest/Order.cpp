@@ -1,6 +1,12 @@
-﻿// Order.cpp : 實作檔
-//
-
+﻿/*
+*檔案名稱:Order.cpp
+*檔案用途:3Axis
+*檔案擁有功能:Move、Laser、Vision、Check
+*適用軸卡:Nova
+*適用雷射:松下
+*更新日期:2017/02/21
+*作者名稱:Rong
+*/
 #include "stdafx.h"
 #include "Order.h"
 #include <math.h>
@@ -201,8 +207,7 @@ BOOL COrder::Pause()
 		if (g_pRunLoopThread && RunStatusRead.RunLoopStatus)
 		{
 			RunStatusRead.RunLoopStatus = FALSE;
-		}
-		
+		}		
 		return TRUE;
 	}
 	else
@@ -225,7 +230,11 @@ BOOL COrder::Continue()
 				{
 					g_pCheckCoordinateScanThread->ResumeThread();//啟動線程
 				}
-			}        
+			}      
+            else
+            {
+                AreaCheckChangTemp.Status = TRUE;//開啟
+            }
 			RunStatusRead.RunStatus = 1;//狀態改變成運作中
 			if (g_pRunLoopThread && !RunStatusRead.RunLoopStatus)
 			{
@@ -275,7 +284,7 @@ BOOL COrder::View(BOOL mode)
 			if (CheckCommandRule(Test))//檢查命令表
 			{
 #ifdef PRINTF
-				_cwprintf(L"錯誤代碼:%d,命令地址為:%d\n", CheckCommandRule(Test), Test);
+				_cwprintf(L"View()::錯誤代碼:%d,命令地址為:%d\n", CheckCommandRule(Test), Test);
 #endif
 				return FALSE;
 			}
@@ -592,6 +601,10 @@ UINT COrder::Thread(LPVOID pParam)
 			}
 			if (((COrder*)pParam)->CheckSwitch.RunCheck)//判斷區間檢測是否執行
 			{
+                ((COrder*)pParam)->AreaCheckChangTemp.Status = TRUE;//開啟中間點
+#ifdef MOVE
+                MO_StopGumming();//關閉出膠
+#endif
 				g_pCheckCoordinateScanThread = AfxBeginThread(((COrder*)pParam)->CheckCoordinateScan, pParam);
 				while (g_pCheckCoordinateScanThread) {
 					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
@@ -1793,13 +1806,20 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					{
 						if (((COrder*)pParam)->IntervalAreaCheck.at(i).Address == ((COrder*)pParam)->CurrentCheckAddress)
 						{
-                            //判斷點是否在區域內
-                            if (((COrder*)pParam)->PointAreaJudge({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                              ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))
-                            {
-                                ((COrder*)pParam)->IntervalAreaCheck.at(i).DotTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//加入訓練點
-                            }
+							//判斷區域是否重組
+							if (((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x == ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y == ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y
+								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x != -1 && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y != -1 
+								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x != -1 && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y != -1)//不重組
+							{
+								//判斷點是否在區域內
+								if (((COrder*)pParam)->PointAreaJudge({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
+									((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+									/*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+									((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))
+								{
+									((COrder*)pParam)->IntervalAreaCheck.at(i).DotTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//加入訓練點
+								}
+							}
 						}
 					}
 				}
@@ -1966,8 +1986,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
                                                 /**/((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
@@ -1978,8 +1999,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X ,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y });//起始點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2022,8 +2044,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                         //判斷線段是否在區域內
                                         if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                         { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                        { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                            ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                        /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                         {
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X ,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y });//起始點
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2034,10 +2057,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							}
 						}
 						//不管何種檢測都要記錄中間點
-						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,0 };//紀錄中間點
+						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z };//紀錄中間點
 					}
 					else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
 					{
+                        PassingException(pParam);//呼叫例外中間點判斷
 						if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//執行圓弧
 						{
 #ifdef MOVE
@@ -2120,8 +2144,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
                                                 /**/((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
@@ -2132,8 +2157,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->AreaCheckChangTemp.X ,((COrder*)pParam)->AreaCheckChangTemp.Y });//換線點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2187,8 +2213,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                         //判斷線段是否在區域內
                                         if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
                                         { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                        { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                            ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                        /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                         {
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y });//起始點
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2208,7 +2235,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							}
 						}
 						//不管何種檢測都要記錄中間點
-						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,0 };//紀錄中間點
+						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z };//紀錄中間點
 					}              
 				}
 				else//連續線段
@@ -2264,7 +2291,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				VisionModify(pParam);//影像修正
 				LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-				_cwprintf(L"SubroutineThread():%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+				_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
 #endif
                 //判斷是否為連續線段
 				if (!((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch)//不為連續線段
@@ -2356,8 +2383,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                         {
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
@@ -2368,8 +2396,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X ,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y });//起始點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2418,8 +2447,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                         //判斷線段是否在區域內
                                         if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y },
                                         { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                        { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                            ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                        /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                            ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                         {
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X ,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y });//起始點
                                             ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2436,9 +2466,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								}
 							}
 						}
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
 					}
 					else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
 					{
+                        PassingException(pParam);//呼叫例外中間點判斷
 						if (((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//執行圓弧
 						{
 #ifdef MOVE
@@ -2465,9 +2497,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                         ((COrder*)pParam)->NewCutPathPoint(((COrder*)pParam)->AreaCheckChangTemp,
                                             ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount),
                                             ((COrder*)pParam)->FinalWorkCoordinateData,
-                                            ((COrder*)pParam)->IntervalAreaCheck.at(i), 1);//加入圓切點路徑
-                                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,0,0,0 };//區域中間點轉換檢測暫存參數清零
-
+                                            ((COrder*)pParam)->IntervalAreaCheck.at(i), 1);//加入圓切點路徑                               
                                         //2017/02/16前
                                         /*
 										if (((COrder*)pParam)->AreaCheckChangTemp.Status)
@@ -2525,8 +2555,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
@@ -2537,8 +2568,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                                             //判斷線段是否在區域內
                                             if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
                                             { ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-                                            { ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                                ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+                                            /*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+                                                ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
                                             {
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y });//起始點
                                                 ((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -2619,12 +2651,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								}
 							}
 						}
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
 					}
 				}
 				else//連續線段
 				{
 #ifdef PRINTF
-					_cwprintf(L"SubroutineThread():選擇線段:%d\n", abs(((COrder*)pParam)->FinalWorkCoordinateData.Z + 10000));
+					_cwprintf(L"SubroutineThread()::選擇線段:%d\n", abs(((COrder*)pParam)->FinalWorkCoordinateData.Z + 10000));
 #endif  
 					if (!((COrder*)pParam)->DemoTemprarilySwitch)//正常用
 					{
@@ -4392,7 +4425,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			if (_ttol(CommandResolve(Command, 1)))//開啟區域檢測
 			{  
 				//LineTrainDataCheck(pParam);//判斷是否有新增換線點
-				((COrder*)pParam)->AreaCheckChangTemp.Status = TRUE;//開啟中間點智能
+				//((COrder*)pParam)->AreaCheckChangTemp.Status = TRUE;//開啟中間點智能
 				((COrder*)pParam)->CheckSwitch.Template = FALSE;
 				((COrder*)pParam)->CheckSwitch.Diameter = FALSE;
 				((COrder*)pParam)->CheckSwitch.Area = TRUE;
@@ -4844,11 +4877,14 @@ UINT COrder::CheckAction(LPVOID pParam)
 		BOOL Switch = FALSE;//控制S型
 		if (!((COrder*)pParam)->m_Action.g_bIsStop)
 		{
-            if (!((COrder*)pParam)->AreaCheckRun.Image.Start.x && !((COrder*)pParam)->AreaCheckRun.Image.Start.y && !((COrder*)pParam)->AreaCheckRun.Image.End.x && !((COrder*)pParam)->AreaCheckRun.Image.End.y)//判斷區域是否為0
+            if (((COrder*)pParam)->AreaCheckRun.Image.Start.x == -1 &&
+				((COrder*)pParam)->AreaCheckRun.Image.Start.y == -1 && 
+				((COrder*)pParam)->AreaCheckRun.Image.End.x == -1 &&
+				((COrder*)pParam)->AreaCheckRun.Image.End.y == -1)//判斷區域是否為-1
             {
                 ((COrder*)pParam)->AutoCalculationArea(((COrder*)pParam)->AreaCheckRun);
 #ifdef PRINTF
-                _cwprintf(L"CheckAction::重組區域(%d,%d,%d,%d)\n", ((COrder*)pParam)->AreaCheckRun.Image.Start.x, ((COrder*)pParam)->AreaCheckRun.Image.Start.y, ((COrder*)pParam)->AreaCheckRun.Image.End.x, ((COrder*)pParam)->AreaCheckRun.Image.End.y);
+                _cwprintf(L"CheckAction()::重組區域(%d,%d,%d,%d)\n", ((COrder*)pParam)->AreaCheckRun.Image.Start.x, ((COrder*)pParam)->AreaCheckRun.Image.Start.y, ((COrder*)pParam)->AreaCheckRun.Image.End.x, ((COrder*)pParam)->AreaCheckRun.Image.End.y);
 #endif
             }
 #ifdef VI
@@ -4867,7 +4903,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 		if (!((COrder*)pParam)->m_Action.g_bIsStop)
 		{
 #ifdef PRINTF
-            _cwprintf(L"CheckAction::重組次數X:%d,Y:%d\n", ((COrder*)pParam)->AreaCheckRun.Image.MoveCountX - 1, ((COrder*)pParam)->AreaCheckRun.Image.MoveCountY - 1);
+            _cwprintf(L"CheckAction()::重組次數X:%d,Y:%d\n", ((COrder*)pParam)->AreaCheckRun.Image.MoveCountX - 1, ((COrder*)pParam)->AreaCheckRun.Image.MoveCountY - 1);
 #endif
 			for (int i = 0; i <= ((COrder*)pParam)->AreaCheckRun.Image.MoveCountY - 1; i++)
 			{
@@ -5723,6 +5759,24 @@ BOOL COrder::CheckDraw()
 		return 1;
 	}   
 	return 0;
+}
+void COrder::PassingException(LPVOID pParam)
+{
+    if (((COrder*)pParam)->AreaCheckChangTemp.Status && ((COrder*)pParam)->AreaCheckChangTemp.X != -1 && ((COrder*)pParam)->AreaCheckChangTemp.Y != -1 && ((COrder*)pParam)->AreaCheckChangTemp.Z != -1)
+    {
+#ifdef MOVE
+        //呼叫LS 
+        ((COrder*)pParam)->m_Action.DecideLineStartMove(
+            ((COrder*)pParam)->AreaCheckChangTemp.X,
+            ((COrder*)pParam)->AreaCheckChangTemp.Y,
+            ((COrder*)pParam)->AreaCheckChangTemp.Z,
+            0, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
+#endif
+        ((COrder*)pParam)->AreaCheckChangTemp.Status = FALSE;
+    }
+#ifdef PRINTF
+    _cwprintf(L"PassingException()::座標(%d,%d,%d)\n", ((COrder*)pParam)->AreaCheckChangTemp.X, ((COrder*)pParam)->AreaCheckChangTemp.Y, ((COrder*)pParam)->AreaCheckChangTemp.Z);
+#endif
 }
 /**************************************************************************資料表處理區塊*************************************************************************/
 /*選擇影像修正*/
@@ -8047,7 +8101,7 @@ BOOL COrder::NewCutPathPoint(CoordinateData Start, CoordinateData Passing, Coord
 	if (Type == 1)
 	{ 
         //判斷圓弧是否在重組區域內
-        if (ArcAreaJudge({ Start.X ,Start.Y }, { Passing.X,Passing.Y }, { End.X,End.Y }, { IntervalAreaCheck.Image.Start.x,IntervalAreaCheck.Image.Start.y,IntervalAreaCheck.Image.End.x,IntervalAreaCheck.Image.End.y }))
+        if (ArcAreaJudge({ Start.X ,Start.Y }, { Passing.X,Passing.Y }, { End.X,End.Y }, MosaicAreaJudge(IntervalAreaCheck)/*{ IntervalAreaCheck.Image.Start.x,IntervalAreaCheck.Image.Start.y,IntervalAreaCheck.Image.End.x,IntervalAreaCheck.Image.End.y }*/))
         {
             CCircleFormula.CircleCutPath_2D_unit(Point1, Point2, Point3, 0, 1000, AxeSpaceInit);//切割圓弧API
             for (UINT i = 0; i < AxeSpaceInit.size(); i++)
@@ -8056,12 +8110,12 @@ BOOL COrder::NewCutPathPoint(CoordinateData Start, CoordinateData Passing, Coord
             }
             IntervalAreaCheck.LineTrain.PointData.push_back({ -1,-1 });
             return 1;
-        }	
+        }
 	}
 	else if (Type == 2)
 	{
         //判斷圓是否在重組區域內
-        if (CircleAreaJudge({ Start.X ,Start.Y }, { Passing.X,Passing.Y }, { End.X,End.Y }, { IntervalAreaCheck.Image.Start.x,IntervalAreaCheck.Image.Start.y,IntervalAreaCheck.Image.End.x,IntervalAreaCheck.Image.End.y }))
+        if (CircleAreaJudge({ Start.X ,Start.Y }, { Passing.X,Passing.Y }, { End.X,End.Y }, MosaicAreaJudge(IntervalAreaCheck)/*{ IntervalAreaCheck.Image.Start.x,IntervalAreaCheck.Image.Start.y,IntervalAreaCheck.Image.End.x,IntervalAreaCheck.Image.End.y }*/))
         {
             CCircleFormula.CircleCutPath_2D_unit(Point1, Point2, Point3, 1, 1000, AxeSpaceInit);//切割圓API
             for (UINT i = 0; i < AxeSpaceInit.size(); i++)
@@ -8080,7 +8134,7 @@ return 1:在區域內or自動抓取重組範圍 0:在區域外
 */
 BOOL COrder::PointAreaJudge(POINT Point, CRect Area)
 {
-    if (!Area.left && !Area.top && !Area.right && !Area.bottom)//判斷區域是否為0
+    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
     {
         return 1;
     }
@@ -8095,7 +8149,7 @@ BOOL COrder::PointAreaJudge(POINT Point, CRect Area)
 */
 BOOL COrder::LineAreaJudge(POINT PointS, POINT PointE, CRect Area)
 {
-    if (!Area.left && !Area.top && !Area.right && !Area.bottom)//判斷區域是否為0
+    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
     {
         return 1;
     }
@@ -8114,7 +8168,7 @@ BOOL COrder::LineAreaJudge(POINT PointS, POINT PointE, CRect Area)
 */
 BOOL COrder::ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area)
 {
-    if (!Area.left && !Area.top && !Area.right && !Area.bottom)//判斷區域是否為0
+    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
     {
         return 1;
     }
@@ -8150,7 +8204,7 @@ BOOL COrder::ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area)
 */
 BOOL COrder::CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area)
 {
-    if (!Area.left && !Area.top && !Area.right && !Area.bottom)//判斷區域是否為0
+    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
     {
         return 1;
     }
@@ -8215,6 +8269,33 @@ BOOL COrder::AutoCalculationArea(AreaCheck & AreaCheckRun)
     AreaCheckRun.Image.End.x = AreaCheckRun.Image.End.x + VI_AutoCalculationMosaicAddOffset;
     AreaCheckRun.Image.End.y = AreaCheckRun.Image.End.y + VI_AutoCalculationMosaicAddOffset;
     return 0;
+}
+/*判斷重組區域是否為同一點
+*Area:區域的起始、結束點
+*return 修正過的區域
+*/
+CRect COrder::MosaicAreaJudge(AreaCheck &AreaCheck)
+{
+    if (AreaCheck.Image.Start.x == -1 && AreaCheck.Image.Start.y == -1 && AreaCheck.Image.End.x == -1 && AreaCheck.Image.End.y == -1)//判斷區域是否為-1
+    {
+        return CRect(-1,-1,-1,-1);
+    }
+    else if (AreaCheck.Image.Start.x == AreaCheck.Image.End.x && AreaCheck.Image.Start.y == AreaCheck.Image.End.y)
+    {
+#ifdef PRINTF
+        _cwprintf(L"MosaicAreaJudge()::%d,%d,%d,%d\n", AreaCheck.Image.Start.x - AreaCheck.Image.ViewMove.x,
+            AreaCheck.Image.Start.y - AreaCheck.Image.ViewMove.y,
+            AreaCheck.Image.Start.x + AreaCheck.Image.ViewMove.x,
+            AreaCheck.Image.Start.y + AreaCheck.Image.ViewMove.y);
+#endif
+        return CRect(
+            AreaCheck.Image.Start.x - AreaCheck.Image.ViewMove.x,
+            AreaCheck.Image.Start.y - AreaCheck.Image.ViewMove.y,
+            AreaCheck.Image.Start.x + AreaCheck.Image.ViewMove.x,
+            AreaCheck.Image.Start.y + AreaCheck.Image.ViewMove.y);
+    }
+    _cwprintf(L"MosaicAreaJudge()::%d,%d,%d,%d\n", AreaCheck.Image.Start.x, AreaCheck.Image.Start.y, AreaCheck.Image.End.x, AreaCheck.Image.End.y);
+    return CRect(AreaCheck.Image.Start.x, AreaCheck.Image.Start.y, AreaCheck.Image.End.x, AreaCheck.Image.End.y);
 }
 /**************************************************************************額外功能*********************************************************************************/
 /*儲存所有陣列*/

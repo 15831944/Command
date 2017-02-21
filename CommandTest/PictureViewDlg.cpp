@@ -38,11 +38,11 @@ BOOL CPictureViewDlg::OnInitDialog()
     BITMAP bitmap;
     GetObject(hBmp, sizeof(BITMAP), &bitmap);
     //讀取系統解析度,判斷式窗大小
-    if (bitmap.bmWidth > GetSystemMetrics(SM_CYSCREEN))
-        bitmap.bmWidth = GetSystemMetrics(SM_CYSCREEN) - 100;
-    if (bitmap.bmHeight > GetSystemMetrics(SM_CXSCREEN))
-        bitmap.bmHeight = GetSystemMetrics(SM_CXSCREEN) - 100;
-    MoveWindow( (GetSystemMetrics(SM_CXSCREEN) / 2) - (bitmap.bmHeight / 2), (GetSystemMetrics(SM_CYSCREEN) / 2) - (bitmap.bmWidth / 2), bitmap.bmHeight, bitmap.bmWidth);
+    if (bitmap.bmHeight > GetSystemMetrics(SM_CYSCREEN))
+        bitmap.bmHeight = GetSystemMetrics(SM_CYSCREEN) - 100;
+    if (bitmap.bmWidth > GetSystemMetrics(SM_CXSCREEN))
+        bitmap.bmWidth = GetSystemMetrics(SM_CXSCREEN) - 100;
+    MoveWindow((GetSystemMetrics(SM_CXSCREEN) / 2) - (bitmap.bmWidth / 2), (GetSystemMetrics(SM_CYSCREEN) / 2) - (bitmap.bmHeight / 2), bitmap.bmWidth, bitmap.bmHeight);
 #ifdef VI
     ShowResult = VI_ShowPic(FilePath, FileName, this->m_hWnd);
 #endif
