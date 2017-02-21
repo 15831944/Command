@@ -206,7 +206,7 @@ void CCircleFormula::CircleCutPath_2D_unit(AxeSpace P1, AxeSpace P2, AxeSpace P3
     cutPathArray.clear();
 
     DPoint Pee;
-    AxeSpace Pn;
+    AxeSpace Pn = {0,0,0,0};
     double rad = 0.0;
     //以1mm，也就是1000um的弧長做切點
     double deltaRad = cutUnit/r;

@@ -524,7 +524,15 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 			m_CommandList.SetItemText(i, 0, StrBuff);
 			m_CommandList.SetItemText(i, 1, a.CommandMemory.at(i));
 		}
-		m_CommandList.EnsureVisible(InsertNum, FALSE);//使List中一項可見(如滾動條向下滾)
+        if (nCount > InsertNum)
+        {
+            m_CommandList.EnsureVisible(InsertNum, FALSE);//使List中一項可見(如滾動條向下滾)
+        }
+        else
+        {
+            m_CommandList.EnsureVisible(nCount, FALSE);//使List中一項可見(如滾動條向下滾)
+        }
+        InsertNum = nCount;
 	}
 	else
 	{
@@ -1844,7 +1852,7 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 		CString EditBuffer1, EditBuffer2, EditBuffer3, EditBuffer4, EditBuffer5;
 		GetDlgItemText(IDC_EDITPARAM2, EditBuffer1); GetDlgItemText(IDC_EDITPARAM3, EditBuffer2);
 		GetDlgItemText(IDC_EDITPARAM4, EditBuffer3); GetDlgItemText(IDC_EDITPARAM5, EditBuffer4);
-		StrBuff.Format(_T("AreaCheck,%d,-1,-1,-1,-1,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
+		StrBuff.Format(_T("AreaCheck,%d,-1000,-1000,-1000,-1000,%f,%f,%f,%f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),
 			_tstof(EditBuffer1), _tstof(EditBuffer2),
 			_tstof(EditBuffer3), _tstof(EditBuffer4), 
 			GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));

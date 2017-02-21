@@ -11,10 +11,11 @@
 #include "Order.h"
 #include <math.h>
 
-#define VI_MICaptureDelayTime 200
-#define VI_DCheckDelayTime 400
-#define VI_TCheckDelayTime 400
-#define VI_AutoCalculationMosaicAddOffset 1000
+#define VI_MICaptureDelayTime 200 //用於重組拍照停留時間 
+#define VI_DCheckDelayTime 400 //用於直徑檢測影像停留時間
+#define VI_TCheckDelayTime 400 //用於模板檢測拍照的停留時間
+#define VI_AutoCalculationMosaicAddOffset 1000 //用於自動抓取重組區大小增加量
+#define VI_MosaicAreaDefault -1000 //用於自動抓取重組區大小判斷值
 
 // COrder
 
@@ -1808,8 +1809,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 							//判斷區域是否重組
 							if (((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x == ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y == ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y
-								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x != -1 && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y != -1 
-								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x != -1 && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y != -1)//不重組
+								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x != VI_MosaicAreaDefault && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y != VI_MosaicAreaDefault
+								&& ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x != VI_MosaicAreaDefault && ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y != VI_MosaicAreaDefault)//不重組
 							{
 								//判斷點是否在區域內
 								if (((COrder*)pParam)->PointAreaJudge({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
@@ -4877,10 +4878,10 @@ UINT COrder::CheckAction(LPVOID pParam)
 		BOOL Switch = FALSE;//控制S型
 		if (!((COrder*)pParam)->m_Action.g_bIsStop)
 		{
-            if (((COrder*)pParam)->AreaCheckRun.Image.Start.x == -1 &&
-				((COrder*)pParam)->AreaCheckRun.Image.Start.y == -1 && 
-				((COrder*)pParam)->AreaCheckRun.Image.End.x == -1 &&
-				((COrder*)pParam)->AreaCheckRun.Image.End.y == -1)//判斷區域是否為-1
+            if (((COrder*)pParam)->AreaCheckRun.Image.Start.x == VI_MosaicAreaDefault &&
+				((COrder*)pParam)->AreaCheckRun.Image.Start.y == VI_MosaicAreaDefault &&
+				((COrder*)pParam)->AreaCheckRun.Image.End.x == VI_MosaicAreaDefault &&
+				((COrder*)pParam)->AreaCheckRun.Image.End.y == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
             {
                 ((COrder*)pParam)->AutoCalculationArea(((COrder*)pParam)->AreaCheckRun);
 #ifdef PRINTF
@@ -5750,16 +5751,17 @@ BOOL COrder::CheckDraw()
 	{
 		int Pencolor = 0;
 		if (CheckFinishRecord.back().Result == L"NG")
-			Pencolor = 1;
+			Pencolor = 3;
 		else if(CheckFinishRecord.back().Result == L"OK")
 			Pencolor = 2;
 		else if (CheckFinishRecord.back().Result == L"Err")
-			Pencolor = 3;
+			Pencolor = 1;
 		(*CallFunction.CDrawFunction)(CallFunction.pObject, { CheckFinishRecord.back().CheckData.Position.X,CheckFinishRecord.back().CheckData.Position.Y }, Pencolor);
 		return 1;
 	}   
 	return 0;
 }
+/*中間點例外處理*/
 void COrder::PassingException(LPVOID pParam)
 {
     if (((COrder*)pParam)->AreaCheckChangTemp.Status && ((COrder*)pParam)->AreaCheckChangTemp.X != -1 && ((COrder*)pParam)->AreaCheckChangTemp.Y != -1 && ((COrder*)pParam)->AreaCheckChangTemp.Z != -1)
@@ -8134,7 +8136,10 @@ return 1:在區域內or自動抓取重組範圍 0:在區域外
 */
 BOOL COrder::PointAreaJudge(POINT Point, CRect Area)
 {
-    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
+    if (Area.left == VI_MosaicAreaDefault &&
+        Area.top == VI_MosaicAreaDefault &&
+        Area.right == VI_MosaicAreaDefault &&
+        Area.bottom == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
     {
         return 1;
     }
@@ -8149,7 +8154,10 @@ BOOL COrder::PointAreaJudge(POINT Point, CRect Area)
 */
 BOOL COrder::LineAreaJudge(POINT PointS, POINT PointE, CRect Area)
 {
-    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
+    if (Area.left == VI_MosaicAreaDefault &&
+        Area.top == VI_MosaicAreaDefault &&
+        Area.right == VI_MosaicAreaDefault &&
+        Area.bottom == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
     {
         return 1;
     }
@@ -8168,7 +8176,10 @@ BOOL COrder::LineAreaJudge(POINT PointS, POINT PointE, CRect Area)
 */
 BOOL COrder::ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area)
 {
-    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
+    if (Area.left == VI_MosaicAreaDefault &&
+        Area.top == VI_MosaicAreaDefault &&
+        Area.right == VI_MosaicAreaDefault &&
+        Area.bottom == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
     {
         return 1;
     }
@@ -8204,7 +8215,10 @@ BOOL COrder::ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area)
 */
 BOOL COrder::CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area)
 {
-    if (Area.left == -1 && Area.top == -1 && Area.right == -1 && Area.bottom == -1)//判斷區域是否為-1
+    if (Area.left == VI_MosaicAreaDefault &&
+        Area.top == VI_MosaicAreaDefault &&
+        Area.right == VI_MosaicAreaDefault &&
+        Area.bottom == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
     {
         return 1;
     }
@@ -8276,11 +8290,14 @@ BOOL COrder::AutoCalculationArea(AreaCheck & AreaCheckRun)
 */
 CRect COrder::MosaicAreaJudge(AreaCheck &AreaCheck)
 {
-    if (AreaCheck.Image.Start.x == -1 && AreaCheck.Image.Start.y == -1 && AreaCheck.Image.End.x == -1 && AreaCheck.Image.End.y == -1)//判斷區域是否為-1
+    if (AreaCheck.Image.Start.x == VI_MosaicAreaDefault &&
+        AreaCheck.Image.Start.y == VI_MosaicAreaDefault &&
+        AreaCheck.Image.End.x == VI_MosaicAreaDefault &&
+        AreaCheck.Image.End.y == VI_MosaicAreaDefault)//判斷區域是否為VI_MosaicAreaDefault
     {
-        return CRect(-1,-1,-1,-1);
+        return CRect(VI_MosaicAreaDefault, VI_MosaicAreaDefault, VI_MosaicAreaDefault, VI_MosaicAreaDefault);//用於自動抓取重組圖大小
     }
-    else if (AreaCheck.Image.Start.x == AreaCheck.Image.End.x && AreaCheck.Image.Start.y == AreaCheck.Image.End.y)
+    else if (AreaCheck.Image.Start.x == AreaCheck.Image.End.x && AreaCheck.Image.Start.y == AreaCheck.Image.End.y)//用於單張拍圖
     {
 #ifdef PRINTF
         _cwprintf(L"MosaicAreaJudge()::%d,%d,%d,%d\n", AreaCheck.Image.Start.x - AreaCheck.Image.ViewMove.x,
@@ -8294,8 +8311,7 @@ CRect COrder::MosaicAreaJudge(AreaCheck &AreaCheck)
             AreaCheck.Image.Start.x + AreaCheck.Image.ViewMove.x,
             AreaCheck.Image.Start.y + AreaCheck.Image.ViewMove.y);
     }
-    _cwprintf(L"MosaicAreaJudge()::%d,%d,%d,%d\n", AreaCheck.Image.Start.x, AreaCheck.Image.Start.y, AreaCheck.Image.End.x, AreaCheck.Image.End.y);
-    return CRect(AreaCheck.Image.Start.x, AreaCheck.Image.Start.y, AreaCheck.Image.End.x, AreaCheck.Image.End.y);
+    return CRect(AreaCheck.Image.Start.x, AreaCheck.Image.Start.y, AreaCheck.Image.End.x, AreaCheck.Image.End.y);//用於重組圖
 }
 /**************************************************************************額外功能*********************************************************************************/
 /*儲存所有陣列*/
