@@ -215,7 +215,7 @@ private:
 		BOOL ContinuousSwitch;
 	};
 	/************************************************************檢測參數結構*******************************************************/
-	//檢測座標結構(檢測模式地址、命令地址、座標位置)
+	//檢測座標結構(檢測模式、檢測模式地址、命令地址、座標位置)
 	struct CheckCoordinate{
 		CString CheckMode;
 		CString CheckModeAddress;
@@ -389,9 +389,8 @@ private:
 		int BlockNumber;
 		std::vector<CString> BlockPosition;
 	};
-	/*Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、步驟標籤起始地址、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、記錄步驟內層迴圈
-	
-	次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
+	/*Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、步驟標籤起始地址、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、
+    記錄步驟內層迴圈次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
 	*步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
@@ -475,7 +474,7 @@ private:    //函式
 	static  UINT    IODetection(LPVOID pParam);//IO偵測程序
 	static  UINT    CheckCoordinateScan(LPVOID pParam);//區間檢測控制程序
 	static  UINT    CheckAction(LPVOID pParam);//區間檢測執行程序
-    static  UINT    MosaicDlg(LPVOID pParam);
+    static  UINT    MosaicDlg(LPVOID pParam);//模板重組中視窗
 	/*動作處理*/
 	static  void    LineGotoActionJudge(LPVOID pParam);//判斷線段動作轉換
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);//CallSubroutin修正處理
@@ -652,6 +651,8 @@ public:     //運行類函式
 	void    LoadPointData();
 	//檢查命令規則(return 錯誤代碼 , ErrorAddress 為錯誤命令地址)
 	int     CheckCommandRule(int &ErrorAddress);
+    //查看所有狀態資訊
+    void    ShowAllStatus();
 public:    //設定類函式
 	//設置畫圖呼叫函式(成功return 1失敗return 0)
 	BOOL    SetDrawFunction(CDrawFunction Funtion, void* pObject);

@@ -2164,6 +2164,7 @@ void CCommandTestDlg::OnBnClickedBtntest()
     StrBuff.Format(L"X = %d,Y = %d", a.AreaCheckParamterDefault.ViewMove.x, a.AreaCheckParamterDefault.ViewMove.y);
     MessageBox(StrBuff);*/
     //印出直徑、模板區間檢測的座標
+    /*
 	for (UINT i = 0; i < a.IntervalCheckCoordinate.size(); i++)
 	{
 		_cwprintf(L"%s,%s,%d,%d,%d", a.IntervalCheckCoordinate.at(i).Address,
@@ -2172,7 +2173,9 @@ void CCommandTestDlg::OnBnClickedBtntest()
 			a.IntervalCheckCoordinate.at(i).Position.Y,
 			a.IntervalCheckCoordinate.at(i).Position.Z);
 	}
+    */
 	//印出區域檢測的訓練點、線
+    /*
 	for (UINT i = 0; i < a.IntervalAreaCheck.size(); i++)
 	{
 		_cwprintf(L"區間%s,%.3f,%.3f\n", a.IntervalAreaCheck.at(i).Address, a.IntervalAreaCheck.at(i).DotTrain.MeasureLimit, a.IntervalAreaCheck.at(i).LineTrain.MeasureLimit);
@@ -2185,6 +2188,7 @@ void CCommandTestDlg::OnBnClickedBtntest()
 			_cwprintf(L"(線)訓練點座標(%d):(%d,%d)\n", j, a.IntervalAreaCheck.at(i).LineTrain.PointData.at(j).x, a.IntervalAreaCheck.at(i).LineTrain.PointData.at(j).y);
 		}
 	}
+    */
     //math.h 測試練習
 	/*double x, y, theta;
 	theta = atan2(x, y);
@@ -2192,7 +2196,9 @@ void CCommandTestDlg::OnBnClickedBtntest()
     //SetLastErrore 測試練習
     /*SetLastError(123);
     _cwprintf(L"%d",GetLastError());*/
-    
+    //所有狀態印出
+    a.ShowAllStatus();
+
 
 }
 

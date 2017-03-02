@@ -32,17 +32,22 @@ END_MESSAGE_MAP()
 BOOL CPictureViewDlg::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
+    CRect rcClient, rcWindow;
     CImage image;
     image.Load(FilePath + FileName + _T(".bmp"));
     HBITMAP hBmp = image.Detach();
     BITMAP bitmap;
-    GetObject(hBmp, sizeof(BITMAP), &bitmap);
+    GetObject(hBmp, sizeof(BITMAP), &bitmap)    ;
     //讀取系統解析度,判斷式窗大小
     if (bitmap.bmHeight > GetSystemMetrics(SM_CYSCREEN))
         bitmap.bmHeight = GetSystemMetrics(SM_CYSCREEN) - 100;
     if (bitmap.bmWidth > GetSystemMetrics(SM_CXSCREEN))
         bitmap.bmWidth = GetSystemMetrics(SM_CXSCREEN) - 100;
-    MoveWindow((GetSystemMetrics(SM_CXSCREEN) / 2) - (bitmap.bmWidth / 2), (GetSystemMetrics(SM_CYSCREEN) / 2) - (bitmap.bmHeight / 2), bitmap.bmWidth, bitmap.bmHeight);
+    GetClientRect(rcClient);
+    GetWindowRect(rcWindow);
+    //MoveWindow((GetSystemMetrics(SM_CXSCREEN) / 2) - (bitmap.bmWidth / 2), (GetSystemMetrics(SM_CYSCREEN) / 2) - (bitmap.bmHeight / 2), bitmap.bmWidth, bitmap.bmHeight);//未修正視窗
+    MoveWindow((GetSystemMetrics(SM_CXSCREEN) / 2) - (bitmap.bmWidth / 2), (GetSystemMetrics(SM_CYSCREEN) / 2) - (bitmap.bmHeight / 2),
+        bitmap.bmWidth + (rcWindow.right - rcWindow.left - rcClient.right), bitmap.bmHeight + (rcWindow.bottom - rcWindow.top - rcClient.bottom));//修正後視窗
 #ifdef VI
     ShowResult = VI_ShowPic(FilePath, FileName, this->m_hWnd);
 #endif

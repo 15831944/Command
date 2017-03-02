@@ -719,6 +719,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		//((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));//啟動事件計時
         //_cwprintf(L"%d...\n", ((COrder*)pParam)->PointAreaJudge({ 500,500 }, { 1000,0,0,0 }));
         //((COrder*)pParam)->CircleAreaJudge({ 145378,78612 }, { 199096,110359 }, { 183319,140973 }, 0);
+        static int  aaaa = 0;
+        _cwprintf(L"%d",aaaa);
+        aaaa++;
+        Sleep(1000);
 	}
 	/************************************************************程序**************************************************************/
 	else if (CommandResolve(Command, 0) == L"GotoLabel") 
@@ -8858,6 +8862,17 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 #endif
 	return 0;
 }
+/*顯示所有狀態值*/
+void COrder::ShowAllStatus()
+{
+    CString StrBuff,StrBuff1;
+    StrBuff.Format(L"g_pThread:%x\ng_pSubroutineThread:%x\ng_pRunLoopThread:%x\ng_pIODetectionThread:%x\ng_pCheckCoordinateScanThread:%x\ng_pCheckActionThread:%x\ng_pMosaicDlgThread:%x\n",
+        g_pThread, g_pSubroutineThread, g_pRunLoopThread, g_pIODetectionThread, g_pCheckCoordinateScanThread, g_pCheckActionThread, g_pMosaicDlgThread);
+    StrBuff1.Format(L"RunStatus:%d\nStepCommandStatus:%d\nRunLoopStatus:%d\nGoHomeStatus:%d\n",
+        RunStatusRead.RunStatus, RunStatusRead.StepCommandStatus, RunStatusRead.RunLoopStatus, RunStatusRead.GoHomeStatus);
+    StrBuff = StrBuff + StrBuff1; 
+    AfxMessageBox(StrBuff);              
+}
 /*設置畫圖呼叫函式*/
 BOOL COrder::SetDrawFunction(CDrawFunction Funtion, void * pObject)
 {
@@ -8883,3 +8898,6 @@ BOOL COrder::SetTabelZ(int *TableZ)
     }
     return 1;
 }
+
+
+
