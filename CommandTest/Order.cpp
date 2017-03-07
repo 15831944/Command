@@ -39,7 +39,7 @@ COrder::COrder()
 	ZSet = {0,0}; 
 	GlueData = { {0,0,0,0},0,0,0,0 };
 	//影像參數
-	VisionOffset = { { 0,0,0,0 },0,0,0 };
+	VisionOffset = { { 0,0,0,0,0 },0,0,0 };
 	VisionSet = { 0,0,0,0,0,0,0,0,0,0 };
 	VisionDefault.VisionSerchError.Manuallymode = FALSE;
 	VisionDefault.VisionSerchError.Pausemode = FALSE;
@@ -76,7 +76,7 @@ COrder::~COrder()
     //釋放影像檔案目錄指針
     if (VisionDefault.VisionFile.ModelPath != NULL)
     {
-        delete VisionFile.ModelPath;//釋放目錄指針記憶體
+        delete VisionDefault.VisionFile.ModelPath;//釋放目錄指針記憶體
     }
     //釋放緊急停止彈跳視窗
     if (IOParam.pEMGDlg != NULL)
