@@ -39,7 +39,7 @@ COrder::COrder()
 	ZSet = {0,0}; 
 	GlueData = { {0,0,0,0},0,0,0,0 };
 	//影像參數
-	VisionOffset = { { 0,0,0,0,0 },0,0,0 };
+	VisionOffset = { { 0,0,0,0 },0,0,0 };
 	VisionSet = { 0,0,0,0,0,0,0,0,0,0 };
 	VisionDefault.VisionSerchError.Manuallymode = FALSE;
 	VisionDefault.VisionSerchError.Pausemode = FALSE;
