@@ -37,9 +37,9 @@ COrder::COrder()
 	DotSpeedSet = {0,0,1000};
 	LineSpeedSet = {0,0,6000};
 	ZSet = {0,0}; 
-	GlueData = { {0,0,0,0},0,0,0,0 };
+	GlueData = { {0,0,0,0,0},0,0,0,0 };
 	//影像參數
-	VisionOffset = { { 0,0,0,0 },0,0,0 };
+	VisionOffset = { { 0,0,0,0,0 },0,0,0 };
 	VisionSet = { 0,0,0,0,0,0,0,0,0,0 };
 	VisionDefault.VisionSerchError.Manuallymode = FALSE;
 	VisionDefault.VisionSerchError.Pausemode = FALSE;
@@ -76,7 +76,7 @@ COrder::~COrder()
     //釋放影像檔案目錄指針
     if (VisionDefault.VisionFile.ModelPath != NULL)
     {
-        delete VisionFile.ModelPath;//釋放目錄指針記憶體
+        delete VisionDefault.VisionFile.ModelPath;//釋放目錄指針記憶體
     }
     //釋放緊急停止彈跳視窗
     if (IOParam.pEMGDlg != NULL)
@@ -124,7 +124,7 @@ BOOL COrder::Run()
 			//載入所有檔案名
 			ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*_*_*_*_*.mod"));
 			//出膠控制器模式
-			m_Action.g_bIsDispend = TRUE;   
+			m_Action.m_bIsDispend = TRUE;   
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
 			return TRUE;
 		}  
@@ -161,8 +161,8 @@ BOOL COrder::Stop()
 	{
 		if (SuspendThread(g_pThread) != GetLastError())
 		{
-			m_Action.g_bIsStop = TRUE;
-			m_Action.g_bIsPause = FALSE;
+			m_Action.m_bIsStop = TRUE;
+			m_Action.m_bIsPause = FALSE;
 			g_pThread->ResumeThread();//啟動線程
 			if (g_pCheckCoordinateScanThread)//判斷檢測是否有在運作
 			{
@@ -181,7 +181,7 @@ BOOL COrder::Stop()
 		}
 		else
 		{
-			m_Action.g_bIsStop = TRUE;
+			m_Action.m_bIsStop = TRUE;
 			#ifdef MOVE
 				MO_DecSTOP();//立即減速停止運動指令
 			#endif
@@ -197,14 +197,14 @@ BOOL COrder::Stop()
 BOOL COrder::Pause()
 {
 	if (g_pThread && RunStatusRead.RunStatus == 1 && RunStatusRead.GoHomeStatus) {
-		m_Action.g_bIsPause = TRUE;
+		m_Action.m_bIsPause = TRUE;
 		g_pThread->SuspendThread();//暫停線程
 		if (g_pCheckCoordinateScanThread)//判斷是否在區間檢測
 		{
 			g_pCheckCoordinateScanThread->SuspendThread();//暫停線程
 		}
 		RunStatusRead.RunStatus = 2;//狀態改變成暫停中
-		m_Action.g_bIsPause = TRUE;
+		m_Action.m_bIsPause = TRUE;
 		if (g_pRunLoopThread && RunStatusRead.RunLoopStatus)
 		{
 			RunStatusRead.RunLoopStatus = FALSE;
@@ -223,7 +223,7 @@ BOOL COrder::Continue()
 	{
 		if (SuspendThread(g_pThread) != GetLastError() && RunStatusRead.RunStatus == 2 && RunStatusRead.GoHomeStatus)
 		{
-			m_Action.g_bIsPause = FALSE;
+			m_Action.m_bIsPause = FALSE;
 			g_pThread->ResumeThread();//啟動線程
 			if (g_pCheckCoordinateScanThread)//判斷檢測是否有在運作
 			{
@@ -259,7 +259,7 @@ BOOL COrder::Home(BOOL mode)
 	if (!g_pThread)
 	{           
 		//將停止狀態清除
-		m_Action.g_bIsStop = FALSE;
+		m_Action.m_bIsStop = FALSE;
 		//確定GoHome參數賦值
 		GoHome = Default.GoHome;
 		//回原點模式設定
@@ -302,7 +302,7 @@ BOOL COrder::View(BOOL mode)
 			//載入所有檔案名
 			ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*_*_*_*_*.mod"));
 			//出膠控制器模式
-			m_Action.g_bIsDispend = FALSE;
+			m_Action.m_bIsDispend = FALSE;
 			//wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
 		}
@@ -409,13 +409,13 @@ UINT COrder::HomeThread(LPVOID pParam)
 	//先移動到(0,0,0)位置 Z軸抬升目前35000絕對 
 	((COrder*)pParam)->m_Action.DecideVirtualHome(0, 0, 0, 35000, 0,
 		((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
-	((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+    ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
 	if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
 	{   
 		((COrder*)pParam)->VisionSet.AdjustOffsetX = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetX;
 		((COrder*)pParam)->VisionSet.AdjustOffsetY = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetY;
-		((COrder*)pParam)->m_Action.DecideVirtualPoint(-(((COrder*)pParam)->VisionSet.AdjustOffsetX), -(((COrder*)pParam)->VisionSet.AdjustOffsetY), 0,
-			((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
+        ((COrder*)pParam)->m_Action.DecideVirtualPoint(-(((COrder*)pParam)->VisionSet.AdjustOffsetX), -(((COrder*)pParam)->VisionSet.AdjustOffsetY), 0, 0,
+            ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
 	}
 #endif
 	((COrder*)pParam)->RunStatusRead.GoHomeStatus = TRUE;//原點賦歸完成
@@ -434,7 +434,7 @@ UINT COrder::Thread(LPVOID pParam)
     ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0, ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
         ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed,1);
 #endif
-	while ((!((COrder*)pParam)->m_Action.g_bIsStop) && ((COrder*)pParam)->ModelControl.Mode != 4/*&& ((COrder*)pParam)->Commanding != _T("End")*/)//新增模式判斷
+	while ((!((COrder*)pParam)->m_Action.m_bIsStop) && ((COrder*)pParam)->ModelControl.Mode != 4/*&& ((COrder*)pParam)->Commanding != _T("End")*/)//新增模式判斷
 	{
 		if (((COrder*)pParam)->RunData.SubProgramName != _T(""))//雙程式使用
 		{
@@ -631,7 +631,7 @@ UINT COrder::Thread(LPVOID pParam)
 #ifdef PRINTF
 					_cwprintf(L"Thread()::發生StepRepeatLabel尋找錯誤立即停止程序!\n");
 #endif
-					((COrder*)pParam)->m_Action.g_bIsStop = TRUE;
+					((COrder*)pParam)->m_Action.m_bIsStop = TRUE;
 				}
 				else
 				{
@@ -692,7 +692,7 @@ UINT COrder::Thread(LPVOID pParam)
 	} 
 	*/  
 	((COrder*)pParam)->DecideClear();//清除所有陣列
-	((COrder*)pParam)->m_Action.g_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
+	((COrder*)pParam)->m_Action.m_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
 	//計算執行時間
 	QueryPerformanceCounter(&((COrder*)pParam)->endTime); //取得開機到程式執行完成經過幾個CPU Cycle
 	((COrder*)pParam)->RunStatusRead.RunTotalTime = ((double)((COrder*)pParam)->endTime.QuadPart - (double)((COrder*)pParam)->startTime.QuadPart) / ((COrder*)pParam)->fre.QuadPart;//計算程式運行時間
@@ -719,10 +719,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		//((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));//啟動事件計時
         //_cwprintf(L"%d...\n", ((COrder*)pParam)->PointAreaJudge({ 500,500 }, { 1000,0,0,0 }));
         //((COrder*)pParam)->CircleAreaJudge({ 145378,78612 }, { 199096,110359 }, { 183319,140973 }, 0);
-        static int  aaaa = 0;
+        /*static int  aaaa = 0;
         _cwprintf(L"%d",aaaa);
         aaaa++;
-        Sleep(1000);
+        Sleep(1000);*/
 	}
 	/************************************************************程序**************************************************************/
 	else if (CommandResolve(Command, 0) == L"GotoLabel") 
@@ -743,8 +743,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		//TODO::可思考 如果LS->CallSubroutine 結果沒有此Subroutine時還是會移到LS，已使用限制命令解決
 		if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS時 移動至LS虛擬點
 		{
-			((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-				((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
+            ((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 			((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount);
 		}
 		//CallSubroutineStatus狀態打開
@@ -788,11 +788,12 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef MOVE
 				if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下才做回歸動作
 				{
-					((COrder*)pParam)->m_Action.DecideVirtualPoint(
-						((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
-						((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-						((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-						((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+                    ((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                        ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                        ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                        ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                        ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 				}
 #endif
 				if (((COrder*)pParam)->Program.SubroutineModelControlSwitch)//用在模式二進入模式三結束子程序
@@ -1758,16 +1759,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			ChooseLaserModify(pParam);//選擇雷射高度
 			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
 			LineGotoActionJudge(pParam);//判斷動作狀態
-			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-			
+			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 
 			VisionModify(pParam);//影像修正
 			LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 #ifdef MOVE
 			((COrder*)pParam)->m_Action.DecidePointGlue(
@@ -1777,11 +1779,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X,
 				((COrder*)pParam)->FinalWorkCoordinateData.Y,
 				((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 				((COrder*)pParam)->DispenseDotSet.GlueOpenTime, ((COrder*)pParam)->DispenseDotSet.GlueCloseTime,
 				((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 			((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
+            
 			if (((COrder*)pParam)->CheckSwitch.ImmediateCheck)//即時檢測(模板、區間)
 			{          
 				((COrder*)pParam)->CheckModel = 1;//檢測模式設為即時檢測
@@ -1856,14 +1860,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-			
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 			/*因為不加入修正所以必須在這裡做汰換*/
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 			
 			VisionModify(pParam);//影像修正
 			LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 			((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
 			//((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
@@ -1872,6 +1876,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 			((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
+            ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W = ((COrder*)pParam)->FinalWorkCoordinateData.W;
 			((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 1;
 		} 
 	}
@@ -1901,13 +1906,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 				((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-				
+                ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+
 				((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 				
 				VisionModify(pParam);//影像修正
 				LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-				_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+                _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
                 //判斷是否是連續線段
 				if (!((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch)//不為連續線段
@@ -1922,13 +1928,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 							//呼叫ARC
 							((COrder*)pParam)->m_Action.DecideArc(
 								((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
@@ -1955,23 +1966,33 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫LS
-							((COrder*)pParam)->m_Action.DecideLineStartMove(
-								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
+                            ((COrder*)pParam)->m_Action.DecideLineStartMove(
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 							//呼叫Circle
-							((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                            ((COrder*)pParam)->m_Action.DecideCircle(
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
 							//呼叫LP
-							((COrder*)pParam)->m_Action.DecideLineMidMove(
-								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								//_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-								((COrder*)pParam)->FinalWorkCoordinateData.X,
-								((COrder*)pParam)->FinalWorkCoordinateData.Y,
-								((COrder*)pParam)->FinalWorkCoordinateData.Z,
-								((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
+                            ((COrder*)pParam)->m_Action.DecideLineMidMove(
+                                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
+                                ((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 							//清除完成動作圓
 							((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
@@ -2030,13 +2051,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫LS-LP
-							((COrder*)pParam)->m_Action.DecideLineSToP(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+							((COrder*)pParam)->m_Action.DecideLineSToP(
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								//_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance, ((COrder*)pParam)->DispenseLineSet.NodeTime,
 								((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
@@ -2062,7 +2088,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							}
 						}
 						//不管何種檢測都要記錄中間點
-						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z };//紀錄中間點
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z,((COrder*)pParam)->FinalWorkCoordinateData.W };//紀錄中間點
 					}
 					else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
 					{
@@ -2071,12 +2097,18 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫ARC
-							((COrder*)pParam)->m_Action.DecideArc(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								((COrder*)pParam)->FinalWorkCoordinateData.X,
-								((COrder*)pParam)->FinalWorkCoordinateData.Y,
-								((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
+                            ((COrder*)pParam)->m_Action.DecideArc(
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
+                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
 #endif
 							//清除完成動作圓弧
 							((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;     
@@ -2120,15 +2152,25 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫Circle
-							((COrder*)pParam)->m_Action.DecideCircle(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+							((COrder*)pParam)->m_Action.DecideCircle(
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, 
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								((COrder*)pParam)->LineSpeedSet.EndSpeed, 1000);
 							//呼叫LP
 							((COrder*)pParam)->m_Action.DecideLineMidMove(
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                //_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
-								_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,				
 								((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 							//清除完成動作圓
@@ -2207,6 +2249,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 							if (((COrder*)pParam)->CheckSwitch.Area)//區域區間檢測線段新增
@@ -2240,7 +2283,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							}
 						}
 						//不管何種檢測都要記錄中間點
-						((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z };//紀錄中間點
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z,((COrder*)pParam)->FinalWorkCoordinateData.W };//紀錄中間點
 					}              
 				}
 				else//連續線段
@@ -2290,13 +2333,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 				((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+                ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 
 				((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 				
 				VisionModify(pParam);//影像修正
 				LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-				_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+                _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
                 //判斷是否為連續線段
 				if (!((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch)//不為連續線段
@@ -2311,19 +2355,24 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 							//再呼叫一個ARC-LE
-							((COrder*)pParam)->m_Action.DecideArcleToEnd(
-								((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-								((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
-								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-								((COrder*)pParam)->FinalWorkCoordinateData.X,
-								((COrder*)pParam)->FinalWorkCoordinateData.Y,
-								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
-								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
-								((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
-								((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
+                            ((COrder*)pParam)->m_Action.DecideArclePToEnd(
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                //_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                //_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.X,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
+                                ((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
+                                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
+                                ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
+                                ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, 1000);
 #endif
 							//清除完成動作圓弧
 							((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
@@ -2359,13 +2408,24 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 							//呼叫Circle-LE
-							((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+							((COrder*)pParam)->m_Action.DecideCirclePToEnd(
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
 								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
 								((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
@@ -2431,12 +2491,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								//_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.BeforeMoveDelay, ((COrder*)pParam)->DispenseLineSet.BeforeMoveDistance,
 								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
 								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
@@ -2471,7 +2533,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								}
 							}
 						}
-                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
 					}
 					else if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 2)//LS存在執行過LP
 					{
@@ -2480,11 +2542,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫ARC-LE
-							((COrder*)pParam)->m_Action.DecideArcleToEnd(((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+							((COrder*)pParam)->m_Action.DecideArclePToEnd(
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
 								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
 								((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
@@ -2532,11 +2600,21 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 #ifdef MOVE
 							//呼叫Circle-LE
-							((COrder*)pParam)->m_Action.DecideCircleToEnd(((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+							((COrder*)pParam)->m_Action.DecideCirclePToEnd(
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                                ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W,
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
 								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
 								((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
@@ -2620,6 +2698,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
 								((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 								((COrder*)pParam)->DispenseLineSet.StayTime, ((COrder*)pParam)->DispenseLineSet.ShutdownDistance, ((COrder*)pParam)->DispenseLineSet.ShutdownDelay,
 								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
 								((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed, ((COrder*)pParam)->DispenseLineEnd.Type,
@@ -2656,7 +2735,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								}
 							}
 						}
-                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
+                        ((COrder*)pParam)->AreaCheckChangTemp = { 0,-1,-1,-1,-1 };//區域中間點轉換檢測暫存參數清零
 					}
 				}
 				else//連續線段
@@ -2726,19 +2805,20 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 			VisionModify(pParam);//影像修正
 
 			((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
 			((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 			((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Z = ((COrder*)pParam)->FinalWorkCoordinateData.Z;
-			
+            ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).W = ((COrder*)pParam)->FinalWorkCoordinateData.W;
 			//((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			//((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 
 #ifdef PRINTF
-			if(((COrder*)pParam)->ModelControl.Mode == 3)
-				_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            if (((COrder*)pParam)->ModelControl.Mode == 3)
+                _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 		}   
 	}
@@ -2774,8 +2854,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 			//圓第二點
-			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			VisionModify(pParam);//影像修正
 			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
@@ -2784,15 +2864,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			//((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			//((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 			//((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			//((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-
+			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W = _tstof(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 #ifdef PRINTF
-			if (((COrder*)pParam)->ModelControl.Mode == 3)
-				_cwprintf(L"SubroutineThread()::%s(%d,%d,%d-%d,%d,%d)\n", CommandResolve(Command, 0),
-					((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-					((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z);
+            if (((COrder*)pParam)->ModelControl.Mode == 3)
+                _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f-%d,%d,%d,%.3f)\n", CommandResolve(Command, 0),
+                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
+                    ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W);
 #endif
 		}
 	}
@@ -2808,7 +2889,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		{
 			LineGotoActionJudge(pParam);//判斷動作狀態
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), 0, 0, 0);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), 0, 0, 0, 0);
 #endif
 			if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
 			{
@@ -2816,18 +2897,22 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
                 //先移動到(0,0,0)位置 Z軸抬升目前35000絕對 
                 ((COrder*)pParam)->m_Action.DecideVirtualHome(0, 0, 0, 35000, 0,
                     ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
-				((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
+                ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
 #endif   
-				((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0 };//紀錄移動虛擬座標
+				((COrder*)pParam)->VirtualCoordinateData = { 0,0,0,0,0 };//紀錄移動虛擬座標
 			}
 			else
 			{
 #ifdef MOVE
-				((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ);
-				((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+				((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
+				((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
 					((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);//回CallSuboutine紀錄點
 #endif  
-				((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z };//紀錄移動虛擬座標
+                ((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z ,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W };//紀錄移動虛擬座標
 			}
 		} 
 	}
@@ -2855,10 +2940,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-		   
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 			
-			if (_ttol(CommandResolve(Command, 4)) == 1)
+			if (_ttol(CommandResolve(Command, 5)) == 1)
 			{
 				VisionModify(pParam);//影像修正
 			}
@@ -2869,7 +2955,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 
 			LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 #ifdef MOVE
 			((COrder*)pParam)->m_Action.DecideVirtualPoint(
@@ -2879,6 +2965,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X,
 				((COrder*)pParam)->FinalWorkCoordinateData.Y,
 				((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 			((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
@@ -2908,10 +2995,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-			
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 			
-			if (_ttol(CommandResolve(Command, 5)) == 1)
+			if (_ttol(CommandResolve(Command, 6)) == 1)
 			{
 				VisionModify(pParam);//影像修正
 			}
@@ -2921,7 +3009,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			}
 			LaserModify(pParam);//雷射修正
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 #ifdef MOVE
 			((COrder*)pParam)->m_Action.DecideWaitPoint(
@@ -2931,7 +3019,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X,
 				((COrder*)pParam)->FinalWorkCoordinateData.Y,
 				((COrder*)pParam)->FinalWorkCoordinateData.Z,
-				_ttol(CommandResolve(Command, 4)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+                ((COrder*)pParam)->FinalWorkCoordinateData.W,
+				_ttol(CommandResolve(Command, 5)), ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 			((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄移動虛擬座標
 		}  
@@ -2948,7 +3037,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		{
 			LineGotoActionJudge(pParam);//判斷動作狀態
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.2f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W);
 #endif
 			if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
 			{
@@ -2956,10 +3045,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				if (((COrder*)pParam)->GlueData.GlueAuto)
 				{
 #ifdef MOVE
-					((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
-						((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime,
-						((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
-						((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+                    ((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W,
+                        ((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime,
+                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
+                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 					((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z };//紀錄移動虛擬座標
 				}
@@ -2970,13 +3059,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				if (((COrder*)pParam)->GlueData.GlueAuto)
 				{
 
-					((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z,
+					((COrder*)pParam)->m_Action.DecideParkPoint(((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W,
 						((COrder*)pParam)->GlueData.GlueTime, ((COrder*)pParam)->GlueData.GlueWaitTime, ((COrder*)pParam)->GlueData.GlueStayTime,
 						((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,((COrder*)pParam)->DispenseDotEnd.RiseDistance, ((COrder*)pParam)->DispenseDotEnd.RiseHightSpeed, ((COrder*)pParam)->DispenseDotEnd.RiseLowSpeed,
 						((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 
 				}
-				((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+				((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
 					((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 				((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z };//紀錄移動虛擬座標
@@ -3007,10 +3100,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-			
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 				   
-			if (_ttol(CommandResolve(Command, 4)) == 1)
+			if (_ttol(CommandResolve(Command, 5)) == 1)
 			{
 				VisionModify(pParam);//影像修正
 			}
@@ -3021,7 +3115,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 
 			LaserModify(pParam);
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.Z, ((COrder*)pParam)->FinalWorkCoordinateData.W);
 #endif
 #ifdef MOVE
 			((COrder*)pParam)->m_Action.DecideVirtualPoint(
@@ -3031,6 +3125,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X,
 				((COrder*)pParam)->FinalWorkCoordinateData.Y,
 				((COrder*)pParam)->FinalWorkCoordinateData.Z,
+                ((COrder*)pParam)->FinalWorkCoordinateData.W,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif         
 			((COrder*)pParam)->Pause();
@@ -3133,7 +3228,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		{
 			LineGotoActionJudge(pParam);//判斷動作狀態
 #ifdef PRINTF
-			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z);
+			_cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W);
 #endif
 			if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
 			{
@@ -3157,7 +3252,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						((COrder*)pParam)->CleanerData.OutputPort, ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType,
 						((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 				}
-				((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+				((COrder*)pParam)->m_Action.DecideVirtualPoint(
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
 					((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 				((COrder*)pParam)->VirtualCoordinateData = { 0,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z };//紀錄移動虛擬座標
@@ -3382,38 +3481,38 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->ParameterDefult();
 		}      
 	}
-	else if (CommandResolve(Command, 0) == L"DispenserSwitch")
-	{
-		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
-		{
-			((COrder*)pParam)->m_Action.g_bIsDispend = _ttol(CommandResolve(Command, 1));
-		}  
-	}
-	else if (CommandResolve(Command, 0) == L"DispenserSwitchSet")
-	{
-		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
-		{
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
-		{
-			((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
-		}      
-	}
+	//else if (CommandResolve(Command, 0) == L"DispenserSwitch")
+	//{
+	//	if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+	//	{
+	//		((COrder*)pParam)->m_Action.m_bIsDispend = _ttol(CommandResolve(Command, 1));
+	//	}  
+	//}
+	//else if (CommandResolve(Command, 0) == L"DispenserSwitchSet")
+	//{
+	//	if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+	//	{
+	//	}
+	//	else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+	//	{
+	//		((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
+	//	}      
+	//}
 	/************************************************************影像***************************************************************/
 	else if (CommandResolve(Command, 0) == L"FindMark")
 	{
@@ -3993,7 +4092,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)//在任何模式下動作
 		{
 			CString CommandBuff;
-			CommandBuff.Format(_T("LaserHeight,%d,%d,%d"), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)), ((COrder*)pParam)->m_Action.g_HeightLaserZero);
+			CommandBuff.Format(_T("LaserHeight,%d,%d,%d"), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)), ((COrder*)pParam)->m_Action.m_HeightLaserZero);
 			ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
 			//判斷是否轉換模式
 			if (!((COrder*)pParam)->LaserSwitch.LaserHeight && !((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
@@ -4105,7 +4204,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				ChooseVisionModify(pParam);//選擇影像Offset
 				((COrder*)pParam)->FinalWorkCoordinateData.X = ((COrder*)pParam)->LaserData.LaserHeightPoint.X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->LaserData.LaserHeightPoint.Y;
-				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.g_HeightLaserZero;
+				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.m_HeightLaserZero;
 				if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
 				{
 					((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
@@ -4135,7 +4234,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				MeasureLS.y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
 				((COrder*)pParam)->FinalWorkCoordinateData.X = ((COrder*)pParam)->LaserData.LaserDetectLE.X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->LaserData.LaserDetectLE.Y;
-				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.g_HeightLaserZero;
+				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.m_HeightLaserZero;
 
 				if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//線段時取結束點
 				{
@@ -4169,7 +4268,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				ChooseVisionModify(pParam);//選擇影像Offset
 				((COrder*)pParam)->FinalWorkCoordinateData.X = ((COrder*)pParam)->LaserData.LaserHeightPoint.X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->LaserData.LaserHeightPoint.Y;
-				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.g_HeightLaserZero;
+				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.m_HeightLaserZero;
 				if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
 				{
 					((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
@@ -4183,7 +4282,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				ChooseVisionModify(pParam);//選擇影像Offset
 				((COrder*)pParam)->FinalWorkCoordinateData.X = ((COrder*)pParam)->LaserData.LaserDetectLE.X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->LaserData.LaserDetectLE.Y;
-				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.g_HeightLaserZero;
+				((COrder*)pParam)->FinalWorkCoordinateData.Z = ((COrder*)pParam)->m_Action.m_HeightLaserZero;
 				if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//線段時取結束點
 				{
 					((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
@@ -4199,7 +4298,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)//在任何模式下動作
 		{
 			CString CommandBuff;
-			CommandBuff.Format(_T("LaserDetect,%d,%d,%d"), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)), ((COrder*)pParam)->m_Action.g_HeightLaserZero);
+			CommandBuff.Format(_T("LaserDetect,%d,%d,%d"), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)), ((COrder*)pParam)->m_Action.m_HeightLaserZero);
 			ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
 			if (!((COrder*)pParam)->LaserSwitch.LaserHeight && !((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
 			{
@@ -4543,7 +4642,7 @@ UINT COrder::IODetection(LPVOID pParam)
 			}
 		} 
 		//讀取Switch修改出膠動作
-		((COrder*)pParam)->m_Action.g_bIsDispend = MO_ReadSwitchBtn();
+		((COrder*)pParam)->m_Action.m_bIsDispend = MO_ReadSwitchBtn();
 	}
 #endif
 	g_pIODetectionThread = NULL;
@@ -4557,7 +4656,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 	{    
 		for (UINT i = 0; i < ((COrder*)pParam)->IntervalCheckCoordinate.size(); i++)//掃描檢測點
 		{
-			if (!((COrder*)pParam)->m_Action.g_bIsStop)
+			if (!((COrder*)pParam)->m_Action.m_bIsStop)
 			{
 				((COrder*)pParam)->CheckCoordinateRun = ((COrder*)pParam)->IntervalCheckCoordinate.at(i);//設定檢測座標
 				((COrder*)pParam)->CheckModel = 2;//設定檢測模式
@@ -4598,7 +4697,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 {
 	if (((COrder*)pParam)->CheckModel == 1)//即時檢測動作
 	{
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 #ifdef MOVE
 			//影像移動至檢測點上(使用對焦高度)
@@ -4606,10 +4705,11 @@ UINT COrder::CheckAction(LPVOID pParam)
 				((COrder*)pParam)->FinalWorkCoordinateData.X - ((COrder*)pParam)->VisionSet.AdjustOffsetX,
 				((COrder*)pParam)->FinalWorkCoordinateData.Y - ((COrder*)pParam)->VisionSet.AdjustOffsetY,
 				((COrder*)pParam)->VisionSet.FocusHeight,
+                0,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif 
 		}   
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 			CString Buff = L"";
 			if (((COrder*)pParam)->CheckSwitch.ImmediateCheck == 1)//模板即時檢測
@@ -4738,7 +4838,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 	}
 	if (((COrder*)pParam)->CheckModel == 2)//區間檢測動作
 	{
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 #ifdef MOVE
 			//影像移動至檢測點上
@@ -4746,10 +4846,11 @@ UINT COrder::CheckAction(LPVOID pParam)
 				((COrder*)pParam)->CheckCoordinateRun.Position.X - ((COrder*)pParam)->VisionSet.AdjustOffsetX,
 				((COrder*)pParam)->CheckCoordinateRun.Position.Y - ((COrder*)pParam)->VisionSet.AdjustOffsetY,
 				((COrder*)pParam)->VisionSet.FocusHeight,
+                0,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 		}
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 			CString Buff = L"";
 			//掃描檢測點的檢測模式
@@ -4880,7 +4981,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 		int symbolx = 1;//用於起始和結束位置的正負號
 		int symboly = 1;//用於起始和結束位置的正負號
 		BOOL Switch = FALSE;//控制S型
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
             if (((COrder*)pParam)->AreaCheckRun.Image.Start.x == VI_MosaicAreaDefault &&
 				((COrder*)pParam)->AreaCheckRun.Image.Start.y == VI_MosaicAreaDefault &&
@@ -4905,7 +5006,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 				symboly = -1;
 			}
 		}
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 #ifdef PRINTF
             _cwprintf(L"CheckAction()::重組次數X:%d,Y:%d\n", ((COrder*)pParam)->AreaCheckRun.Image.MoveCountX - 1, ((COrder*)pParam)->AreaCheckRun.Image.MoveCountY - 1);
@@ -4913,7 +5014,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 			for (int i = 0; i <= ((COrder*)pParam)->AreaCheckRun.Image.MoveCountY - 1; i++)
 			{
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = ((COrder*)pParam)->AreaCheckRun.Image.Start.y + (symboly * i * ((COrder*)pParam)->AreaCheckRun.Image.ViewMove.y);
-				if (!((COrder*)pParam)->m_Action.g_bIsStop)
+				if (!((COrder*)pParam)->m_Action.m_bIsStop)
 				{
 					for (int j = 0; j <= ((COrder*)pParam)->AreaCheckRun.Image.MoveCountX - 1; j++)
 					{
@@ -4924,7 +5025,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 
 						ChooseVisionModify(pParam);//選擇影像Offset
 						VisionModify(pParam);//影像修正
-						if (!((COrder*)pParam)->m_Action.g_bIsStop)
+						if (!((COrder*)pParam)->m_Action.m_bIsStop)
 						{
 #ifdef MOVE
 							//影像移動至拍攝點上
@@ -4932,6 +5033,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 								((COrder*)pParam)->FinalWorkCoordinateData.X - ((COrder*)pParam)->VisionSet.AdjustOffsetX,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y - ((COrder*)pParam)->VisionSet.AdjustOffsetY,
 								((COrder*)pParam)->VisionSet.FocusHeight,
+                                0,
 								((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 						}
@@ -4944,7 +5046,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 				}
 			}
 		}
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
 #ifdef VI
 			if (FilePathExist(((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Path))//判斷檔案路徑是否存在
@@ -4964,7 +5066,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 			VI_MosaicingImagesProcessStop();//發生中斷重組
 #endif
 		}
-		if (!((COrder*)pParam)->m_Action.g_bIsStop)
+		if (!((COrder*)pParam)->m_Action.m_bIsStop)
 		{
             if (((COrder*)pParam)->RunStatusRead.MosaicStatus == 1)//重組成功
             {
@@ -5064,7 +5166,7 @@ void COrder::LineGotoActionJudge(LPVOID pParam)
 		if (((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) == 1)//LS時 移動至LS虛擬點
 		{
 #ifdef MOVE
-			((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+			((COrder*)pParam)->m_Action.DecideVirtualPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).W,
 				((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 			((COrder*)pParam)->VirtualCoordinateData = ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount);//紀錄移動虛擬座標
@@ -5176,7 +5278,7 @@ CString COrder::VirtualNowOffSet(LPVOID pParam, CString Command)
 #ifdef PRINTF
 	_cwprintf(_T("VirtualNowOffSet()::子程序偏差值:%ld,%ld,%ld\n"), (lNowX - _ttol(CommandResolve(Command, 1))), (lNowY - _ttol(CommandResolve(Command, 2))), (lNowZ - _ttol(CommandResolve(Command, 3))));
 #endif
-	((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0 };//計算完畢後數值規0
+	((COrder*)pParam)->NVMVirtualCoordinateData = { 0,0,0,0,0 };//計算完畢後數值規0
 	return csBuff;
 }
 /*影像修正*/
@@ -5292,6 +5394,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 						((COrder*)pParam)->VisionTrigger.Trigger2.at(i).X,
 						((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Y,
 						((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Z,
+                        0,
 						((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif              
 					if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).X, ((COrder*)pParam)->VisionTrigger.Trigger2.at(i).Y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
@@ -5776,6 +5879,7 @@ void COrder::PassingException(LPVOID pParam)
             ((COrder*)pParam)->AreaCheckChangTemp.X,
             ((COrder*)pParam)->AreaCheckChangTemp.Y,
             ((COrder*)pParam)->AreaCheckChangTemp.Z,
+            ((COrder*)pParam)->AreaCheckChangTemp.W,
             0, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
         ((COrder*)pParam)->AreaCheckChangTemp.Status = FALSE;
@@ -6522,13 +6626,10 @@ void COrder::DecideInit()
 	//原點賦歸狀態設為賦歸完成
 	RunStatusRead.GoHomeStatus = TRUE;
 	//運動運行狀態清除
-	m_Action.g_bIsStop = FALSE;
-	m_Action.g_bIsPause = FALSE;
+	m_Action.m_bIsStop = FALSE;
+	m_Action.m_bIsPause = FALSE;
 	//程序狀態堆疊
-	InitData.Status = FALSE;
-	InitData.X = 0;
-	InitData.Y = 0;
-	InitData.Z = 0;
+    InitData = { 0,0,0,0,0 };
 	ArcData.push_back(InitData);
 	CircleData1.push_back(InitData);
 	CircleData2.push_back(InitData);
@@ -8255,12 +8356,12 @@ return:目前無用途
 */
 BOOL COrder::AutoCalculationArea(AreaCheck & AreaCheckRun)
 {
-    for (int i = 0; i < AreaCheckRun.DotTrain.PointData.size(); i++)
+    for (UINT i = 0; i < AreaCheckRun.DotTrain.PointData.size(); i++)
     {
         AreaCheckRun.Image.End.x = max(AreaCheckRun.DotTrain.PointData.at(i).x, AreaCheckRun.Image.End.x);//取最大值
         AreaCheckRun.Image.End.y = max(AreaCheckRun.DotTrain.PointData.at(i).y, AreaCheckRun.Image.End.y);//取最大值
     }
-    for (int i = 0; i < AreaCheckRun.LineTrain.PointData.size(); i++)
+    for (UINT i = 0; i < AreaCheckRun.LineTrain.PointData.size(); i++)
     {
         if (AreaCheckRun.LineTrain.PointData.at(i).x != -1)//排除換線點
         {
@@ -8269,12 +8370,12 @@ BOOL COrder::AutoCalculationArea(AreaCheck & AreaCheckRun)
         }     
     }
     AreaCheckRun.Image.Start = AreaCheckRun.Image.End;
-    for (int i = 0; i < AreaCheckRun.DotTrain.PointData.size(); i++)
+    for (UINT i = 0; i < AreaCheckRun.DotTrain.PointData.size(); i++)
     {
         AreaCheckRun.Image.Start.x = min(AreaCheckRun.DotTrain.PointData.at(i).x, AreaCheckRun.Image.Start.x);//取最小值
         AreaCheckRun.Image.Start.y = min(AreaCheckRun.DotTrain.PointData.at(i).y, AreaCheckRun.Image.Start.y);//取最小值
     }
-    for (int i = 0; i < AreaCheckRun.LineTrain.PointData.size(); i++)
+    for (UINT i = 0; i < AreaCheckRun.LineTrain.PointData.size(); i++)
     {
         if (AreaCheckRun.LineTrain.PointData.at(i).x != -1)//排除換線點
         {
@@ -8888,8 +8989,8 @@ BOOL COrder::SetTabelZ(int *TableZ)
     if (TableZ != NULL)
     {
 #ifdef MOVE
-        m_Action.g_TablelZ = MO_ReadLogicPosition(2);
-        *TableZ = m_Action.g_TablelZ;
+        m_Action.m_TablelZ = MO_ReadLogicPosition(2);
+        *TableZ = m_Action.m_TablelZ;
 #endif
     }
     else

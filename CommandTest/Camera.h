@@ -47,4 +47,5 @@ public:
     afx_msg void OnBnClickedBtnfocusset();
     afx_msg void OnBnClickedBtnfocus();
     afx_msg void OnBnClickedBtntableset();
+    afx_msg void OnBnClickedBtnxdown();
 };

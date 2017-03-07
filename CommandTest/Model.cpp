@@ -75,6 +75,8 @@ void CModel::OnOK()
 #ifdef MOVE
 	MO_Do3DLineMove((LONG)OffsetX, (LONG)OffsetY, 0, 30000, 100000, 6000);
 #endif
+    if (lpszText != NULL)
+        delete lpszText;
 	//CDialogEx::OnOK();
 }
 /*離開*/
@@ -140,6 +142,8 @@ void CModel::OnBnClickedButton1()
 	AllModelName.clear();
 	//搜尋檔案
 	ListAllFileInDirectory(lpszText, TEXT("*_*_*_*_*.mod"));
+    if (lpszText != NULL)
+        delete lpszText;
 }
 /*列表點選右鍵時*/
 void CModel::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -174,4 +178,6 @@ void CModel::OnDeletefile()
 	DeleteFile(lpszText + AllModelName.at(iSelPos).Left(AllModelName.at(iSelPos).Find(_T("."))) + _T(".bmp"));//刪除.bmp檔
 	AllModelName.erase(AllModelName.begin() + iSelPos);
 	OnBnClickedButton1();
+    if (lpszText != NULL)
+        delete lpszText;
 }

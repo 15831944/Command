@@ -29,9 +29,6 @@
 
 
 // CCommandTestDlg 對話方塊
-
-
-
 CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_COMMANDTEST_DIALOG, pParent)
 	, InputAuto(FALSE)
@@ -61,10 +58,10 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	m_pLaserAdjustDlg = NULL;
 	m_pLineContinuousDlg = NULL;
     m_pCheckResultDlg = NULL;
+    NoPushEsc = TRUE;
 
     StrCutout_Copy = L"";
 }
-
 CCommandTestDlg::~CCommandTestDlg()
 {
     if (m_pCameraDlg != NULL)
@@ -82,7 +79,6 @@ CCommandTestDlg::~CCommandTestDlg()
     if (m_pCheckResultDlg != NULL)
         delete (CDialog*)m_pCheckResultDlg;//釋放檢測結果頁面記憶體
 }
-
 void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
 {
 	DDX_Control(pDX, IDC_LIST1, m_CommandList);
@@ -98,7 +94,7 @@ void CCommandTestDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_EDITPARAM7, NumEdit7);
 	DDX_Control(pDX, IDC_EDITPARAM8, NumEdit8);
 	DDX_Control(pDX, IDC_EDITPARAM9, NumEdit9);
-
+    DDX_Control(pDX, IDC_EDITPARAM10, NumEdit10);
 	CDialogEx::DoDataExchange(pDX);
 }
 
@@ -202,8 +198,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	
 	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
 	
+    ON_WM_CLOSE()
 END_MESSAGE_MAP()
-
 
 // CCommandTestDlg 訊息處理常式
 BOOL CCommandTestDlg::OnInitDialog()
@@ -229,8 +225,8 @@ BOOL CCommandTestDlg::OnInitDialog()
     MO_SetDecOK(1);//開啟減速有效
     MO_InterruptCase(1, 1, a.m_Action.MoInterrupt, a.m_Action.pAction);//中斷開啟
     MO_SetSoftLim(7, 1);//軟極限開啟
-    MO_SetCompSoft(1, -47000, -62000, -10000);
-    MO_SetCompSoft(0, 350000, 350000, 80000); //0, 150000, 190000, 80000
+    MO_SetCompSoft(1, -47000, -62000, -10000, -360);
+    MO_SetCompSoft(0, 350000, 350000, 80000, 360); //0, 150000, 190000, 80000
     a.m_Action.LA_SetInit();//雷射開啟
 #endif
 	//命令列表
@@ -274,7 +270,7 @@ BOOL CCommandTestDlg::OnInitDialog()
 	//載入參數檔案
 	LoadParameter();
     SetTimer(1, 500, NULL);
-	OnBnClickedBtnhome();//呼叫原點賦歸
+	//OnBnClickedBtnhome();//呼叫原點賦歸
 	return TRUE;  // 傳回 TRUE，除非您對控制項設定焦點
 }
 // 如果將最小化按鈕加入您的對話方塊，您需要下列的程式碼，
@@ -515,10 +511,10 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 	CString StrBuff;
 	m_CommandList.DeleteAllItems();
-	int nCount = a.CommandMemory.size();
+    UINT nCount = a.CommandMemory.size();
 	if (!ScrollBarRefresh)
 	{
-		for (int i = 0; i < nCount; i++) {
+		for (UINT i = 0; i < nCount; i++) {
 			m_CommandList.InsertItem(i, NULL);
 			(i>8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
 			m_CommandList.SetItemText(i, 0, StrBuff);
@@ -679,7 +675,7 @@ void CCommandTestDlg::OnDelete()
 		ListRefresh(NULL);
 	}
 }
-/*移動至此命令*/
+/*移動至此命令*//*****尚未修正*****/
 void CCommandTestDlg::OnMove()
 {
 	if (!Insert)
@@ -693,16 +689,18 @@ void CCommandTestDlg::OnMove()
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"ArcPoint" ||
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"VirtualPoint" || 
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"StopPoint" || 
-			CommandResolve(a.CommandMemory.at(istat), 0) == L"WaitPoint" ||
-			CommandResolve(a.CommandMemory.at(istat), 0) == L"FindMark" ||
-			CommandResolve(a.CommandMemory.at(istat), 0) == L"FiducialMark"||
-			CommandResolve(a.CommandMemory.at(istat), 0) == L"CameraTrigger" )
+			CommandResolve(a.CommandMemory.at(istat), 0) == L"WaitPoint")
 		{
-
 			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY - MO_ReadLogicPosition(1),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 		}
+        else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"FindMark" ||
+            CommandResolve(a.CommandMemory.at(istat), 0) == L"FiducialMark" ||
+            CommandResolve(a.CommandMemory.at(istat), 0) == L"CameraTrigger")
+        {
+
+        }
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"CirclePoint")
 		{
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
@@ -738,7 +736,7 @@ void CCommandTestDlg::OnMove()
 
 			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
-				a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+				a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserDetect")
 		{
@@ -746,13 +744,13 @@ void CCommandTestDlg::OnMove()
 			{
 				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
-					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 			else
 			{
 				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
-					a.m_Action.g_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
 			}
 		}
 #endif
@@ -834,8 +832,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
    
     if (m_pCheckResultDlg == NULL)
     {
-        //測試用
-        /*
+        //測試用    
         static int count = 0;
         if (count == 0)
         {
@@ -849,7 +846,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
                 i++;
             }
             i = 0;
-            while (i < 10)
+            while (i < 10000)
             {
                 if (i % 2)
                     a.AreaCheckFinishRecord.push_back({ L"",{ GetCurrentPath(L"\\CheckResult\\"),L"Result_20170202_17_03_14_885"} ,1 });
@@ -859,7 +856,6 @@ void CCommandTestDlg::OnBnClickedBtncheck()
             }
             count++;
         }
-        */
         m_pCheckResultDlg = new CCheckResult();
         //模態式對話框
         //m_pCheckResultDlg->DoModal();
@@ -869,20 +865,31 @@ void CCommandTestDlg::OnBnClickedBtncheck()
     }
     else
     {
-        ((CCheckResult*)m_pCheckResultDlg)->SendMessage(WM_CLOSE);//模態式不需要開
-        if (::IsWindow(m_pCheckResultDlg->m_hWnd))
+        ::SendMessage(((CCheckResult*)m_pCheckResultDlg)->m_hWnd, WM_CLOSE, 0, 0);//模態式不需要開
+        if (::IsWindow(m_pCheckResultDlg->m_hWnd))//判斷視窗句柄是否還存在
         {
             DWORD Endcode = 0;
             GetExitCodeThread(((CCheckResult*)m_pCheckResultDlg)->m_pLoadlist->m_hThread, &Endcode);
-            if (Endcode != CheckEndDlgcode)
-                return;
+            if (Endcode == CheckEndDlgcode)
+            {
 #ifdef PRINTF
-            _cwprintf(L"%d\n", Endcode);
+                _cwprintf(L"%d\n", Endcode);
 #endif
+            }
+            else
+            {
+#ifdef PRINTF
+                _cwprintf(L"%d\n", Endcode);
+#endif
+                return;
+            }             
         } 
         if (m_pCheckResultDlg != NULL)
         {
-            delete m_pCheckResultDlg;
+            ((CCheckResult*)m_pCheckResultDlg)->OnCancel();//模態式不需要開
+            ((CCheckResult*)m_pCheckResultDlg)->DestroyWindow();//模態式不需要開
+            ::SendMessage(((CCheckResult*)m_pCheckResultDlg)->m_hWnd, WM_DESTROY, 0, 0);//模態式不需要開
+            delete (CDialog*)m_pCheckResultDlg;
             m_pCheckResultDlg = NULL;
         }
         m_pCheckResultDlg = new CCheckResult();
@@ -959,7 +966,7 @@ void CCommandTestDlg::OnBnClickedBtnprintcline()
 		m_pLineContinuousDlg->ShowWindow(SW_SHOW);
 	}
 }
-/*模式切換*/
+/*模式切換*//*****尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtnmodechange()
 {
     CString StrBuff;
@@ -991,40 +998,71 @@ void CCommandTestDlg::OnBnClickedBtnmodefyz()
             CommandResolve(a.CommandMemory.at(i), 0) == L"LineEnd" ||
             CommandResolve(a.CommandMemory.at(i), 0) == L"ArcPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1));
+            StrBuff.Format(_T(",%d,%d,%d,%.3f"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1),_tstof(CommandResolve(a.CommandMemory.at(i), 4)));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"VirtualPoint" ||
             CommandResolve(a.CommandMemory.at(i), 0) == L"StopPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1), _ttol(CommandResolve(a.CommandMemory.at(i), 4)));
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1), _tstof(CommandResolve(a.CommandMemory.at(i), 4)), _ttol(CommandResolve(a.CommandMemory.at(i), 5)));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"WaitPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1), _ttol(CommandResolve(a.CommandMemory.at(i), 4)), _ttol(CommandResolve(a.CommandMemory.at(i), 5)));
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1), _tstof(CommandResolve(a.CommandMemory.at(i), 4)), _ttol(CommandResolve(a.CommandMemory.at(i), 5)), _ttol(CommandResolve(a.CommandMemory.at(i), 6)));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"CirclePoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d,%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 4)), _ttol(CommandResolve(a.CommandMemory.at(i), 5)), GetDlgItemInt(IDC_EDITPARAM1));
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d,%d,%d,%.3f"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), GetDlgItemInt(IDC_EDITPARAM1), _tstof(CommandResolve(a.CommandMemory.at(i), 4)),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 5)), _ttol(CommandResolve(a.CommandMemory.at(i), 6)), GetDlgItemInt(IDC_EDITPARAM1), _tstof(CommandResolve(a.CommandMemory.at(i), 8)));
+            a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
+        }
+        else if (CommandResolve(a.CommandMemory.at(i), 0) == L"FillArea")
+        {
+            StrBuff.Format(_T(",%d,%d,%d,%d,%d,%d,%d,%d,%d"),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 1)), _ttol(CommandResolve(a.CommandMemory.at(i), 2)), _ttol(CommandResolve(a.CommandMemory.at(i), 3)),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 4)), _ttol(CommandResolve(a.CommandMemory.at(i), 5)), GetDlgItemInt(IDC_EDITPARAM1),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 7)), _ttol(CommandResolve(a.CommandMemory.at(i), 8)), GetDlgItemInt(IDC_EDITPARAM1));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
     }
     ListRefresh(NULL);
 }
+//關閉按鈕X
+void CCommandTestDlg::OnClose()
+{
+    if (m_pCheckResultDlg != NULL)//判斷檢測結果指針是否存在
+    {
+        if (::IsWindow(m_pCheckResultDlg->m_hWnd))//判斷檢測結果視窗句柄是否還存在
+        {
+            DWORD Endcode = 0;
+            GetExitCodeThread(((CCheckResult*)m_pCheckResultDlg)->m_pLoadlist->m_hThread, &Endcode);
+            if (Endcode != CheckEndDlgcode)//判斷執行是否還在作用中
+            {
+                ::SendMessage(((CCheckResult*)m_pCheckResultDlg)->m_hWnd, WM_CLOSE, 0, 0);//關閉執行續
+            }
+        }
+    }
+    NoPushEsc = FALSE;
+    CDialogEx::OnClose();
+}
+//取消按鈕 Esc 
+void CCommandTestDlg::OnCancel()
+{
+    if(!NoPushEsc)
+        CDialogEx::OnCancel();
+}
 //關閉程式視窗銷毀事件
 void CCommandTestDlg::OnDestroy()
-{
-    
+{  
 #ifdef VI
     if (m_pCameraDlg != NULL)
     {
         ((CCamera*)m_pCameraDlg)->DestroyWindow();
     }
     VI_VisionFree();
-#endif
+#endif 
     //儲存參數檔案
     SaveParameter();
     SaveDefault();
@@ -1042,37 +1080,46 @@ void CCommandTestDlg::OnBnClickedBtnalloffset()
             CommandResolve(a.CommandMemory.at(i), 0) == L"LineEnd" ||
             CommandResolve(a.CommandMemory.at(i), 0) == L"ArcPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
+            GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+            StrBuff.Format(_T(",%d,%d,%d,%.3f"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 2)) + GetDlgItemInt(IDC_EDITPARAM2),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 3)) + GetDlgItemInt(IDC_EDITPARAM3));
+                _ttol(CommandResolve(a.CommandMemory.at(i), 3)) + GetDlgItemInt(IDC_EDITPARAM3),
+                _tstof(CommandResolve(a.CommandMemory.at(i), 4)) + _tstof(StrBuff1));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"VirtualPoint" ||
             CommandResolve(a.CommandMemory.at(i), 0) == L"StopPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
+            GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 2)) + GetDlgItemInt(IDC_EDITPARAM2),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 3)) + GetDlgItemInt(IDC_EDITPARAM3),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 4)));
+                _tstof(CommandResolve(a.CommandMemory.at(i), 4)) + _tstof(StrBuff1), _ttol(CommandResolve(a.CommandMemory.at(i), 5)));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"WaitPoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
+            GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 2)) + GetDlgItemInt(IDC_EDITPARAM2),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 3)) + GetDlgItemInt(IDC_EDITPARAM3),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 4)),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 5)));
+                _tstof(CommandResolve(a.CommandMemory.at(i), 4)) + _tstof(StrBuff1),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 5)), 
+                _ttol(CommandResolve(a.CommandMemory.at(i), 6)));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"CirclePoint")
         {
-            StrBuff.Format(_T(",%d,%d,%d,%d,%d,%d"), _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
+            GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+            StrBuff.Format(_T(",%d,%d,%d,%.3f,%d,%d,%d,%.3f"),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 1)) + GetDlgItemInt(IDC_EDITPARAM1),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 2)) + GetDlgItemInt(IDC_EDITPARAM2),
                 _ttol(CommandResolve(a.CommandMemory.at(i), 3)) + GetDlgItemInt(IDC_EDITPARAM3),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 4)) + GetDlgItemInt(IDC_EDITPARAM1),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 5)) + GetDlgItemInt(IDC_EDITPARAM2),
-                _ttol(CommandResolve(a.CommandMemory.at(i), 6)) + GetDlgItemInt(IDC_EDITPARAM3));
+                _tstof(CommandResolve(a.CommandMemory.at(i), 4)) + _tstof(StrBuff1),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 5)) + GetDlgItemInt(IDC_EDITPARAM1),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 6)) + GetDlgItemInt(IDC_EDITPARAM2),
+                _ttol(CommandResolve(a.CommandMemory.at(i), 7)) + GetDlgItemInt(IDC_EDITPARAM3),
+                _tstof(CommandResolve(a.CommandMemory.at(i), 8)) + _tstof(StrBuff1));
             a.CommandMemory.at(i) = CommandResolve(a.CommandMemory.at(i), 0) + StrBuff;
         }
         else if (CommandResolve(a.CommandMemory.at(i), 0) == L"LaserHeight")
@@ -1190,7 +1237,7 @@ void CCommandTestDlg::myDrawFunction(void * pParam, CPoint pt, int pencolor)
     }
 }
 /*******************************************************************************************命令**********************************************************/
-/*單點點膠*/
+/*單點點膠*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand1()
 {
 	if (InputAuto)
@@ -1200,8 +1247,9 @@ void CCommandTestDlg::OnBnClickedBtncommand1()
 #endif
 	}
 	else
-	{
-		StrBuff.Format(_T("Dot,%d,%d,%d"),GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
+    {
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+		StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"),GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum,StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
@@ -1239,7 +1287,7 @@ void CCommandTestDlg::OnBnClickedBtncommand4_2()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段開始*/
+/*線段開始*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand5()
 {
 	if (InputAuto)
@@ -1250,13 +1298,14 @@ void CCommandTestDlg::OnBnClickedBtncommand5()
 	}
 	else
 	{
-		StrBuff.Format(_T("LineStart,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("LineStart,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段中間點*/
+/*線段中間點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand6()
 {
 	if (InputAuto)
@@ -1267,13 +1316,14 @@ void CCommandTestDlg::OnBnClickedBtncommand6()
 	}
 	else
 	{
-		StrBuff.Format(_T("LinePassing,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("LinePassing,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段結束點*/
+/*線段結束點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand7()
 {     
 	if (InputAuto)
@@ -1284,13 +1334,14 @@ void CCommandTestDlg::OnBnClickedBtncommand7()
 	}
 	else
 	{
-		StrBuff.Format(_T("LineEnd,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+		StrBuff.Format(_T("LineEnd,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*圓弧中點*/
+/*圓弧中點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand8()
 {
 	if (InputAuto)
@@ -1301,13 +1352,14 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
 	}
 	else
 	{
-		StrBuff.Format(_T("ArcPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("ArcPoint,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*圓中點*/
+/*圓中點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
 	CString ControlName;
@@ -1334,7 +1386,11 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 	}
 	else
 	{
-		StrBuff.Format(_T("CirclePoint,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4) + OffsetX, GetDlgItemInt(IDC_EDITPARAM5) + OffsetY, GetDlgItemInt(IDC_EDITPARAM6));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        GetDlgItemText(IDC_EDITPARAM8, StrBuff2);
+        StrBuff.Format(_T("CirclePoint,%d,%d,%d,%.3f,%d,%d,%d,%.3f"),
+            GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1),
+            GetDlgItemInt(IDC_EDITPARAM5) + OffsetX, GetDlgItemInt(IDC_EDITPARAM6) + OffsetY, GetDlgItemInt(IDC_EDITPARAM7), _tstof(StrBuff2));
 		(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 		Insert = FALSE;
 		ListRefresh(NULL);
@@ -1430,7 +1486,7 @@ void CCommandTestDlg::OnBnClickedBtncommand19_2()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*虛擬點*/
+/*虛擬點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand20()
 {
 	if(InputAuto)
@@ -1441,13 +1497,15 @@ void CCommandTestDlg::OnBnClickedBtncommand20()
 	}
 	else
 	{
-		StrBuff.Format(_T("VirtualPoint,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("VirtualPoint,%d,%d,%d,%.3f,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1), GetDlgItemInt(IDC_EDITPARAM5));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
+    
 }
-/*等待點*/
+/*等待點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand21()
 {
 	if (InputAuto)
@@ -1458,7 +1516,8 @@ void CCommandTestDlg::OnBnClickedBtncommand21()
 	}
 	else
 	{
-		StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4), GetDlgItemInt(IDC_EDITPARAM5));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("WaitPoint,%d,%d,%d,%.3f,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1), GetDlgItemInt(IDC_EDITPARAM5), GetDlgItemInt(IDC_EDITPARAM6));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
@@ -1472,7 +1531,7 @@ void CCommandTestDlg::OnBnClickedBtncommand22()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*停止點*/
+/*停止點*//*****InputAuto部分尚未修正*****/
 void CCommandTestDlg::OnBnClickedBtncommand23()
 {
 	if (InputAuto)
@@ -1483,7 +1542,8 @@ void CCommandTestDlg::OnBnClickedBtncommand23()
 	}
 	else
 	{
-		StrBuff.Format(_T("StopPoint,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), GetDlgItemInt(IDC_EDITPARAM4));
+        GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
+        StrBuff.Format(_T("StopPoint,%d,%d,%d,%.3f,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1), GetDlgItemInt(IDC_EDITPARAM5));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
@@ -1687,7 +1747,7 @@ void CCommandTestDlg::OnBnClickedBtncommand40()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }                                              
-/*擴展步驟重複*/
+/*Printf*/
 void CCommandTestDlg::OnBnClickedBtncommand41()
 {
 	StrBuff.Format(_T("Printf"));
@@ -1912,12 +1972,12 @@ void CCommandTestDlg::SaveParameter()
             PixToPulsY << 
             a.VisionDefault.VisionSet.AdjustOffsetX << 
             a.VisionDefault.VisionSet.AdjustOffsetY << 
-            a.m_Action.g_OffSetLaserX << 
-            a.m_Action.g_OffSetLaserY << 
-            a.m_Action.g_OffSetLaserZ << 
+            a.m_Action.m_OffSetLaserX << 
+            a.m_Action.m_OffSetLaserY << 
+            a.m_Action.m_OffSetLaserZ << 
             a.VisionDefault.VisionSet.FocusHeight << 
-            a.m_Action.g_HeightLaserZero << 
-            a.m_Action.g_TablelZ;
+            a.m_Action.m_HeightLaserZero << 
+            a.m_Action.m_TablelZ;
 	}
 	File.Close();
 }
@@ -1939,21 +1999,21 @@ void CCommandTestDlg::LoadParameter()
             PixToPulsY >> 
             a.VisionDefault.VisionSet.AdjustOffsetX >> 
             a.VisionDefault.VisionSet.AdjustOffsetY >> 
-            a.m_Action.g_OffSetLaserX >> 
-            a.m_Action.g_OffSetLaserY >> 
-            a.m_Action.g_OffSetLaserZ >> 
+            a.m_Action.m_OffSetLaserX >> 
+            a.m_Action.m_OffSetLaserY >> 
+            a.m_Action.m_OffSetLaserZ >> 
             a.VisionDefault.VisionSet.FocusHeight >> 
-            a.m_Action.g_HeightLaserZero >> 
-            a.m_Action.g_TablelZ;
+            a.m_Action.m_HeightLaserZero >> 
+            a.m_Action.m_TablelZ;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
 	TipOffset.y = a.VisionDefault.VisionSet.AdjustOffsetY;
 	FocusPoint = a.VisionDefault.VisionSet.FocusHeight;
-	LaserOffset.x = a.m_Action.g_OffSetLaserX;
-	LaserOffset.y = a.m_Action.g_OffSetLaserY;
-	LaserOffsetz = a.m_Action.g_OffSetLaserZ;
-	HeightLaserZero = a.m_Action.g_HeightLaserZero;
+	LaserOffset.x = a.m_Action.m_OffSetLaserX;
+	LaserOffset.y = a.m_Action.m_OffSetLaserY;
+	LaserOffsetz = a.m_Action.m_OffSetLaserZ;
+	HeightLaserZero = a.m_Action.m_HeightLaserZero;
 #ifdef VI
 	VI_SetOnePixelUnit(PixToPulsX, PixToPulsY);//設定Pixel轉實際距離
 	VI_SetCameraToTipOffset(TipOffset.x, TipOffset.y);//設定針頭和影像Offset                                              
@@ -2197,10 +2257,7 @@ void CCommandTestDlg::OnBnClickedBtntest()
     /*SetLastError(123);
     _cwprintf(L"%d",GetLastError());*/
     //所有狀態印出
-    a.ShowAllStatus();
-
-
+    //a.ShowAllStatus();
+    
 }
-
-
 

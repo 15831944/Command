@@ -21,9 +21,10 @@ public:
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV §‰¥©
-
+    BOOL NoPushEsc;//•Œ®”¬ÍEsc
 	DECLARE_MESSAGE_MAP()
 public:
+    
 	CXListCtrl m_ListCheck;
     CWinThread* m_pLoadlist;
     CCommandTestDlg* pCCommandTestDlg;  
@@ -39,4 +40,5 @@ public:
     afx_msg void OnClose();
     afx_msg void OnDestroy();
     afx_msg void OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult);
+    virtual void OnOK();
 };

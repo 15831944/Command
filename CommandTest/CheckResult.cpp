@@ -14,6 +14,7 @@ IMPLEMENT_DYNAMIC(CCheckResult, CDialogEx)
 CCheckResult::CCheckResult(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG12, pParent)
 {
+    NoPushEsc = TRUE;
     m_pLoadlist = NULL;
     lEndthread = 0;
     pCCommandTestDlg = (CCommandTestDlg*)AfxGetApp()->m_pMainWnd;
@@ -21,6 +22,11 @@ CCheckResult::CCheckResult(CWnd* pParent /*=NULL*/)
 }
 CCheckResult::~CCheckResult()
 {
+    if (m_pPictureViewDlg != NULL)
+    {
+        delete (CDialog*)m_pPictureViewDlg;
+        m_pPictureViewDlg = NULL;
+    }
 }
 void CCheckResult::DoDataExchange(CDataExchange* pDX)
 {
@@ -77,16 +83,17 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"OK")
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(0, 255, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"NG")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 102, 0));//橘
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"Err")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 255, 0));
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255,0,0));
         }   
+        if (((CCheckResult*)pParam)->lEndthread == 0)
         str_position.Format(L"%d,%d", ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.X, ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.Y);
         if (((CCheckResult*)pParam)->lEndthread == 0)
             ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 3, str_position);
         ListCount++;
     } 
-    int i = 0;
+    UINT i = 0;
     while (((CCheckResult*)pParam)->lEndthread == 0 && ((CCheckResult*)pParam)->pCCommandTestDlg->a.AreaCheckFinishRecord.size() > i)
     {
         CString str_no, str_position;
@@ -109,10 +116,12 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->lEndthread == 0)
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
         }
+        if (((CCheckResult*)pParam)->lEndthread == 0)
         ListCount++;
         i++;
     }
-    ExitThread(CheckEndDlgcode);
+    return 0;//安全返回執行緒 
+    //ExitThread(CheckEndDlgcode);
 }
 //滑鼠左鍵兩下
 void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -122,7 +131,9 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
     if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
         if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"AreaCheck")
         {
+#ifdef PRINTF
             _cwprintf(L"%s\n", pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path +
+#endif
                 pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name);
             if (m_pPictureViewDlg == NULL)
             {
@@ -165,13 +176,15 @@ void CCheckResult::OnClose()
 {
     _cwprintf(L"OnClose\n");
     InterlockedIncrement(&lEndthread);
+    NoPushEsc = FALSE;
     CDialogEx::OnClose();
 }
 //取消視窗
 void CCheckResult::OnCancel()
 {
     _cwprintf(L"OnCancel\n");
-    CDialogEx::OnCancel();
+    if(!NoPushEsc)
+        CDialogEx::OnCancel();
 }
 //銷毀視窗
 BOOL CCheckResult::DestroyWindow()
@@ -185,5 +198,8 @@ void CCheckResult::OnDestroy()
     _cwprintf(L"OnDestroy\n");
     CDialogEx::OnDestroy();
 }
-
-
+//OK 和 Enter鍵
+void CCheckResult::OnOK()
+{
+    //CDialogEx::OnOK();
+}

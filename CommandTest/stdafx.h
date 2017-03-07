@@ -73,7 +73,7 @@ BOOL FileExist(LPCWSTR FilePathName);
 #endif
 
 //©w¸q°Ï¶ô
-#define CheckEndDlgcode 0x001
+#define CheckEndDlgcode 0x000
 
 
 

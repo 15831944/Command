@@ -52,8 +52,8 @@ BOOL CLaserDlg::OnInitDialog()
 void CLaserDlg::OnBnClickedBtnzero()
 {
 	((CCommandTestDlg*)pMain)->a.m_Action.LA_SetZero();
-    ((CCommandTestDlg*)pMain)->HeightLaserZero = ((CCommandTestDlg*)pMain)->a.m_Action.g_HeightLaserZero;
-    ((CCommandTestDlg*)pMain)->LaserOffsetz = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserZ;
+    ((CCommandTestDlg*)pMain)->HeightLaserZero = ((CCommandTestDlg*)pMain)->a.m_Action.m_HeightLaserZero;
+    ((CCommandTestDlg*)pMain)->LaserOffsetz = ((CCommandTestDlg*)pMain)->a.m_Action.m_OffSetLaserZ;
     CString StrBuff,StrBuff1;
     GetDlgItemTextW(IDC_STALASERTOTIP, StrBuff);
     StrBuff1.Format(_T(",%d,%d"), ((CCommandTestDlg*)pMain)->HeightLaserZero, ((CCommandTestDlg*)pMain)->LaserOffsetz);
@@ -64,8 +64,8 @@ void CLaserDlg::OnBnClickedBtnzero()
 void CLaserDlg::OnBnClickedBtnlasertob()
 {
 	((CCommandTestDlg*)pMain)->a.m_Action.LA_Butt_GoLAtoBPoint();
-    ((CCommandTestDlg*)pMain)->LaserOffset.x = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserX;
-    ((CCommandTestDlg*)pMain)->LaserOffset.y = ((CCommandTestDlg*)pMain)->a.m_Action.g_OffSetLaserY;
+    ((CCommandTestDlg*)pMain)->LaserOffset.x = ((CCommandTestDlg*)pMain)->a.m_Action.m_OffSetLaserX;
+    ((CCommandTestDlg*)pMain)->LaserOffset.y = ((CCommandTestDlg*)pMain)->a.m_Action.m_OffSetLaserY;
 	CString StrBuff;
 	StrBuff.Format(_T("LaserToTip:%d,%d"), ((CCommandTestDlg*)pMain)->LaserOffset.x, ((CCommandTestDlg*)pMain)->LaserOffset.y);
 	SetDlgItemText(IDC_STALASERTOTIP, StrBuff);

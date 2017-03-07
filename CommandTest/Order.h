@@ -24,12 +24,13 @@ class COrder : public CWnd
 	DECLARE_DYNAMIC(COrder)
 private:
 	/************************************************************運動參數結構*******************************************************/
-	//座標結構(狀態、紀錄X、紀錄Y、紀錄Z)
+	//座標結構(狀態、紀錄X、紀錄Y、紀錄Z、記錄W)
 	struct CoordinateData {
 		BOOL Status;
 		LONG X;
 		LONG Y;
 		LONG Z;
+        DOUBLE W;
 	};
 	//速度結構(加速度、驅動速度、初速度)
 	struct Speed {
@@ -84,7 +85,7 @@ private:
 		BOOL CleanerSwitch;
 		LONG OutputPort;
 	};
-	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、循環是否復歸、是否為影像賦歸)
+	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、偏移W、循環是否復歸、是否為影像賦歸)
 	struct GoHome {
 		LONG Speed1;
 		LONG Speed2;
@@ -92,6 +93,7 @@ private:
 		LONG MoveX;
 		LONG MoveY;
 		LONG MoveZ;
+        DOUBLE MoveW;
 		BOOL PrecycleInitialize;
 		BOOL VisionGoHome;
 	};

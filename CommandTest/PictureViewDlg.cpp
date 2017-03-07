@@ -37,7 +37,7 @@ BOOL CPictureViewDlg::OnInitDialog()
     image.Load(FilePath + FileName + _T(".bmp"));
     HBITMAP hBmp = image.Detach();
     BITMAP bitmap;
-    GetObject(hBmp, sizeof(BITMAP), &bitmap)    ;
+    GetObject(hBmp, sizeof(BITMAP), &bitmap);
     //讀取系統解析度,判斷式窗大小
     if (bitmap.bmHeight > GetSystemMetrics(SM_CYSCREEN))
         bitmap.bmHeight = GetSystemMetrics(SM_CYSCREEN) - 100;

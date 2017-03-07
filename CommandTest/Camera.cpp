@@ -15,6 +15,7 @@ IMPLEMENT_DYNAMIC(CCamera, CDialogEx)
 CCamera::CCamera(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG2, pParent)
 {
+    m_pCModel = NULL; //初始化影像匹配頁面指針
 	RaiChoose = 1;
 	MilModel = malloc(sizeof(int));
     if(MilModel != NULL)
@@ -25,6 +26,8 @@ CCamera::~CCamera()
 {
     if (MilModel != NULL)
         free(MilModel);
+    if (m_pCModel != NULL)
+        delete (CDialog*)m_pCModel;//釋放影像匹配頁面記憶體
 }
 
 void CCamera::DoDataExchange(CDataExchange* pDX)
@@ -79,7 +82,7 @@ BOOL CCamera::OnInitDialog()
 	SetDlgItemText(IDC_TIPTOCCD, StrBuff);
 	StrBuff.Format(_T("FocusHeight:%d"), ((CCommandTestDlg*)pMain)->FocusPoint);
 	SetDlgItemText(IDC_FOCUSHEIGHT, StrBuff);
-    StrBuff.Format(_T("TableZ:%d"), ((CCommandTestDlg*)pMain)->a.m_Action.g_TablelZ);
+    StrBuff.Format(_T("TableZ:%d"), ((CCommandTestDlg*)pMain)->a.m_Action.m_TablelZ);
     SetDlgItemText(IDC_TABLEZ, StrBuff);
 	//影像開啟
 #ifdef VI
@@ -387,9 +390,24 @@ void CCamera::OnBnClickedBtntableset()
 //模組管理
 void CCamera::OnBnClickedButton4()
 {
-	m_pCModel = new CModel();
-	m_pCModel->Create(IDD_DIALOG3, this);
-	m_pCModel->ShowWindow(SW_SHOW);
+    if (m_pCModel == NULL)
+    {
+        m_pCModel = new CModel();
+        m_pCModel->Create(IDD_DIALOG3, this);
+        m_pCModel->ShowWindow(SW_SHOW);
+    }
+    else
+    {
+        ((CModel*)m_pCModel)->DestroyWindow();
+        if (m_pCModel != NULL)
+        {
+            delete (CDialog*)m_pCModel;
+            m_pCModel = NULL;
+        }
+        m_pCModel = new CModel();
+        m_pCModel->Create(IDD_DIALOG3, this);
+        m_pCModel->ShowWindow(SW_SHOW);
+    }
 }
 //關閉對話框
 void CCamera::OnCancel()
@@ -446,4 +464,5 @@ BOOL CCamera::DestroyWindow()
 #endif
 	return CDialogEx::DestroyWindow();
 }
+
 
