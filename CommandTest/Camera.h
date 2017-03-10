@@ -1,6 +1,8 @@
 #pragma once
 #include "MoveButton.h"
 #include "Model.h"
+#include "afxwin.h"
+#include "NumEdit.h"
 
 // CCamera 對話方塊
 
@@ -21,8 +23,13 @@ public: //變數
 	UINT RaiChoose;
 	void* MilModel;
 	CDialog* m_pCModel;
+    CNumEdit m_labsx;
+    CNumEdit m_labsy;
+    CNumEdit m_labsz;
+    CNumEdit m_dabsw;
+    BOOL TCOffstAdjust;
 public:// 函數
-	void MoveXYZ(int MoveX, int MoveY, int MoveZ);
+    void MoveXYZ(int MoveX, int MoveY, int MoveZ, double MoveW);
 	virtual BOOL OnInitDialog();
 	virtual void OnCancel();
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
@@ -35,17 +42,17 @@ protected:
 	DECLARE_MESSAGE_MAP()
    
 public:
-	afx_msg void OnBnClickedButton1();
-	afx_msg void OnBnClickedButton2();
-	afx_msg void OnBnClickedButton3();
-	afx_msg void OnBnClickedButton4();
-
-	virtual void OnOK();
-    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
-    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
-    virtual BOOL DestroyWindow();
+	afx_msg void OnBnClickedBtnsettiptoccd();
+    afx_msg void OnBnClickedBtnlimitunlock();
+	afx_msg void OnBnClickedBtnsetpixtopuls();
+    afx_msg void OnBnClickedBtnmodelmatch();
     afx_msg void OnBnClickedBtnfocusset();
     afx_msg void OnBnClickedBtnfocus();
     afx_msg void OnBnClickedBtntableset();
-    afx_msg void OnBnClickedBtnxdown();
+    afx_msg void OnBnClickedBtnwregulate();
+    virtual void OnOK();
+    virtual BOOL DestroyWindow();
+    afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+    afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
+    
 };

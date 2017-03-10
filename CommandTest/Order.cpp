@@ -25,17 +25,17 @@ COrder::COrder()
 {
 	//wakeEvent = NULL;
 	//系統移動速度
-	MoveSpeedSet = { 1200000,80000,6000 };
-	LMPSpeedSet = { 1200000,80000,6000 };
+	MoveSpeedSet = { 100000,30000,2000 };
+	LMPSpeedSet = { 100000,30000,2000 };
 	LMCSpeedSet = { 10000,5000,2000 };
-	VMSpeedSet = { 1200000,80000,6000 };
+	VMSpeedSet = { 100000,30000,2000 };
 	//運動參數
 	DispenseDotSet = { 0,0 };
 	DispenseDotEnd = { 0,0,0 };
 	DispenseLineSet = { 0,0,0,0,0,0 };
 	DispenseLineEnd = { 0,0,0,0,0 };
 	DotSpeedSet = {0,0,1000};
-	LineSpeedSet = {0,0,6000};
+	LineSpeedSet = {0,0,2000};
 	ZSet = {0,0}; 
 	GlueData = { {0,0,0,0,0},0,0,0,0 };
 	//影像參數
@@ -49,7 +49,7 @@ COrder::COrder()
 	RunStatusRead = { 0,0,1,0,0,0,0,0,0 };
 	RunLoopData = { 0,0,0,-1 };
 	//虛擬位置
-	VirtualCoordinateData = { 0,0,0,0 };
+	VirtualCoordinateData = { 0,0,0,0,0 };
 	//模組控制參數
 	ModelControl = { 0,0,0,0 };
 	//IO參數
@@ -407,10 +407,14 @@ UINT COrder::HomeThread(LPVOID pParam)
 {
 #ifdef MOVE
 	//先移動到(0,0,0)位置 Z軸抬升目前35000絕對 
-	((COrder*)pParam)->m_Action.DecideVirtualHome(0, 0, 0, 35000, 0,
-		((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
-    ((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
-	if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
+	//((COrder*)pParam)->m_Action.DecideVirtualHome(0, 0, 0, 35000, 0,
+	//	((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
+    //((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
+    /*if (((COrder*)pParam)->m_Action.m_MachineOffSet.x == -99999 && ((COrder*)pParam)->m_Action.m_MachineOffSet.y == -99999)
+        ((COrder*)pParam)->m_Action.W_NeedleGoHoming(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2,0);
+    else
+        */((COrder*)pParam)->m_Action.W_NeedleGoHoming(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2);
+    if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
 	{   
 		((COrder*)pParam)->VisionSet.AdjustOffsetX = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetX;
 		((COrder*)pParam)->VisionSet.AdjustOffsetY = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetY;
@@ -2870,7 +2874,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
             ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W = _tstof(CommandResolve(Command, 8)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 #ifdef PRINTF
-            if (((COrder*)pParam)->ModelControl.Mode == 3)
                 _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f-%d,%d,%d,%.3f)\n", CommandResolve(Command, 0),
                 ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
                     ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W);
@@ -3037,7 +3040,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		{
 			LineGotoActionJudge(pParam);//判斷動作狀態
 #ifdef PRINTF
-            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.2f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W);
+            _cwprintf(L"SubroutineThread()::%s(%d,%d,%d,%.3f)\n", CommandResolve(Command, 0), ((COrder*)pParam)->GlueData.ParkPositionData.X, ((COrder*)pParam)->GlueData.ParkPositionData.Y, ((COrder*)pParam)->GlueData.ParkPositionData.Z, ((COrder*)pParam)->GlueData.ParkPositionData.W);
 #endif
 			if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//已經有offset修正
 			{
@@ -5810,9 +5813,10 @@ void COrder::VirtualCoordinateMove(LPVOID pParam, CString Command ,LONG type)
 		{
 			((COrder*)pParam)->FinalWorkCoordinateData.Status = TRUE;
 		}
-		((COrder*)pParam)->FinalWorkCoordinateData.X = _ttoi(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-		((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttoi(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-		((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttoi(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+		((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+		((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+		((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+        ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 		((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 	}
 	else if (CommandResolve(Command, 0) == L"FillArea")
@@ -5843,6 +5847,7 @@ void COrder::VirtualCoordinateMove(LPVOID pParam, CString Command ,LONG type)
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 			if (CommandResolve(Command, 0) == L"LineEnd")
 			{
 				((COrder*)pParam)->FinalWorkCoordinateData.Status = FALSE;
@@ -5885,7 +5890,7 @@ void COrder::PassingException(LPVOID pParam)
         ((COrder*)pParam)->AreaCheckChangTemp.Status = FALSE;
     }
 #ifdef PRINTF
-    _cwprintf(L"PassingException()::座標(%d,%d,%d)\n", ((COrder*)pParam)->AreaCheckChangTemp.X, ((COrder*)pParam)->AreaCheckChangTemp.Y, ((COrder*)pParam)->AreaCheckChangTemp.Z);
+    _cwprintf(L"PassingException()::座標(%d,%d,%d,%.3f)\n", ((COrder*)pParam)->AreaCheckChangTemp.X, ((COrder*)pParam)->AreaCheckChangTemp.Y, ((COrder*)pParam)->AreaCheckChangTemp.Z , ((COrder*)pParam)->AreaCheckChangTemp.W);
 #endif
 }
 /**************************************************************************資料表處理區塊*************************************************************************/
@@ -6602,11 +6607,11 @@ void COrder::ParameterDefult() {
 	DispenseDotSet = Default.DispenseDotSet;
 	DispenseDotEnd = Default.DispenseDotEnd;
 	DotSpeedSet = Default.DotSpeedSet;
-	DotSpeedSet.InitSpeed = 6000;//防止初速度被初始化為0
+	DotSpeedSet.InitSpeed = 2000;//防止初速度被初始化為0
 	DispenseLineSet = Default.DispenseLineSet;
 	DispenseLineEnd = Default.DispenseLineEnd;
 	LineSpeedSet = Default.LineSpeedSet;
-	LineSpeedSet.InitSpeed = 6000;//防止初速度被初始化為0
+	LineSpeedSet.InitSpeed = 2000;//防止初速度被初始化為0
 	ZSet = Default.ZSet;
 	GlueData = Default.GlueData;
 	GoHome = Default.GoHome;

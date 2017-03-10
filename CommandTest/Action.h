@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/6
+*＠data 更新日期:2017/3/10
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
@@ -49,6 +49,11 @@ public:     //變數
 	DOUBLE  WangBuff;		  //w軸旋轉角度buff
 	CPoint  cpCirMidBuff[2];  //取同心圓座標的buff
 	LONG    m_MachineCirRad;  //機械同心圓半徑
+	AxeSpace m_HomingOffset_INIT;//原點復歸偏移量--初次設定用
+	AxeSpace m_HomingPoint;   //原點復歸點(機械座標)
+	BOOL    m_IsCutError;	  //切值錯誤
+	int     m_ThreadFlag;	  //執行緒旗標(再MoMoveThread中執行)
+	DOUBLE     m_WSpeed;         //W速度變數
 #ifdef MOVE
     std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
 #endif
@@ -140,10 +145,12 @@ public:
 	/**********人機用函數****************************************/
 
 	//人機用函數-軟體負極限(x,y,z,w為最小工作範圍)
-	void HMNegLim(LONG lX, LONG lY, LONG lZ, DOUBLE lW);
+	void HMNegLim(LONG lX, LONG lY, LONG lZ, DOUBLE dW);
 	//人機用函數-軟體正極限(x,y,z,w為最大工作範圍)
-	void HMPosLim(LONG lX, LONG lY, LONG lZ, DOUBLE lW);
-     
+	void HMPosLim(LONG lX, LONG lY, LONG lZ, DOUBLE dW);
+    //人機用函數-移動命令(Z軸抬生→W軸旋轉→X,Y移動→Z軸下降)
+	void HMGoPosition(LONG lX, LONG lY, LONG lZ, DOUBLE dW, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+
 	/**********其它命令*****************************************/
 
 	//位置偏移(輸入一個(X,Y,Z,W)座標)
@@ -258,7 +265,7 @@ public:
     //絕對座標轉相對座標4軸連續插補使用
     void W_AbsToOppo4Move(std::vector<DATA_4MOVE> &str);
 #endif
-    //連續線段動作--(四軸連續插補)
+    //連續線段動作--(先移動到起始點x,y在走z___進行四軸連續插補)
     void W_Line4DtoDo(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//W軸四連續插補單純移動
 	void W_Line4DtoMove(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
@@ -266,6 +273,10 @@ public:
 	void W_Correction(BOOL bStep, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy,LONG lMoveZ = 10000);
     //讀取現在位置坐標(預設針頭座標0/機械座標1)
     AxeSpace MCO_ReadPosition(BOOL NedMah = 0);
+	//針頭模式原點復歸(步驟0為初始化第一步/步驟1為一般原點復歸)
+	void W_NeedleGoHoming(LONG Speed1,LONG Speed2, BOOL bStep=1);
+
+
 
     /**********JOG模式********************************************/
     //單軸移動(X,Y,Z,W相對量移動/WType:0單軸,1同軸自轉/全部為0使用減速停止)

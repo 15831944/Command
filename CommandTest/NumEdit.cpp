@@ -34,15 +34,25 @@ BOOL CNumEdit::PreTranslateMessage(MSG* pMsg)
         }
         //只允許一個小數點
         if (('.' == pMsg->wParam) && !CheckUnique('.') && (GetSel() == 0))
-        {
+        {        
             SetWindowText(L"0.");
-            SetSel(3,2);
+            SetSel(3, 2);
             return TRUE;
         }
         else if (('.' == pMsg->wParam) && CheckUnique('.'))
-            return TRUE;
-        else if(('.' == pMsg->wParam))
+            return TRUE;        
+        else if (('.' == pMsg->wParam))
+        {
+            CString str;
+            GetWindowText(str);
+            if (str == L"-")//判斷目前是否只有一個-號
+            {
+                SetWindowText(L"-0.");
+                SetSel(4, 3);
+                return TRUE;
+            }
             return CEdit::PreTranslateMessage(pMsg);
+        }    
         //當前字符是"-"及當前光標在第一個 及當前沒有"-"
         if (('-' == pMsg->wParam) && (GetSel() == 0) && !CheckUnique('-'))
             return CEdit::PreTranslateMessage(pMsg);

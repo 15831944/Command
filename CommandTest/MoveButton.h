@@ -12,6 +12,7 @@ public:
     int MoveX;
     int MoveY;
     int MoveZ;
+    DOUBLE MoveW;
     virtual ~CMoveButton();
 
 protected:

@@ -30,7 +30,6 @@ void CLineContinuous::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST1, m_ListLCPoint);
 }
 
-
 BEGIN_MESSAGE_MAP(CLineContinuous, CDialogEx)
 	ON_WM_MOUSEACTIVATE()
 	ON_WM_SHOWWINDOW()
@@ -44,9 +43,7 @@ BEGIN_MESSAGE_MAP(CLineContinuous, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNEXCELTOLIST, &CLineContinuous::OnBnClickedBtnexceltolist)
 END_MESSAGE_MAP()
 
-
 // CLineContinuous 訊息處理常式
-
 
 BOOL CLineContinuous::OnInitDialog()
 {

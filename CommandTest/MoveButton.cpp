@@ -17,6 +17,7 @@ CMoveButton::CMoveButton()
     MoveX = 0;
     MoveY = 0;
     MoveZ = 0;
+    MoveW = 0;
 }
 CMoveButton::~CMoveButton()
 {
@@ -47,7 +48,7 @@ void CMoveButton::OnLButtonDown(UINT nFlags, CPoint point)
 #endif
     CButton::OnLButtonDown(nFlags, point);
 }
-/*按鈕放開*/
+/*按鈕放開*//*****尚未修正*****/
 void CMoveButton::OnLButtonUp(UINT nFlags, CPoint point)
 {
 #ifdef MOVE
@@ -68,7 +69,7 @@ void CMoveButton::OnLButtonUp(UINT nFlags, CPoint point)
 #endif // MOVE
     CButton::OnLButtonUp(nFlags, point);
 }
-/*XYZ移動*/
+/*XYZ移動*//*****尚未修正*****/
 void CMoveButton::MoveXYZ(int MoveX, int MoveY, int MoveZ) {
 #ifdef MOVE
     CWnd* pMain = AfxGetApp()->m_pMainWnd;

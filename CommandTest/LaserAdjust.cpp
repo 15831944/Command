@@ -28,7 +28,6 @@ void CLaserAdjust::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST1, m_ListLaserAdjust);
 }
 
-
 BEGIN_MESSAGE_MAP(CLaserAdjust, CDialogEx)
 	ON_WM_MOUSEACTIVATE()
 	ON_WM_SHOWWINDOW()
@@ -39,9 +38,7 @@ BEGIN_MESSAGE_MAP(CLaserAdjust, CDialogEx)
 	ON_COMMAND(IDM_LASERDELETE, &CLaserAdjust::OnLaserdelete)
 END_MESSAGE_MAP()
 
-
 // CLaserAdjust 訊息處理常式
-
 
 BOOL CLaserAdjust::OnInitDialog()
 {
@@ -58,38 +55,12 @@ void CLaserAdjust::OnCancel()
 {
 	CDialogEx::OnCancel();
 }
-//CreateEdit
-void CLaserAdjust::CreateEdit(NM_LISTVIEW * pEditCtrl, CEdit * m_Editbox1)
+//新增Enter
+void CLaserAdjust::OnOK()
 {
-	CRect EditRect;
-	//點處理
-	m_OldListRow = pEditCtrl->iItem;
-	m_OldListColumn = pEditCtrl->iSubItem;
-	//創建編輯框
-	m_Editbox1->Create(ES_AUTOHSCROLL | WS_CHILD | ES_LEFT | ES_WANTRETURN, CRect(0, 0, 0, 0), this, IDC_EDITBUFF2);
-	m_Editbox1->SetParent(&m_ListLaserAdjust); //List 設置父窗口*important
-	m_ListLaserAdjust.GetSubItemRect(m_OldListRow, m_OldListColumn, LVIR_LABEL, EditRect); //獲取空間訊息
-	EditRect.SetRect(EditRect.left + 1, EditRect.top + 1, EditRect.left + m_ListLaserAdjust.GetColumnWidth(m_OldListColumn) - 1, EditRect.bottom - 1); //+1和-1使編輯框不檔住網格線
-	m_Editbox1->MoveWindow(&EditRect); //將編輯框放在滑鼠點擊位置上
-	m_Editbox1->ShowWindow(SW_SHOW); //顯示編輯框
-									 //編輯框設置
-	CString str;
-	str = m_ListLaserAdjust.GetItemText(m_OldListRow, m_OldListColumn); //抓取格子內狀態
-	m_Editbox1->SetWindowText(NULL); //將文字顯示在格子上
-	m_Editbox1->SetFont(this->GetFont(), FALSE);  //設置字體，不然會有突兀的感覺
-	m_Editbox1->SetFocus(); //設其為焦點
-	m_Editbox1->SetSel(-1);
-}
-//DistroyEditBox
-void CLaserAdjust::DistroyEdit(CListCtrl *list, CEdit *distroyedit, int &Item, int &SubItem)
-{
-	CString  editdata;
-	distroyedit->GetWindowTextW(editdata);
-	if (editdata == _T(""))
-		editdata = _T("0");
-	list->SetItemText(Item, SubItem, editdata); //type in 對應Item
-	distroyedit->DestroyWindow(); //銷毀
-	LaserAdjustModify();
+    ((CCommandTestDlg*)pMain)->a.LaserAdjust.push_back({ 0 });
+    ListRefresh();
+    // CDialogEx::OnOK();
 }
 //列表左鍵一下
 void CLaserAdjust::OnNMClickList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -151,7 +122,40 @@ void CLaserAdjust::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
 	}
 	*pResult = 0;
 }
-//列表右件一下
+//CreateEdit
+void CLaserAdjust::CreateEdit(NM_LISTVIEW * pEditCtrl, CEdit * m_Editbox1)
+{
+    CRect EditRect;
+    //點處理
+    m_OldListRow = pEditCtrl->iItem;
+    m_OldListColumn = pEditCtrl->iSubItem;
+    //創建編輯框
+    m_Editbox1->Create(ES_AUTOHSCROLL | WS_CHILD | ES_LEFT | ES_WANTRETURN, CRect(0, 0, 0, 0), this, IDC_EDITBUFF2);
+    m_Editbox1->SetParent(&m_ListLaserAdjust); //List 設置父窗口*important
+    m_ListLaserAdjust.GetSubItemRect(m_OldListRow, m_OldListColumn, LVIR_LABEL, EditRect); //獲取空間訊息
+    EditRect.SetRect(EditRect.left + 1, EditRect.top + 1, EditRect.left + m_ListLaserAdjust.GetColumnWidth(m_OldListColumn) - 1, EditRect.bottom - 1); //+1和-1使編輯框不檔住網格線
+    m_Editbox1->MoveWindow(&EditRect); //將編輯框放在滑鼠點擊位置上
+    m_Editbox1->ShowWindow(SW_SHOW); //顯示編輯框
+                                     //編輯框設置
+    CString str;
+    str = m_ListLaserAdjust.GetItemText(m_OldListRow, m_OldListColumn); //抓取格子內狀態
+    m_Editbox1->SetWindowText(NULL); //將文字顯示在格子上
+    m_Editbox1->SetFont(this->GetFont(), FALSE);  //設置字體，不然會有突兀的感覺
+    m_Editbox1->SetFocus(); //設其為焦點
+    m_Editbox1->SetSel(-1);
+}
+//DistroyEditBox
+void CLaserAdjust::DistroyEdit(CListCtrl *list, CEdit *distroyedit, int &Item, int &SubItem)
+{
+    CString  editdata;
+    distroyedit->GetWindowTextW(editdata);
+    if (editdata == _T(""))
+        editdata = _T("0");
+    list->SetItemText(Item, SubItem, editdata); //type in 對應Item
+    distroyedit->DestroyWindow(); //銷毀
+    LaserAdjustModify();
+}
+//列表右鍵一下
 void CLaserAdjust::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
@@ -168,6 +172,21 @@ void CLaserAdjust::OnNMRClickList1(NMHDR *pNMHDR, LRESULT *pResult)
 		pSubMenu->TrackPopupMenu(TPM_LEFTALIGN, CurPnt.x, CurPnt.y, this);//點右鍵出現的菜單位置
 	}
 	*pResult = 0;
+}
+//插入
+void CLaserAdjust::OnLaserinster()
+{
+    int istat = m_ListLaserAdjust.GetSelectionMark();//獲取選擇的項
+    m_ListLaserAdjust.InsertItem(istat, NULL);
+    ((CCommandTestDlg*)pMain)->a.LaserAdjust.insert(((CCommandTestDlg*)pMain)->a.LaserAdjust.begin() + istat, { 0 });
+    ListRefresh();
+}
+//刪除
+void CLaserAdjust::OnLaserdelete()
+{
+    int istat = m_ListLaserAdjust.GetSelectionMark();//獲取選擇的項
+    ((CCommandTestDlg*)pMain)->a.LaserAdjust.erase(((CCommandTestDlg*)pMain)->a.LaserAdjust.begin() + istat);
+    ListRefresh();
 }
 //修改陣列值
 void CLaserAdjust::LaserAdjustModify()
@@ -194,31 +213,6 @@ void CLaserAdjust::ListRefresh()
 	int ListnCount = m_ListLaserAdjust.GetItemCount();
 	m_ListLaserAdjust.EnsureVisible(ListnCount - 1, FALSE);//使List中一項可見(如滾動條向下滾)
 }
-//插入
-void CLaserAdjust::OnLaserinster()
-{
-	int istat = m_ListLaserAdjust.GetSelectionMark();//獲取選擇的項
-	m_ListLaserAdjust.InsertItem(istat, NULL);
-	((CCommandTestDlg*)pMain)->a.LaserAdjust.insert(((CCommandTestDlg*)pMain)->a.LaserAdjust.begin() + istat, { 0 });
-	ListRefresh();
-}
-//刪除
-void CLaserAdjust::OnLaserdelete()
-{
-	int istat = m_ListLaserAdjust.GetSelectionMark();//獲取選擇的項
-	((CCommandTestDlg*)pMain)->a.LaserAdjust.erase(((CCommandTestDlg*)pMain)->a.LaserAdjust.begin() + istat);
-	ListRefresh();
-}
-//新增
-void CLaserAdjust::OnOK()
-{
-    ((CCommandTestDlg*)pMain)->a.LaserAdjust.push_back({0});
-    ListRefresh();
-    // CDialogEx::OnOK();
-}
-
-
-
 //顯示視窗時設定
 void CLaserAdjust::OnShowWindow(BOOL bShow, UINT nStatus)
 {

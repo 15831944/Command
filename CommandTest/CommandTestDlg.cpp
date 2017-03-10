@@ -27,7 +27,6 @@
 #define new DEBUG_NEW
 #endif
 
-
 // CCommandTestDlg 對話方塊
 CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_COMMANDTEST_DIALOG, pParent)
@@ -58,6 +57,7 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
 	m_pLaserAdjustDlg = NULL;
 	m_pLineContinuousDlg = NULL;
     m_pCheckResultDlg = NULL;
+
     NoPushEsc = TRUE;
 
     StrCutout_Copy = L"";
@@ -221,12 +221,12 @@ BOOL CCommandTestDlg::OnInitDialog()
     /*運動開啟*/
 #ifdef MOVE
     MO_Open(1);//軸卡開啟
-    MO_SetHardLim(7, 1);//極限開啟
+    MO_SetHardLim(15, 1);//極限開啟
     MO_SetDecOK(1);//開啟減速有效
     MO_InterruptCase(1, 1, a.m_Action.MoInterrupt, a.m_Action.pAction);//中斷開啟
-    MO_SetSoftLim(7, 1);//軟極限開啟
-    MO_SetCompSoft(1, -47000, -62000, -10000, -360);
-    MO_SetCompSoft(0, 350000, 350000, 80000, 360); //0, 150000, 190000, 80000
+    MO_SetSoftLim(15, 1);//軟極限開啟
+    MO_SetCompSoft(1, -500000, -500000, -100000, -360);//負-
+    MO_SetCompSoft(0, 500000, 500000, 100000, 360); //正-0, 150000, 190000, 80000
     a.m_Action.LA_SetInit();//雷射開啟
 #endif
 	//命令列表
@@ -241,8 +241,8 @@ BOOL CCommandTestDlg::OnInitDialog()
 	m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格 
 	//參數列表
 	m_ParamList.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
-	m_ParamList.InsertColumn(0, _T("名稱"), LVCFMT_CENTER, 100, -1);
-	m_ParamList.InsertColumn(1, _T("參數值"), LVCFMT_LEFT, 150, -1);
+	m_ParamList.InsertColumn(0, _T("名稱"), LVCFMT_CENTER, 120, -1);
+	m_ParamList.InsertColumn(1, _T("參數值"), LVCFMT_LEFT, 130, -1);
 	CStringArray StrTable;
 	StrTable.Add(_T("點膠出膠時間")); StrTable.Add(_T("點膠停留時間"));
 	StrTable.Add(_T("點膠回程距離")); StrTable.Add(_T("點膠低回程速度")); StrTable.Add(_T("點膠高回程速度"));
@@ -251,13 +251,13 @@ BOOL CCommandTestDlg::OnInitDialog()
 	StrTable.Add(_T("線段返回類型")); StrTable.Add(_T("線段返回低速")); StrTable.Add(_T("線段返回高度")); StrTable.Add(_T("線段返回長度")); StrTable.Add(_T("線段返回高速"));
 	StrTable.Add(_T("線段加速度")); StrTable.Add(_T("線段驅動速度"));
 	StrTable.Add(_T("Z軸回升距離")); StrTable.Add(_T("Z軸回升型態"));
-	StrTable.Add(_T("停駐點X，Y，Z")); StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
+    StrTable.Add(_T("停駐點X，Y，Z，W")); StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
 	StrTable.Add(_T("動作總數")); StrTable.Add(_T("影像OffsetX")); StrTable.Add(_T("影像OffsetY")); StrTable.Add(_T("影像Angle"));
 	StrTable.Add(_T("對位點1X")); StrTable.Add(_T("對位點1Y")); StrTable.Add(_T("對位點1offsetX")); StrTable.Add(_T("對位點1offsetY"));
 	StrTable.Add(_T("對位點2X")); StrTable.Add(_T("對位點2Y")); StrTable.Add(_T("對位點2offsetX")); StrTable.Add(_T("對位點2offsetY"));
 	StrTable.Add(_T("最終X")); StrTable.Add(_T("最終Y")); 
 	StrTable.Add(_T("影像紀錄表計數")); StrTable.Add(_T("雷射紀錄表計數"));
-	StrTable.Add(_T("虛擬座標X")); StrTable.Add(_T("虛擬座標Y")); StrTable.Add(_T("虛擬座標Z"));
+	StrTable.Add(_T("虛擬座標X")); StrTable.Add(_T("虛擬座標Y")); StrTable.Add(_T("虛擬座標Z")); StrTable.Add(_T("虛擬座標W"));
 	StrTable.Add(_T("雷射測高數值"));
 	for (int i = 0; i < StrTable.GetSize(); i++) {
 		m_ParamList.InsertItem(i, NULL);
@@ -418,28 +418,28 @@ void CCommandTestDlg::OnBnClickedBtncleancount()
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	CString XYZlocation,StrBuff,FinishCountBuff;
-	LONG DataArray[49] = { a.DispenseDotSet.GlueOpenTime, a.DispenseDotSet.GlueCloseTime,
-		a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseLowSpeed,a.DispenseDotEnd.RiseHightSpeed,
-		a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
-		a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDistance, a.DispenseLineSet.ShutdownDelay,
-		a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
-		a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed,
-		a.ZSet.ZBackHeight,a.ZSet.ZBackType,
-		a.GlueData.ParkPositionData.X,a.GlueData.ParkPositionData.Y,a.GlueData.ParkPositionData.Z,a.GlueData.GlueAuto,a.GlueData.GlueWaitTime,a.GlueData.GlueTime,a.GlueData.GlueStayTime,
-		a.ActionCount,(LONG)a.VisionOffset.OffsetX,(LONG)a.VisionOffset.OffsetY,(LONG)a.VisionOffset.Angle,
-		a.FiducialMark1.Point.X, a.FiducialMark1.Point.Y,(LONG)a.FiducialMark1.OffsetX,(LONG)a.FiducialMark1.OffsetY,
-		a.FiducialMark2.Point.X, a.FiducialMark2.Point.Y,(LONG)a.FiducialMark2.OffsetX,(LONG)a.FiducialMark2.OffsetY,
-		a.FinalWorkCoordinateData.X,a.FinalWorkCoordinateData.Y ,a.VisionCount,a.LaserCount,
-		a.VirtualCoordinateData.X,a.VirtualCoordinateData.Y,a.VirtualCoordinateData.Z,
-		a.LaserData.LaserMeasureHeight
-	}; 
+    LONG DataArray[] = { a.DispenseDotSet.GlueOpenTime, a.DispenseDotSet.GlueCloseTime,
+        a.DispenseDotEnd.RiseDistance,a.DispenseDotEnd.RiseLowSpeed,a.DispenseDotEnd.RiseHightSpeed,
+        a.DotSpeedSet.AccSpeed,a.DotSpeedSet.EndSpeed,
+        a.DispenseLineSet.BeforeMoveDelay, a.DispenseLineSet.BeforeMoveDistance, a.DispenseLineSet.NodeTime, a.DispenseLineSet.StayTime, a.DispenseLineSet.ShutdownDistance, a.DispenseLineSet.ShutdownDelay,
+        a.DispenseLineEnd.Type, a.DispenseLineEnd.HighSpeed, a.DispenseLineEnd.LowSpeed, a.DispenseLineEnd.Width, a.DispenseLineEnd.Height,
+        a.LineSpeedSet.AccSpeed, a.LineSpeedSet.EndSpeed,
+        a.ZSet.ZBackHeight,a.ZSet.ZBackType,
+        a.GlueData.ParkPositionData.X,a.GlueData.ParkPositionData.Y,a.GlueData.ParkPositionData.Z,(LONG)a.GlueData.ParkPositionData.W,a.GlueData.GlueAuto,a.GlueData.GlueWaitTime,a.GlueData.GlueTime,a.GlueData.GlueStayTime,
+        a.ActionCount,(LONG)a.VisionOffset.OffsetX,(LONG)a.VisionOffset.OffsetY,(LONG)a.VisionOffset.Angle,
+        a.FiducialMark1.Point.X, a.FiducialMark1.Point.Y,(LONG)a.FiducialMark1.OffsetX,(LONG)a.FiducialMark1.OffsetY,
+        a.FiducialMark2.Point.X, a.FiducialMark2.Point.Y,(LONG)a.FiducialMark2.OffsetX,(LONG)a.FiducialMark2.OffsetY,
+        a.FinalWorkCoordinateData.X,a.FinalWorkCoordinateData.Y ,a.VisionCount,a.LaserCount,
+        a.VirtualCoordinateData.X,a.VirtualCoordinateData.Y,a.VirtualCoordinateData.Z,(LONG)a.VirtualCoordinateData.W,
+        a.LaserData.LaserMeasureHeight
+    };
 	int ArrayCount = 0;
-	for (int i = 0; i < 47; i++)
+	for (int i = 0; i < 48; i++)
 	{   
 		if (i == 22)
 		{
-			StrBuff.Format(_T("%d,%d,%d"), DataArray[22], DataArray[23], DataArray[24]);
-			ArrayCount += 3;
+            StrBuff.Format(_T("%d,%d,%d,%d"), DataArray[22], DataArray[23], DataArray[24], DataArray[25]);
+			ArrayCount += 4;
 		}
 		else
 		{
@@ -448,10 +448,12 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 		}    
 		m_ParamList.SetItemText(i, 1, StrBuff);
 	}
-	/*手臂與出膠狀態*/
+	/*手臂與出膠狀態*//*****尚未修正*****/
 	#ifdef MOVE
-		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d)\tGlueStatus:%d\t驅動速度:%d\t加速度:%d\t加工時間:%f(s)"),
-			MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadGumming(),
+		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d,W:%.3f)\t針頭位置(X:%d,Y:%d,Z:%d,W:%.3f)\tGlueStatus:%d\t驅動速度:%d\t加速度:%d\t加工時間:%f(s)"),
+			MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2),MO_ReadLogicPositionW(),
+            a.m_Action.MCO_ReadPosition().x, a.m_Action.MCO_ReadPosition().y, a.m_Action.MCO_ReadPosition().z, a.m_Action.MCO_ReadPosition().w,
+            MO_ReadGumming(),
 			MO_ReadSpeed(0),MO_ReadAccDec(0),a.RunStatusRead.RunTotalTime);
 	#endif 
 	SetDlgItemText(IDC_ARMSTATUS, XYZlocation);
@@ -833,7 +835,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
     if (m_pCheckResultDlg == NULL)
     {
         //測試用    
-        static int count = 0;
+        /*static int count = 0;
         if (count == 0)
         {
             int i = 0;
@@ -855,7 +857,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
                 i++;
             }
             count++;
-        }
+        }*/
         m_pCheckResultDlg = new CCheckResult();
         //模態式對話框
         //m_pCheckResultDlg->DoModal();
@@ -1029,7 +1031,7 @@ void CCommandTestDlg::OnBnClickedBtnmodefyz()
     }
     ListRefresh(NULL);
 }
-//關閉按鈕X
+/*關閉按鈕X*/
 void CCommandTestDlg::OnClose()
 {
     if (m_pCheckResultDlg != NULL)//判斷檢測結果指針是否存在
@@ -1047,13 +1049,13 @@ void CCommandTestDlg::OnClose()
     NoPushEsc = FALSE;
     CDialogEx::OnClose();
 }
-//取消按鈕 Esc 
+/*取消按鈕 Esc*/ 
 void CCommandTestDlg::OnCancel()
 {
     if(!NoPushEsc)
         CDialogEx::OnCancel();
 }
-//關閉程式視窗銷毀事件
+/*關閉程式視窗銷毀事件*/
 void CCommandTestDlg::OnDestroy()
 {  
 #ifdef VI
@@ -1069,7 +1071,7 @@ void CCommandTestDlg::OnDestroy()
     //_CrtDumpMemoryLeaks();//查看記憶體洩漏
     CDialogEx::OnDestroy();
 }
-//全部位置偏移
+/*全部位置偏移*/
 void CCommandTestDlg::OnBnClickedBtnalloffset()
 {
     for (UINT i = 0; i < a.CommandMemory.size(); i++)
@@ -1954,7 +1956,7 @@ void CCommandTestDlg::Counter()
 	_cwprintf(L"%f", times);
 #endif
 }
-//儲存參數檔案
+/*儲存參數檔案*/
 void CCommandTestDlg::SaveParameter()
 {
 	CString path = GetCurrentPath(_T("\\Param"));
@@ -1977,11 +1979,13 @@ void CCommandTestDlg::SaveParameter()
             a.m_Action.m_OffSetLaserZ << 
             a.VisionDefault.VisionSet.FocusHeight << 
             a.m_Action.m_HeightLaserZero << 
-            a.m_Action.m_TablelZ;
+            a.m_Action.m_TablelZ << 
+            a.m_Action.m_MachineOffSet.x <<
+            a.m_Action.m_MachineOffSet.y;
 	}
 	File.Close();
 }
-//載入參數檔案
+/*載入參數檔案*/
 void CCommandTestDlg::LoadParameter()
 {
 	CString path = GetCurrentPath(_T("\\Param"));
@@ -2004,7 +2008,9 @@ void CCommandTestDlg::LoadParameter()
             a.m_Action.m_OffSetLaserZ >> 
             a.VisionDefault.VisionSet.FocusHeight >> 
             a.m_Action.m_HeightLaserZero >> 
-            a.m_Action.m_TablelZ;
+            a.m_Action.m_TablelZ >>
+            a.m_Action.m_MachineOffSet.x >>
+            a.m_Action.m_MachineOffSet.y;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -2040,6 +2046,7 @@ void CCommandTestDlg::SaveDefault()
 			a.Default.GoHome.MoveX <<
 			a.Default.GoHome.MoveY <<
 			a.Default.GoHome.MoveZ <<
+            a.Default.GoHome.MoveW <<
 			a.Default.GoHome.PrecycleInitialize <<
 			a.Default.DispenseDotSet.GlueOpenTime <<
 			a.Default.DispenseDotSet.GlueCloseTime <<
@@ -2066,6 +2073,7 @@ void CCommandTestDlg::SaveDefault()
 			a.Default.GlueData.ParkPositionData.X <<
 			a.Default.GlueData.ParkPositionData.Y <<
 			a.Default.GlueData.ParkPositionData.Z <<
+            a.Default.GlueData.ParkPositionData.W <<
 			a.Default.GlueData.GlueAuto <<
 			a.Default.GlueData.GlueWaitTime <<
 			a.Default.GlueData.GlueTime <<
@@ -2075,6 +2083,7 @@ void CCommandTestDlg::SaveDefault()
 			a.Default.CleanerData.CleanerPositionData.X <<
 			a.Default.CleanerData.CleanerPositionData.Y <<
 			a.Default.CleanerData.CleanerPositionData.Z <<
+            a.Default.CleanerData.CleanerPositionData.W <<
 			a.VisionDefault.VisionSet.Accuracy <<
 			a.VisionDefault.VisionSet.Speed <<
 			a.VisionDefault.VisionSet.Score <<
@@ -2108,6 +2117,7 @@ void CCommandTestDlg::LoadDefault()
 			a.Default.GoHome.MoveX >>
 			a.Default.GoHome.MoveY >>
 			a.Default.GoHome.MoveZ >>
+            a.Default.GoHome.MoveW >>
 			a.Default.GoHome.PrecycleInitialize >>
 			a.Default.DispenseDotSet.GlueOpenTime >>
 			a.Default.DispenseDotSet.GlueCloseTime >>
@@ -2134,6 +2144,7 @@ void CCommandTestDlg::LoadDefault()
 			a.Default.GlueData.ParkPositionData.X >>
 			a.Default.GlueData.ParkPositionData.Y >>
 			a.Default.GlueData.ParkPositionData.Z >>
+            a.Default.GlueData.ParkPositionData.W >>
 			a.Default.GlueData.GlueAuto >>
 			a.Default.GlueData.GlueWaitTime >>
 			a.Default.GlueData.GlueTime >>
@@ -2143,6 +2154,7 @@ void CCommandTestDlg::LoadDefault()
 			a.Default.CleanerData.CleanerPositionData.X >>
 			a.Default.CleanerData.CleanerPositionData.Y >>
 			a.Default.CleanerData.CleanerPositionData.Z >>
+            a.Default.CleanerData.CleanerPositionData.W >>
 			a.VisionDefault.VisionSet.Accuracy >>
 			a.VisionDefault.VisionSet.Speed >>
 			a.VisionDefault.VisionSet.Score >>
@@ -2166,7 +2178,7 @@ void CCommandTestDlg::LoadDefault()
 	}
 	else
 	{
-		a.Default.GoHome = { 30000,5000,7,47000,62000,10000 };//原點賦歸參數預設
+		a.Default.GoHome = { 30000,5000,7,47000,62000,10000,0 };//原點賦歸參數預設
 		a.Default.DotSpeedSet = { 100000,30000 };//點對點移動速度預設
 		a.Default.LineSpeedSet = { 100000,30000 };//線移動速度預設
 		a.Default.ZSet = { 5000,1 };//Z軸抬升參數預設
@@ -2258,6 +2270,5 @@ void CCommandTestDlg::OnBnClickedBtntest()
     _cwprintf(L"%d",GetLastError());*/
     //所有狀態印出
     //a.ShowAllStatus();
-    
 }
 
