@@ -320,6 +320,8 @@ void CCommandTestDlg::OnBnClickedStart()
 	DWORD dwStyle = m_CommandList.GetExtendedStyle();
 	dwStyle |= LVS_SHOWSELALWAYS;
 	m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+    /*設置直徑模板檢測目錄*/
+    a.DTCheckParamterDefault.DiameterResultSave.Path = GetCurrentPath(_T("\\CheckResult\\")).GetBuffer();
 	/*設置區域檢測目錄*/
 	a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
 	a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
@@ -403,6 +405,8 @@ void CCommandTestDlg::OnBnClickedBtnview()
     DWORD dwStyle = m_CommandList.GetExtendedStyle();
     dwStyle |= LVS_SHOWSELALWAYS;
     m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+    /*設置直徑模板檢測目錄*/
+    a.DTCheckParamterDefault.DiameterResultSave.Path = GetCurrentPath(_T("\\CheckResult\\")).GetBuffer();
     /*設置區域檢測目錄*/
     a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
     a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
@@ -515,10 +519,10 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 	CString StrBuff;
 	m_CommandList.DeleteAllItems();
-	int nCount = a.CommandMemory.size();
+	UINT nCount = a.CommandMemory.size();
 	if (!ScrollBarRefresh)
 	{
-		for (int i = 0; i < nCount; i++) {
+		for (UINT i = 0; i < nCount; i++) {
 			m_CommandList.InsertItem(i, NULL);
 			(i>8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
 			m_CommandList.SetItemText(i, 0, StrBuff);

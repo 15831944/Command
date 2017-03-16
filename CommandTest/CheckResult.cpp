@@ -77,16 +77,16 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"OK")
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(0, 255, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"NG")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 108, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"Err")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 255, 0));
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
         }   
         str_position.Format(L"%d,%d", ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.X, ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.Y);
         if (((CCheckResult*)pParam)->lEndthread == 0)
             ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 3, str_position);
         ListCount++;
     } 
-    int i = 0;
+    UINT i = 0;
     while (((CCheckResult*)pParam)->lEndthread == 0 && ((CCheckResult*)pParam)->pCCommandTestDlg->a.AreaCheckFinishRecord.size() > i)
     {
         CString str_no, str_position;
@@ -122,8 +122,10 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
     if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
         if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"AreaCheck")
         {
+#ifdef PRINTF
             _cwprintf(L"%s\n", pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path +
                 pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name);
+#endif
             if (m_pPictureViewDlg == NULL)
             {
                 //秀出圖片:方式ㄧ(呼叫Windowns預設程式)
@@ -156,6 +158,18 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
                 m_pPictureViewDlg->Create(IDD_DIALOG13, this);
                 m_pPictureViewDlg->ShowWindow(SW_SHOW);
             }
+        }
+        else if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"DiameterCheck")
+        {
+#ifdef PRINTF
+            _cwprintf(L"%s\n", pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path +
+                pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name);
+#endif
+            m_pPictureViewDlg = new CPictureViewDlg();
+            ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
+            ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
+            m_pPictureViewDlg->Create(IDD_DIALOG13, this);
+            m_pPictureViewDlg->ShowWindow(SW_SHOW);
         }
     }
     *pResult = 0;
