@@ -23,6 +23,11 @@
 #include <math.h>
 #include <valarray>
 
+#define PointMoveSpeedW 30000
+#define PointMoveSpeedA 90000
+#define PointMoveSpeedI 2000
+
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -225,8 +230,8 @@ BOOL CCommandTestDlg::OnInitDialog()
     MO_SetDecOK(1);//開啟減速有效
     MO_InterruptCase(1, 1, a.m_Action.MoInterrupt, a.m_Action.pAction);//中斷開啟
     MO_SetSoftLim(15, 1);//軟極限開啟
-    MO_SetCompSoft(1, -500000, -500000, -100000, -360);//負-
-    MO_SetCompSoft(0, 500000, 500000, 100000, 360); //正-0, 150000, 190000, 80000
+    MO_SetCompSoft(1, -500000, -500000, -120000, -370);//負-
+    MO_SetCompSoft(0, 500000, 500000, 120000, 370); //正-0, 150000, 190000, 80000
     a.m_Action.LA_SetInit();//雷射開啟
 #endif
 	//命令列表
@@ -448,11 +453,11 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 		}    
 		m_ParamList.SetItemText(i, 1, StrBuff);
 	}
-	/*手臂與出膠狀態*//*****尚未修正*****/
+	/*手臂與出膠狀態*/
 	#ifdef MOVE
 		XYZlocation.Format(_T("機械手臂位置(X:%d,Y:%d,Z:%d,W:%.3f)\t針頭位置(X:%d,Y:%d,Z:%d,W:%.3f)\tGlueStatus:%d\t驅動速度:%d\t加速度:%d\t加工時間:%f(s)"),
-			MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2),MO_ReadLogicPositionW(),
-            a.m_Action.MCO_ReadPosition().x, a.m_Action.MCO_ReadPosition().y, a.m_Action.MCO_ReadPosition().z, a.m_Action.MCO_ReadPosition().w,
+            a.m_Action.MCO_ReadPosition(UseMachineMode).x, a.m_Action.MCO_ReadPosition(UseMachineMode).y, a.m_Action.MCO_ReadPosition(UseMachineMode).z, a.m_Action.MCO_ReadPosition(UseMachineMode).w,
+            a.m_Action.MCO_ReadPosition(UseNeedleMode).x, a.m_Action.MCO_ReadPosition(UseNeedleMode).y, a.m_Action.MCO_ReadPosition(UseNeedleMode).z, a.m_Action.MCO_ReadPosition(UseNeedleMode).w,
             MO_ReadGumming(),
 			MO_ReadSpeed(0),MO_ReadAccDec(0),a.RunStatusRead.RunTotalTime);
 	#endif 
@@ -677,7 +682,7 @@ void CCommandTestDlg::OnDelete()
 		ListRefresh(NULL);
 	}
 }
-/*移動至此命令*//*****尚未修正*****/
+/*移動至此命令*/
 void CCommandTestDlg::OnMove()
 {
 	if (!Insert)
@@ -693,66 +698,130 @@ void CCommandTestDlg::OnMove()
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"StopPoint" || 
 			CommandResolve(a.CommandMemory.at(istat), 0) == L"WaitPoint")
 		{
-			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
+            if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+            {
+                a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)), _ttol(CommandResolve(a.CommandMemory.at(istat), 2)), _ttol(CommandResolve(a.CommandMemory.at(istat), 3)), _tstof(CommandResolve(a.CommandMemory.at(istat), 4)), PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+            }
+            else//CCD移動至此
+            {
+                a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+            } 
+			/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY - MO_ReadLogicPosition(1),
-				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 		}
         else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"FindMark" ||
             CommandResolve(a.CommandMemory.at(istat), 0) == L"FiducialMark" ||
             CommandResolve(a.CommandMemory.at(istat), 0) == L"CameraTrigger")
         {
-
+            //CCD移動至此
+            a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
         }
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"CirclePoint")
 		{
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)), _ttol(CommandResolve(a.CommandMemory.at(istat), 2)), _ttol(CommandResolve(a.CommandMemory.at(istat), 3)), _tstof(CommandResolve(a.CommandMemory.at(istat), 4)), PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 1)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetY - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 5)), _ttol(CommandResolve(a.CommandMemory.at(istat), 6)), _ttol(CommandResolve(a.CommandMemory.at(istat), 7)), _tstof(CommandResolve(a.CommandMemory.at(istat), 8)), PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 5)), _ttol(CommandResolve(a.CommandMemory.at(istat), 6)), FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"FillArea")
 		{
 			if (MessageBox( L"選擇Yes則移動至第一點，選擇NO則移動至第二點。",L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)), _ttol(CommandResolve(a.CommandMemory.at(istat), 5)), _ttol(CommandResolve(a.CommandMemory.at(istat), 6)), dFillAreaW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY, FocusPoint, dFillAreaW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 6)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)), _ttol(CommandResolve(a.CommandMemory.at(istat), 8)), _ttol(CommandResolve(a.CommandMemory.at(istat), 9)), dFillAreaW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 8)) - OffsetY, FocusPoint, dFillAreaW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 7)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 8)) - OffsetY - MO_ReadLogicPosition(1),
-					_ttol(CommandResolve(a.CommandMemory.at(istat), 9)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					_ttol(CommandResolve(a.CommandMemory.at(istat), 9)) - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 		}   
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserHeight")
 		{
-
-			MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
+            if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+            {
+                a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)), _ttol(CommandResolve(a.CommandMemory.at(istat), 3)), a.m_Action.m_HeightLaserZero, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+            }
+            else//CCD移動至此
+            {
+                a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+            }
+			/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
 				_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
-				a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+				a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 		}
 		else if (CommandResolve(a.CommandMemory.at(istat), 0) == L"LaserDetect")
 		{
 			if (MessageBox(L"選擇Yes則移動至第一點，選擇NO則移動至第二點。", L"提示", MB_YESNOCANCEL) == IDYES)
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)), _ttol(CommandResolve(a.CommandMemory.at(istat), 3)), a.m_Action.m_HeightLaserZero, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 2)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 3)) - OffsetY - MO_ReadLogicPosition(1),
-					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 			else
 			{
-				MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
+                if (OffsetX == 0 && OffsetY == 0)//針頭移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)), _ttol(CommandResolve(a.CommandMemory.at(istat), 5)), a.m_Action.m_HeightLaserZero, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+                else//CCD移動至此
+                {
+                    a.m_Action.HMGoPosition(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX, _ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY, FocusPoint, dCCDOffsetW, PointMoveSpeedW, PointMoveSpeedA, PointMoveSpeedI);//絕對
+                }
+				/*MO_Do3DLineMove(_ttol(CommandResolve(a.CommandMemory.at(istat), 4)) - OffsetX - MO_ReadLogicPosition(0),
 					_ttol(CommandResolve(a.CommandMemory.at(istat), 5)) - OffsetY - MO_ReadLogicPosition(1),
-					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);
+					a.m_Action.m_HeightLaserZero - MO_ReadLogicPosition(2), 80000, 1000000, 5000);//相對*/
 			}
 		}
 #endif
@@ -1239,13 +1308,14 @@ void CCommandTestDlg::myDrawFunction(void * pParam, CPoint pt, int pencolor)
     }
 }
 /*******************************************************************************************命令**********************************************************/
-/*單點點膠*//*****InputAuto部分尚未修正*****/
+/*單點點膠*/
 void CCommandTestDlg::OnBnClickedBtncommand1()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("Dot,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		//StrBuff.Format(_T("Dot,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+        StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 #endif
 	}
 	else
@@ -1289,13 +1359,14 @@ void CCommandTestDlg::OnBnClickedBtncommand4_2()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段開始*//*****InputAuto部分尚未修正*****/
+/*線段開始*/
 void CCommandTestDlg::OnBnClickedBtncommand5()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("LineStart,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		//StrBuff.Format(_T("LineStart,%d,%d,%d,%.3f"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+        StrBuff.Format(_T("LineStart,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 #endif
 	}
 	else
@@ -1307,13 +1378,14 @@ void CCommandTestDlg::OnBnClickedBtncommand5()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段中間點*//*****InputAuto部分尚未修正*****/
+/*線段中間點*/
 void CCommandTestDlg::OnBnClickedBtncommand6()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("LinePassing,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		//StrBuff.Format(_T("LinePassing,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+        StrBuff.Format(_T("LinePassing,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 #endif
 	}
 	else
@@ -1325,13 +1397,14 @@ void CCommandTestDlg::OnBnClickedBtncommand6()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*線段結束點*//*****InputAuto部分尚未修正*****/
+/*線段結束點*/
 void CCommandTestDlg::OnBnClickedBtncommand7()
 {     
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("LineEnd,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		//StrBuff.Format(_T("LineEnd,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+        StrBuff.Format(_T("LineEnd,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 #endif
 	}
 	else
@@ -1343,13 +1416,14 @@ void CCommandTestDlg::OnBnClickedBtncommand7()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*圓弧中點*//*****InputAuto部分尚未修正*****/
+/*圓弧中點*/
 void CCommandTestDlg::OnBnClickedBtncommand8()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("ArcPoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		//StrBuff.Format(_T("ArcPoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+        StrBuff.Format(_T("ArcPoint,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 #endif
 	}
 	else
@@ -1361,7 +1435,7 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*圓中點*//*****InputAuto部分尚未修正*****/
+/*圓中點*/
 void CCommandTestDlg::OnBnClickedBtncommand9()
 {
 	CString ControlName;
@@ -1371,13 +1445,13 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 #ifdef MOVE
 		if (ControlName == L"圓中點")
 		{
-
-			StrBuff.Format(_T("CirclePoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+			//StrBuff.Format(_T("CirclePoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+            StrBuff.Format(_T("CirclePoint,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 			SetDlgItemText(IDC_BTNCOMMAND9, _T("圓中點2"));
 		}
 		else
 		{
-			ControlName.Format(_T(",%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+			ControlName.Format(_T(",%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
 			StrBuff = StrBuff + ControlName;
 			SetDlgItemText(IDC_BTNCOMMAND9, _T("圓中點"));
 			(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
@@ -1488,13 +1562,14 @@ void CCommandTestDlg::OnBnClickedBtncommand19_2()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*虛擬點*//*****InputAuto部分尚未修正*****/
+/*虛擬點*/
 void CCommandTestDlg::OnBnClickedBtncommand20()
 {
 	if(InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("VirtualPoint,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1));
+        //StrBuff.Format(_T("VirtualPoint,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1));
+        StrBuff.Format(_T("VirtualPoint,%d,%d,%d,%.3f,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w, GetDlgItemInt(IDC_EDITPARAM1));
 #endif
 	}
 	else
@@ -1507,13 +1582,14 @@ void CCommandTestDlg::OnBnClickedBtncommand20()
 	ListRefresh(NULL);
     
 }
-/*等待點*//*****InputAuto部分尚未修正*****/
+/*等待點*/
 void CCommandTestDlg::OnBnClickedBtncommand21()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+		//StrBuff.Format(_T("WaitPoint,%d,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+        StrBuff.Format(_T("WaitPoint,%d,%d,%d,%.3f,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w, GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
 #endif
 	}
 	else
@@ -1533,13 +1609,14 @@ void CCommandTestDlg::OnBnClickedBtncommand22()
 	Insert = FALSE;
 	ListRefresh(NULL);
 }
-/*停止點*//*****InputAuto部分尚未修正*****/
+/*停止點*/
 void CCommandTestDlg::OnBnClickedBtncommand23()
 {
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("StopPoint,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1));
+		//StrBuff.Format(_T("StopPoint,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1));
+        StrBuff.Format(_T("StopPoint,%d,%d,%d,%.3f,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w, GetDlgItemInt(IDC_EDITPARAM1));
 #endif
 	}
 	else
@@ -1562,12 +1639,12 @@ void CCommandTestDlg::OnBnClickedBtncommand24()
 		if (ControlName == L"填充區域")
 		{
 			StrBuff.Format(_T("FillArea,%d,%d,%d,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2), GetDlgItemInt(IDC_EDITPARAM3),
-				MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+                a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z);
 			SetDlgItemText(IDC_BTNCOMMAND24, _T("填充點2"));
 		}
 		else
 		{
-			ControlName.Format(_T(",%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+			ControlName.Format(_T(",%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z);
 			StrBuff = StrBuff + ControlName;
 			SetDlgItemText(IDC_BTNCOMMAND24, _T("填充區域"));
 			(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
@@ -1680,7 +1757,7 @@ void CCommandTestDlg::OnBnClickedBtncommand34()
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("FindMark,%d,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+		StrBuff.Format(_T("FindMark,%d,%d,%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
 #endif
 	}
 	else
@@ -1697,7 +1774,7 @@ void CCommandTestDlg::OnBnClickedBtncommand35()
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("FiducialMark,%d,%d,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2), GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
+		StrBuff.Format(_T("FiducialMark,%d,%d,%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, GetDlgItemInt(IDC_EDITPARAM1), GetDlgItemInt(IDC_EDITPARAM2));
 #endif
 	}
 	else
@@ -1738,7 +1815,7 @@ void CCommandTestDlg::OnBnClickedBtncommand40()
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("CameraTrigger,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
+		StrBuff.Format(_T("CameraTrigger,%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z);
 #endif
 	}
 	else
@@ -1787,7 +1864,7 @@ void CCommandTestDlg::OnBnClickedBtncommand46()
 	if (InputAuto)
 	{
 #ifdef MOVE
-		StrBuff.Format(_T("LaserHeight,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+		StrBuff.Format(_T("LaserHeight,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY);
 #endif
 	}
 	else
@@ -1816,12 +1893,12 @@ void CCommandTestDlg::OnBnClickedBtncommand48()
 #ifdef MOVE
 		if (ControlName == L"雷射檢測")
 		{
-			StrBuff.Format(_T("LaserDetect,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1),MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+            StrBuff.Format(_T("LaserDetect,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY);
 			SetDlgItemText(IDC_BTNCOMMAND48, _T("雷射檢測點2"));
 		}
 		else
 		{
-			ControlName.Format(_T(",%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+			ControlName.Format(_T(",%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY);
 			StrBuff = StrBuff + ControlName;
 			SetDlgItemText(IDC_BTNCOMMAND48, _T("雷射檢測"));
 			(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
@@ -1888,7 +1965,7 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 #ifdef MOVE
 		if (ControlName == L"區域檢測")
 		{
-			StrBuff.Format(_T("AreaCheck,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY);
+			StrBuff.Format(_T("AreaCheck,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY);
 			SetDlgItemText(IDC_BTNCOMMAND53, _T("區域檢測結束點"));
 		}
 		else
@@ -1897,7 +1974,7 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 			GetDlgItemText(IDC_EDITPARAM2, EditBuffer1);GetDlgItemText(IDC_EDITPARAM3, EditBuffer2);
 			GetDlgItemText(IDC_EDITPARAM4, EditBuffer3);GetDlgItemText(IDC_EDITPARAM5, EditBuffer4); 
 			GetDlgItemText(IDC_EDITPARAM7, EditBuffer5);
-			ControlName.Format(_T(",%d,%d,%f,%f,%f,%f,%d,%f"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY,
+			ControlName.Format(_T(",%d,%d,%f,%f,%f,%f,%d,%f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY,
 				_tstof(EditBuffer1), _tstof(EditBuffer2),
 				_tstof(EditBuffer3), _tstof(EditBuffer4),
 				GetDlgItemInt(IDC_EDITPARAM6), _tstof(EditBuffer5));

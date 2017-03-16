@@ -44,7 +44,6 @@ BEGIN_MESSAGE_MAP(CLineContinuous, CDialogEx)
 END_MESSAGE_MAP()
 
 // CLineContinuous 訊息處理常式
-
 BOOL CLineContinuous::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
@@ -233,7 +232,7 @@ void CLineContinuous::OnDelete()
 	ListRefresh();
 #endif
 }
-//移動此命令
+//移動此命令/*****尚未修正*****/
 void CLineContinuous::OnMove()
 {
 	int istat = m_ListLCPoint.GetSelectionMark();//獲取選擇的項

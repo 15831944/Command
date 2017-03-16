@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/10
+*＠data 更新日期:2017/3/15
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
@@ -53,7 +53,8 @@ public:     //變數
 	AxeSpace m_HomingPoint;   //原點復歸點(機械座標)
 	BOOL    m_IsCutError;	  //切值錯誤
 	int     m_ThreadFlag;	  //執行緒旗標(再MoMoveThread中執行)
-	DOUBLE     m_WSpeed;         //W速度變數
+	LONG	m_HomeSpeed_DEF; //原點復歸預設速度(Z,W軸)
+	DOUBLE  m_WSpeed;         //W速度變數
 #ifdef MOVE
     std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
 #endif
@@ -66,8 +67,8 @@ public:     //變數
 #ifdef MOVE
 	std::vector<DATA_3MOVE> LA_m_ptVec;//雷射連續切點儲存vector
 	std::vector<DATA_2MOVE> LA_m_ptVec2D;//雷射連續切點儲存vector
-    DATA_4MOVE DATA_4Do[512];//連續切暫存
-	DATA_3MOVE DATA_3Do[512];//連續切暫存
+    DATA_4MOVE DATA_4Do[768];//連續切暫存
+	DATA_3MOVE DATA_3Do[768];//連續切暫存
 	DATA_2MOVE DATA_2Do[128];
 	DATA_3MOVE DATA_3ZERO_B;//雷射歸零_針頭B點
 	DATA_3MOVE DATA_3ZERO_LA;//雷射歸零_雷射B點
@@ -269,14 +270,14 @@ public:
     void W_Line4DtoDo(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//W軸四連續插補單純移動
 	void W_Line4DtoMove(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-	//W軸校正動作--步驟1.2(步驟、速度、加速度、驅動速度、z軸抬升高度)
+	//W軸校正動作--步驟1.2(步驟、驅動速度、加速度、初速度、z軸抬升高度)
 	void W_Correction(BOOL bStep, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy,LONG lMoveZ = 10000);
     //讀取現在位置坐標(預設針頭座標0/機械座標1)
     AxeSpace MCO_ReadPosition(BOOL NedMah = 0);
+	//四軸插補移動命令(角度、驅動速度、加速度、初速度、0:相對/1:絕對)預設相對角度
+	void MCO_Do4DLineMove(DOUBLE dAng, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIsType = 0);
 	//針頭模式原點復歸(步驟0為初始化第一步/步驟1為一般原點復歸)
 	void W_NeedleGoHoming(LONG Speed1,LONG Speed2, BOOL bStep=1);
-
-
 
     /**********JOG模式********************************************/
     //單軸移動(X,Y,Z,W相對量移動/WType:0單軸,1同軸自轉/全部為0使用減速停止)

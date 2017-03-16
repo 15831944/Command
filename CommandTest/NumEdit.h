@@ -16,6 +16,7 @@ protected:
 public:
     virtual BOOL PreTranslateMessage(MSG* pMsg);
     BOOL CheckUnique(char nChar);
+    afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 };
 
 

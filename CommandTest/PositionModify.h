@@ -1,6 +1,6 @@
 #pragma once
 #include "afxcmn.h"
-
+#include "NumEdit.h"
 
 // CPositionModify ¹ï¸Ü¤è¶ô
 
@@ -27,7 +27,7 @@ public:
     virtual void OnCancel();
     CListCtrl m_Listposition;
     int m_OldListRow, m_OldListColumn;
-    CEdit m_Edit;
+    CNumEdit m_Edit;
     CWnd* pMain;
     void CreateEdit(NM_LISTVIEW * pEditCtrl, CEdit * m_Edit);
     void DistroyEdit(CListCtrl * list, CEdit * distroyedit, int & Item, int & SubItem);

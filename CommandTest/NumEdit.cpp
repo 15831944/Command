@@ -20,6 +20,7 @@ CNumEdit::~CNumEdit()
 }
 
 BEGIN_MESSAGE_MAP(CNumEdit, CEdit)
+    ON_WM_RBUTTONDOWN()
 END_MESSAGE_MAP()
 
 // CNumEdit 訊息處理常式
@@ -75,4 +76,9 @@ BOOL CNumEdit::CheckUnique(char nChar)
     GetWindowText(str);
     nPos = str.Find(nChar);
     return (nPos >= 0) ? TRUE : FALSE;
+}
+//鎖住右鍵功能
+void CNumEdit::OnRButtonDown(UINT nFlags, CPoint point)
+{
+    //CEdit::OnRButtonDown(nFlags, point);
 }

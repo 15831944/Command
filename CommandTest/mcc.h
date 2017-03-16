@@ -2,7 +2,7 @@
 *檔案名稱:mcc.h
 *內容簡述:運動軸卡API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠date 更新日期:2017/03/06
+*＠date 更新日期:2017/03/14
 *@虹橋2號W軸機專用 */
 // mcc.h : mcc DLL 的主要標頭檔
 //
@@ -23,14 +23,16 @@
 #define g_iId 0
 #endif
 /***********馬達解析度************************/
-//解析度對照 xy:4.8  z:5
-//馬達驅動器上數值X,Y :10000;Z,W:4000
+//X,Y皮帶導程40mm(20齒1齒2mm)
+//Z軸螺桿導程25mm
+//解析度對照 XY:2  Z:2.5 W:1
+//馬達驅動器上數值X: 20000,Y:10000, Z:10000 ,W: 4000;
 #ifndef RESOLUTION
-#define RESOLUTION 4.8
+#define RESOLUTION 2.0
 #endif
 
 #ifndef RESOLUTION_Z
-#define RESOLUTION_Z 5
+#define RESOLUTION_Z 2.5
 #endif
 
 #ifndef RESOLUTION_W

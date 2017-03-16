@@ -243,7 +243,7 @@ void CCircleFormula::CircleCutPath_2D_unit(AxeSpace P1, AxeSpace P2, AxeSpace P3
 
             Pn.x = (LONG)round(Pee.x+dcenter.x);
             Pn.y = (LONG)round(Pee.y+dcenter.y);
-            Pn.z = 0;
+            Pn.z = P1.z;
             cutPathArray.push_back(Pn);
             rad += deltaRad;
         }
@@ -258,7 +258,7 @@ void CCircleFormula::CircleCutPath_2D_unit(AxeSpace P1, AxeSpace P2, AxeSpace P3
 
             Pn.x = (LONG)round(Pee.x+dcenter.x);
             Pn.y = (LONG)round(Pee.y+dcenter.y);
-            Pn.z = 0;
+            Pn.z = P1.z;
             cutPathArray.push_back(Pn);
             rad -= deltaRad;
         }
@@ -320,7 +320,7 @@ void CCircleFormula::CircleCutPath_2D_radian(AxeSpace P1, AxeSpace P2, AxeSpace 
 
             Pn.x = (LONG)round(Pee.x+dcenter.x);
             Pn.y = (LONG)round(Pee.y+dcenter.y);
-            Pn.z = 0;
+            Pn.z = P1.z;
             cutPathArray.push_back(Pn);
             rad += deltaRad;
         }
@@ -335,7 +335,7 @@ void CCircleFormula::CircleCutPath_2D_radian(AxeSpace P1, AxeSpace P2, AxeSpace 
 
             Pn.x = (LONG)round(Pee.x+dcenter.x);
             Pn.y = (LONG)round(Pee.y+dcenter.y);
-            Pn.z = 0;
+            Pn.z = P1.z;
             cutPathArray.push_back(Pn);
             rad -= deltaRad;
         }
