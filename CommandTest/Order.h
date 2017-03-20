@@ -30,7 +30,7 @@ private:
 		LONG X;
 		LONG Y;
 		LONG Z;
-        DOUBLE W;
+		DOUBLE W;
 	};
 	//速度結構(加速度、驅動速度、初速度)
 	struct Speed {
@@ -93,7 +93,7 @@ private:
 		LONG MoveX;
 		LONG MoveY;
 		LONG MoveZ;
-        DOUBLE MoveW;
+		DOUBLE MoveW;
 		BOOL PrecycleInitialize;
 		BOOL VisionGoHome;
 	};
@@ -109,6 +109,13 @@ private:
 		GlueData        GlueData;
 		GoHome          GoHome;
 		CleanerData     CleanerData;
+	};
+	//地址查表結構(編號、StepReap、Subroutine、Step&Sub)
+	struct AddressData {
+		std::vector<CString> Num;
+		std::vector<CString> StepRepeat;
+		std::vector<CString> Subroutine;
+		std::vector<CString> StepSub;
 	};
 	//修正表結構(命令地址、影像修正編號、雷射修正編號)
 	struct PositionModifyNumber {
@@ -311,7 +318,7 @@ private:
 		File DotTrainSave;
 		File LineTrainSave;
 		File Result;
-        CDialog* pMosaicDlg;
+		CDialog* pMosaicDlg;
 	};
 	/************************************************************模組參數結構*******************************************************/
 	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射和檢測模組跳過)
@@ -369,7 +376,7 @@ private:
 	*運行迴圈狀態(0:未運行、暫停中 1:執行中)
 	*單次命令運行狀態(0:執行完畢、未執行 1:正在執行中)
 	*畫布刷新關狀態(0:不關閉 1:關閉清除)//人機要求
-    *重組狀態(-1:重組中 0:重組失敗 1:重組成功 2:未重組)
+	*重組狀態(-1:重組中 0:重組失敗 1:重組成功 2:未重組)
 	*/
 	struct RunStatusRead {
 		UINT RunStatus;
@@ -380,7 +387,7 @@ private:
 		BOOL RunLoopStatus;
 		BOOL StepCommandStatus;
 		BOOL PaintClearClose;
-        int MosaicStatus;
+		int MosaicStatus;
 		//TODO::之後做總進度使用
 		//BOOL RegistrationStatus;
 		//UINT CommandTotalCount;
@@ -392,7 +399,7 @@ private:
 		std::vector<CString> BlockPosition;
 	};
 	/*Step&Loop控管結構(循環開關、循環地址紀錄、循環計數、步驟跳躍標籤、步驟跳躍開關、步驟標籤起始地址、增加步驟內層迴圈開關、記錄步驟內層迴圈新增次數、
-    記錄步驟內層迴圈次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
+	記錄步驟內層迴圈次數、記錄S型轉換開關、步驟地址紀錄、步驟初始offsetX紀錄、步驟初始offsetY紀錄、步驟計數X、步驟計數Y、記錄組斷資料、StepRepeat區間堆疊)
 	*循環開關:用來判別沒有此標籤時狀況
 	*步驟跳躍標籤:用於執行迴圈時跳躍指令用
 	*步驟跳躍開關:目的用於跳到StepRepeat最外層迴圈
@@ -476,7 +483,7 @@ private:    //函式
 	static  UINT    IODetection(LPVOID pParam);//IO偵測程序
 	static  UINT    CheckCoordinateScan(LPVOID pParam);//區間檢測控制程序
 	static  UINT    CheckAction(LPVOID pParam);//區間檢測執行程序
-    static  UINT    MosaicDlg(LPVOID pParam);//模板重組中視窗
+	static  UINT    MosaicDlg(LPVOID pParam);//模板重組中視窗
 	/*動作處理*/
 	static  void    LineGotoActionJudge(LPVOID pParam);//判斷線段動作轉換
 	static  void    ModifyPointOffSet(LPVOID pParam, CString XYZPoint);//CallSubroutin修正處理
@@ -488,12 +495,13 @@ private:    //函式
 	BOOL            LaserPointDetect();//檢查雷射檢測點是否重複
 	static  void    VirtualCoordinateMove(LPVOID pParam, CString Command, LONG type);//虛擬座標移動
 	BOOL            CheckDraw();//點檢測畫圖
-    static  void    PassingException(LPVOID pParam);//中間點例外處理(暫停、執行區域檢測)
+	static  void    PassingException(LPVOID pParam);//中間點例外處理(暫停、執行區域檢測)
 	//虛擬座標模擬移動
 	/*資料表處理區塊*/
 	static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
 	static  void    ChooseLaserModify(LPVOID pParam);//選擇雷射修正值
-	static  void    RecordCorrectionTable(LPVOID pParam);//記錄運動修正表
+	static  void    RecordCorrectionTable(LPVOID pParam);//紀錄修正表
+	//記錄運動修正表
 	/*命令處理*/
 	static  CString CommandResolve(CString Command, UINT Choose);//命令分解
 	static  CString ModelNumResolve(CString ModelNum, UINT Choose);//模版編號分解
@@ -528,12 +536,12 @@ private:    //函式
 	BOOL            ClearCheckData(BOOL Moment, BOOL Interval);
 	static  void    LineTrainDataCheck(LPVOID pParam);
 	BOOL            NewCutPathPoint(CoordinateData Start, CoordinateData Passing, CoordinateData End, AreaCheck &IntervalAreaCheck, int Type);//新增點成功回傳1 失敗回傳0
-    BOOL            PointAreaJudge(POINT Point, CRect Area);//判斷區域內回傳1 外回傳0
-    BOOL            LineAreaJudge(POINT PointS, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
-    BOOL            ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
-    BOOL            CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area);//判斷區域內回傳1 外回傳0
-    BOOL            AutoCalculationArea(AreaCheck &AreaCheckRun);//自動計算重組區域大小
-    CRect           MosaicAreaJudge(AreaCheck &AreaCheck);//判斷重組區域是否為同一點
+	BOOL            PointAreaJudge(POINT Point, CRect Area);//判斷區域內回傳1 外回傳0
+	BOOL            LineAreaJudge(POINT PointS, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
+	BOOL            ArcAreaJudge(POINT PointS, POINT PointA, POINT PointE, CRect Area);//判斷區域內回傳1 外回傳0
+	BOOL            CircleAreaJudge(POINT PointS, POINT PointC1, POINT PointC2, CRect Area);//判斷區域內回傳1 外回傳0
+	BOOL            AutoCalculationArea(AreaCheck &AreaCheckRun);//自動計算重組區域大小
+	CRect           MosaicAreaJudge(AreaCheck &AreaCheck);//判斷重組區域是否為同一點
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
 
@@ -586,7 +594,7 @@ public:     //變數
 	CoordinateData  VirtualCoordinateData;
 	
 	//動作修正表
-	std::vector<PositionModifyNumber> PositionModifyNumber;
+	std::vector<std::vector<PositionModifyNumber>> PositionModifyNumber;
 	//影像修正資料
 	std::vector<VisionAdjust> VisionAdjust;
 	//雷射修正資料
@@ -612,8 +620,8 @@ public:     //變數
 	//畫圖呼叫函式設定
 	CallFunction    CallFunction;
 
-    //紀錄例外中間點
-    CoordinateData  PassingExceptionTemp;//紀錄中間點
+	//紀錄例外中間點
+	CoordinateData  PassingExceptionTemp;//紀錄中間點
 	/********************/
 
 	//區域檢測預設值參數
@@ -653,8 +661,8 @@ public:     //運行類函式
 	void    LoadPointData();
 	//檢查命令規則(return 錯誤代碼 , ErrorAddress 為錯誤命令地址)
 	int     CheckCommandRule(int &ErrorAddress);
-    //查看所有狀態資訊
-    void    ShowAllStatus();
+	//查看所有狀態資訊
+	void    ShowAllStatus();
 public:    //設定類函式
 	//設置畫圖呼叫函式(成功return 1失敗return 0)
 	BOOL    SetDrawFunction(CDrawFunction Funtion, void* pObject);

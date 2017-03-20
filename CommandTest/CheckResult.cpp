@@ -133,8 +133,8 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
         {
 #ifdef PRINTF
             _cwprintf(L"%s\n", pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path +
-#endif
                 pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name);
+#endif
             if (m_pPictureViewDlg == NULL)
             {
                 //秀出圖片:方式ㄧ(呼叫Windowns預設程式)

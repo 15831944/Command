@@ -2013,6 +2013,10 @@ CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
 	{
 		return Command.Left(iLength);
 	}
+    /*else if (Command.Right(Command.GetLength() - iLength - 1) == L"")
+    {
+        return  Command.Right(iLength);
+    }*/
 	else
 	{
 		return CommandResolve(Command.Right(Command.GetLength() - iLength - 1), --Choose);
@@ -2024,9 +2028,15 @@ void CCommandTestDlg::Counter()
 	int a = 0, b = 0;
 	LARGE_INTEGER startTime, endTime, fre;
 	double times;
+    std::vector<int> asd;
+    int i = 0;
 	QueryPerformanceFrequency(&fre); //取得CPU頻率
 	QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
-	//doing something
+    while (i < 10000)
+    {
+        asd.push_back(i);
+        i++;
+    }
 	QueryPerformanceCounter(&endTime); //取得開機到程式執行完成經過幾個CPU Cycle
 	times = ((double)endTime.QuadPart - (double)startTime.QuadPart) / fre.QuadPart;
 #ifdef PRINTF
@@ -2347,5 +2357,23 @@ void CCommandTestDlg::OnBnClickedBtntest()
     _cwprintf(L"%d",GetLastError());*/
     //所有狀態印出
     //a.ShowAllStatus();
+    /*struct Test {
+        CString abc;
+        int iii;
+    };
+    std::vector<std::vector<Test>> ads;
+    ads.resize(50);
+    ads.at(0).resize(50, {L"",-1});
+    ads.at(20).push_back({ L"123",123 });
+    _cwprintf(L"%d,%d,%d,%s,%d,%d", ads.size(),ads.at(0).size(),ads.at(20).size(),ads.at(20).at(0).abc, ads.at(20).at(0).iii,ads.at(1).size());*/
+    StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
+    int i = 0;
+    while (i < 30000)
+    {
+        a.CommandMemory.push_back(StrBuff);
+        i++;
+    }
+       
+    ListRefresh(NULL);
 }
 

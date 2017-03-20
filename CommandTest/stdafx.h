@@ -31,8 +31,8 @@
 
 //定義開啟功能區塊
 #define MOVE
-//#define VI                                                     
-//#define LA
+#define VI                                                     
+#define LA
 #define PRINTF
 //#define LOG
 

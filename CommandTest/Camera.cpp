@@ -241,16 +241,52 @@ BOOL CCamera::PreTranslateMessage(MSG* pMsg)
             {
                 if (pMsg->wParam == VK_NUMPAD9) {
                     if (((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.x == TCXYOffsetInit && ((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.y == TCXYOffsetInit || TCOffstAdjust)//尚未執行非同軸校正
-                        MoveXYZW(0, 0, 0, -(((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseMachineMode).w) - 360);//往-行程距為360度
+                    {
+                        if (WJOGMode)
+                        {
+                            MoveXYZW(0, 0, 0, -360);//絕對位置-360
+                        }
+                        else
+                        {
+                            MoveXYZW(0, 0, 0, -(((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseMachineMode).w) - 360);//相對往-行程距為360度
+                        }
+                    }
                     else
-                        MoveXYZW(0, 0, 0, -(((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseNeedleMode).w) + NegWWorkRange);
+                    {
+                        if (WJOGMode)
+                        {
+                            MoveXYZW(0, 0, 0, NegWWorkRange);//絕對位置360
+                        }
+                        else
+                        {
+                            MoveXYZW(0, 0, 0, -(((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseNeedleMode).w) + NegWWorkRange);
+                        }
+                    }              
                     pMsg->message = WM_NULL;
                 }
                 if (pMsg->wParam == VK_NUMPAD3) {
                     if (((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.x == TCXYOffsetInit && ((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.y == TCXYOffsetInit || TCOffstAdjust)//尚未執行非同軸校正
-                        MoveXYZW(0, 0, 0, (360 - ((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseMachineMode).w));//往+行程距為360度
+                    {
+                        if (WJOGMode)
+                        {
+                            MoveXYZW(0, 0, 0, 360);//絕對位置360
+                        }
+                        else
+                        {
+                            MoveXYZW(0, 0, 0, (360 - ((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseMachineMode).w));//往+行程距為360度
+                        }
+                    }
                     else
-                        MoveXYZW(0, 0, 0, (PosWWorkRange - ((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseNeedleMode).w - 1));//最大動到359度
+                    {
+                        if (WJOGMode)
+                        {
+                            MoveXYZW(0, 0, 0, PosWWorkRange);//絕對位置360
+                        }
+                        else
+                        {
+                            MoveXYZW(0, 0, 0, (PosWWorkRange - ((CCommandTestDlg*)pMain)->a.m_Action.MCO_ReadPosition(UseNeedleMode).w));//最大動到360度
+                        }
+                    }
                     pMsg->message = WM_NULL;
                 }
             }       
@@ -299,17 +335,44 @@ void CCamera::MoveXYZW(int MoveX, int MoveY, int MoveZ, double MoveW) {
 					{
 					case 1:
                         if (!MO_ReadIsDriving(15))
-                            ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGHSpeedW, JOGHSpeedA, JOGHSpeedI, MoveW, WJOGMode);
+                        {
+                            if (WJOGMode && MoveW != 0)
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGHSpeedW * 2, JOGHSpeedA * 6, JOGHSpeedI, MoveW, WJOGMode);
+                            }
+                            else
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGHSpeedW, JOGHSpeedA, JOGHSpeedI, MoveW, WJOGMode);
+                            }
+                        }                 
 							//MO_Do3DLineMove(MoveX, MoveY, MoveZ, 80000, 1200000, 6000);
 						break;
 					case 2:
-						if (!MO_ReadIsDriving(15))
-                            ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGMSpeedW, JOGMSpeedA, JOGMSpeedI, MoveW, WJOGMode);
+                        if (!MO_ReadIsDriving(15))
+                        {
+                            if (WJOGMode && MoveW != 0)
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGMSpeedW * 2, JOGMSpeedA * 6, JOGMSpeedI, MoveW, WJOGMode);
+                            }
+                            else
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGMSpeedW, JOGMSpeedA, JOGMSpeedI, MoveW, WJOGMode);
+                            }
+                        }                 
 							//MO_Do3DLineMove(MoveX, MoveY, MoveZ, 50000, 800000, 5000);
 						break;
 					case 3:
-						if (!MO_ReadIsDriving(15))
-                            ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGLSpeedW, JOGLSpeedA, JOGLSpeedI, MoveW, WJOGMode);
+                        if (!MO_ReadIsDriving(15))
+                        {
+                            if (WJOGMode && MoveW != 0)
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGLSpeedW * 2, JOGLSpeedA * 6, JOGLSpeedI, MoveW, WJOGMode);
+                            }
+                            else
+                            {
+                                ((CCommandTestDlg*)pMain)->a.m_Action.MCO_JogMove(MoveX, MoveY, MoveZ, JOGLSpeedW, JOGLSpeedA, JOGLSpeedI, MoveW, WJOGMode);
+                            }
+                        }               
 							//MO_Do3DLineMove(MoveX, MoveY, MoveZ, 5000, 50000, 1000);
 						break;
 					default:

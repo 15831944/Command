@@ -2,14 +2,13 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/15
+*＠data 更新日期:2017/3/17
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
 //* 呼叫運動函式傳入的X,Y,Z,W值都為  "針頭座標"
 //*
 /****************************************************/
-#define PRINTF
 #define UseIsNeedle
 #ifdef UseIsNeedle
 #define USEMODE_W 0
@@ -55,6 +54,7 @@ public:     //變數
 	int     m_ThreadFlag;	  //執行緒旗標(再MoMoveThread中執行)
 	LONG	m_HomeSpeed_DEF; //原點復歸預設速度(Z,W軸)
 	DOUBLE  m_WSpeed;         //W速度變數
+	BOOL    m_IsHomingOK;     //原點復歸完成參數(沒有執行0,執行中1)
 #ifdef MOVE
     std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
 #endif
@@ -270,7 +270,7 @@ public:
     void W_Line4DtoDo(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
 	//W軸四連續插補單純移動
 	void W_Line4DtoMove(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-	//W軸校正動作--步驟1.2(步驟、驅動速度、加速度、初速度、z軸抬升高度)
+	//W軸校正動作--步驟1.2(步驟(0,1)、驅動速度、加速度、初速度、z軸抬升高度)
 	void W_Correction(BOOL bStep, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy,LONG lMoveZ = 10000);
     //讀取現在位置坐標(預設針頭座標0/機械座標1)
     AxeSpace MCO_ReadPosition(BOOL NedMah = 0);

@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/15
+*＠data 更新日期:2017/3/17
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 #include "stdafx.h"
 #include "Action.h"
@@ -36,7 +36,7 @@ CAction::CAction()
     m_OffSetScan = 500;//雷射位移補償
     m_LaserAverage = FALSE; //雷射平均(1使用/0不使用)
     m_LaserAveBuffZ = 0; // 雷射用平均暫存值(絕對位置z值)
-    m_TablelZ = 60850;//工作平台高度(Z軸總工作高度)
+    m_TablelZ = 100068;//工作平台高度(Z軸總工作高度)
     m_MachineCirMid.x = 0;//機械同心圓座標x
     m_MachineCirMid.y = 0;//機械同心圓座標y
     m_MachineOffSet.x = -99999;//機械同心圓偏移量x(預設未初始化為-99999)
@@ -52,12 +52,14 @@ CAction::CAction()
     m_HomingOffset_INIT.y = 200000;   //原點偏移量Y(機械座標)
     m_HomingOffset_INIT.z = 10000;    //原點偏移量Z(機械座標)
     m_HomingOffset_INIT.w = 0;      //原點偏移量W(機械座標)
-    m_HomingPoint.x = 200000;   //原點復歸點X(機械座標)
-    m_HomingPoint.y = 200000;   //原點復歸點Y(機械座標)
+	//機械座標為平台的機械座標，傾斜角度為90度
+    m_HomingPoint.x = 92000;   //原點復歸點X(機械座標)
+    m_HomingPoint.y = 96000;   //原點復歸點Y(機械座標)
     m_HomingPoint.z = 10000;    //原點復歸點Z(機械座標)
     m_HomingPoint.w = 0;        //原點復歸點W(機械座標)
 	m_HomeSpeed_DEF = 15000;	//原點復歸預設速度(Z,W軸)
 	m_WSpeed = 6.0;				//W軸速度調整變數(1~10)
+	m_IsHomingOK = 0;           //原點復歸參數
 #ifdef MOVE
     W_m_ptVec.clear();//W資料初使化
     LA_m_ptVec2D.clear();
@@ -799,7 +801,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, DOUBLE dAng, LONG lX2, L
             if(!m_bIsStop)
             {
                 CAction::m_ZtimeOutGlueSet = FALSE;
-                _cwprintf(_T("End關機距離的時間=%lf \n"), (lCloseTime+ lAddTime) / 1000000.0);
+              //  _cwprintf(_T("End關機距離的時間=%lf \n"), (lCloseTime+ lAddTime) / 1000000.0);
                 MO_TimerSetIntter(lCloseTime + lAddTime, 1);//計時到跳至執行序
             }
         }
@@ -831,7 +833,7 @@ void CAction::DecideLineSToE(LONG lX, LONG lY, LONG lZ, DOUBLE dAng, LONG lX2, L
             if(!m_bIsStop)
             {
                 CAction::m_ZtimeOutGlueSet = FALSE;
-                _cwprintf(_T("End關機距離的時間=%lf \n"), (lCloseTime + lAddTime) / 1000000.0);
+             //   _cwprintf(_T("End關機距離的時間=%lf \n"), (lCloseTime + lAddTime) / 1000000.0);
                 MO_TimerSetIntter(lCloseTime + lAddTime, 1);//計時到跳至執行序
             }
         }
@@ -903,32 +905,46 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
 	}
 	else
 	{
-		Circle.m_cuttingLength = cutRad;
-		Circle.CircleCutPoint(p1, p2, p3, VecBuf); //3d切圓
+		Circle.m_cuttingLength = cutRad;//切圓弧單位長
+		Circle.CircleCutPoint(p1, p2, p3, VecBuf); //3D切圓
 	}
-	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();
+	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();//W迴轉角度量(含+/-方向性)
 	size_t num = VecBuf.size();
-	DOUBLE num_Ang = 360.0 / (DOUBLE)num;
-	num_Ang = floor(num_Ang / 0.036)*0.036;
+	DOUBLE num_Ang = 360.0 / (DOUBLE)num;//依圓弧插補點數切割360度
+	num_Ang = floor(num_Ang / 0.036)*0.036;//依馬達 0.036 [deg/pulse] 轉換為合理的角度分量
 	DOUBLE rest_Ang = (360.0 - num_Ang*(DOUBLE)num)*((SumAng>0) ? 1 : -1);//剩餘的角度
 	DATA_4MOVE *pDataM = new DATA_4MOVE[num];
 	DATA_4MOVE *pDataShift = pDataM;
 	CPoint cpMpbuf(0, 0), cpMpLast(0, 0);
+	int Fin_cnt = (int)floor(fabs(rest_Ang) / 0.072);//最後個數
+	DOUBLE absAngle = MO_ReadLogicPositionW();
 
 	for (size_t i = 0; i<VecBuf.size(); i++)
 	{
-		//Get 絕對角度、機械絕對座標
-		DOUBLE absAngle = MO_ReadLogicPositionW() + (num_Ang * (i + 1)*((SumAng>0) ? 1 : -1));
+		//Get 絕對角度
+		if (Fin_cnt != 0)
+		{
+			//Get 絕對角度
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			Fin_cnt--;
+		}
+		else
+		{
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+		}
+		//Get 機械絕對座標
 		cpMpbuf = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, absAngle, 1);
 
+		//進行絕對/相對座標轉換
 		if (i == 0)
 		{
 			pDataShift->EndPX = cpMpbuf.x - MO_ReadLogicPosition(0);
 			pDataShift->EndPY = cpMpbuf.y - MO_ReadLogicPosition(1);
 			pDataShift->EndPZ = VecBuf.at(i).z - MO_ReadLogicPosition(2);
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
+			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 		}
 		else
@@ -936,14 +952,8 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
 			pDataShift->EndPX = cpMpbuf.x - cpMpLast.x;
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if (i == VecBuf.size() - 1)
-			{
-				//如果最後一筆，則加上剩下的角度
-				pDataShift->AngleW += rest_Ang;
-			}
-			_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
+			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			// TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 		}
 		cpMpLast = cpMpbuf;
@@ -952,7 +962,6 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
 	PauseDoGlue();//暫停恢復後繼續出膠(m_bIsPause=0)
 	if (!m_bIsStop)
 	{
-		AfxMessageBox(L"ready?");
 		MO_DO4Curve(pDataM, num, lWorkVelociy);
 		PreventMoveError();//防止驅動錯誤
 	}
@@ -1004,35 +1013,46 @@ void CAction::DecideArc(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
 	if (lZ1 == lZ2&&lZ1 == MO_ReadLogicPosition(2))
 	{
 		Circle.CircleCutPath_2D_unit(p1, p2, p3, false, cutRad, VecBuf);//2D切圓弧
-
 	}
 	else
 	{
-		Circle.m_cuttingLength = cutRad;
-		Circle.ArcCutPoint(p1, p2, p3, VecBuf);//3d切圓弧
+		Circle.m_cuttingLength = cutRad;//切圓弧單位長
+		Circle.ArcCutPoint(p1, p2, p3, VecBuf);//3D切圓弧
 	}
-	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();
+	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();//W迴轉角度量(含+/-方向性)
 	size_t num = VecBuf.size();
-	DOUBLE num_Ang = fabs(SumAng) / (DOUBLE)num;
-	num_Ang = floor(num_Ang / 0.036)*0.036;
-	DOUBLE rest_Ang = (fabs(SumAng) - num_Ang*(DOUBLE)num)*((SumAng>0) ? 1 : -1);//剩餘的角度
+	DOUBLE num_Ang = fabs(SumAng) / (DOUBLE)num;//依圓弧插補點數切割迴轉角度量(不含+/-方向性)
+	num_Ang = floor(num_Ang / 0.036)*0.036;//依馬達 0.036 [deg/pulse] 轉換為合理的角度分量(不含+/-方向性)
+	DOUBLE rest_Ang = (fabs(SumAng) - num_Ang*(DOUBLE)num)*((SumAng>0) ? 1 : -1);//剩餘的角度(含+/-方向性)
 	DATA_4MOVE *pDataM = new DATA_4MOVE[num];
 	DATA_4MOVE *pDataShift = pDataM;
 	CPoint cpMpbuf(0, 0), cpMpLast(0, 0);
+	int Fin_cnt = (int)floor(fabs(rest_Ang) / 0.072);//最後個數
+	DOUBLE absAngle = MO_ReadLogicPositionW();
 
 	for (size_t i = 0; i<VecBuf.size(); i++)
 	{
-		//Get 絕對角度、機械絕對座標
-		DOUBLE absAngle = MO_ReadLogicPositionW() + (num_Ang * (i + 1)*((SumAng>0) ? 1 : -1));
+		if (Fin_cnt != 0)
+		{
+			//Get 絕對角度
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			Fin_cnt--;
+		}
+		else
+		{
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+		}
+		//Get 機械絕對座標
 		cpMpbuf = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, absAngle, 1);
 
+		//進行絕對/相對座標轉換
 		if (i == 0)
 		{
-			cpMpbuf = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, MO_ReadLogicPositionW(), 1);
 			pDataShift->EndPX = cpMpbuf.x - MO_ReadLogicPosition(0);
 			pDataShift->EndPY = cpMpbuf.y - MO_ReadLogicPosition(1);
 			pDataShift->EndPZ = VecBuf.at(i).z - MO_ReadLogicPosition(2);
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
@@ -1042,11 +1062,10 @@ void CAction::DecideArc(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
 			pDataShift->EndPX = cpMpbuf.x - cpMpLast.x;
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if (i == VecBuf.size() - 1)
+			if ((i == VecBuf.size() - 2) || (i == VecBuf.size() - 1))
 			{
-				pDataShift->AngleW += rest_Ang;
+				_cwprintf(_T("lost_%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			}
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
@@ -1334,32 +1353,46 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
 	else
 	{
 		//求三維圓心、半徑、角度
-		Circle.m_cuttingLength = cutRad;
+		Circle.m_cuttingLength = cutRad;//切圓弧單位長
 		pCen = Circle.SpaceCircleCenterCalculation(dp1, dp2, dp3, dRad, angle);
 		angle = 360.0;
-		Circle.CircleCutPoint(p1, p2, p3, VecBuf); //3d切圓
+		Circle.CircleCutPoint(p1, p2, p3, VecBuf); //3D切圓
 	}
-	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();
+	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();//W迴轉角度量(含+/-方向性)
 	size_t num = VecBuf.size();
-	DOUBLE num_Ang = 360.0 / (DOUBLE)num;
-	num_Ang = floor(num_Ang / 0.036)*0.036;
+	DOUBLE num_Ang = 360.0 / (DOUBLE)num;//依圓弧插補點數切割360度
+	num_Ang = floor(num_Ang / 0.036)*0.036;//依馬達 0.036 [deg/pulse] 轉換為合理的角度分量
 	DOUBLE rest_Ang = (360.0 - num_Ang*(DOUBLE)num)*((SumAng>0) ? 1 : -1);//剩餘的角度
 	DATA_4MOVE *pDataM = new DATA_4MOVE[num];
 	DATA_4MOVE *pDataShift = pDataM;
 	CPoint cpMpbuf(0, 0), cpMpLast(0, 0);
+	int Fin_cnt = (int)floor(fabs(rest_Ang) / 0.072);//最後個數
+	DOUBLE absAngle = MO_ReadLogicPositionW();
 
 	for (size_t i = 0; i<VecBuf.size(); i++)
 	{
-		//Get 絕對角度、機械絕對座標
-		DOUBLE absAngle = MO_ReadLogicPositionW() + (num_Ang * (i + 1)*((SumAng>0) ? 1 : -1));
+		//Get 絕對角度
+		if (Fin_cnt != 0)
+		{
+			//Get 絕對角度
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			Fin_cnt--;
+		}
+		else
+		{
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+		}
+		//Get 機械絕對座標
 		cpMpbuf = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, absAngle, 1);
 
+		//進行絕對/相對座標轉換
 		if (i == 0)
 		{
 			pDataShift->EndPX = cpMpbuf.x - MO_ReadLogicPosition(0);
 			pDataShift->EndPY = cpMpbuf.y - MO_ReadLogicPosition(1);
 			pDataShift->EndPZ = VecBuf.at(i).z - MO_ReadLogicPosition(2);
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
@@ -1369,12 +1402,7 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
 			pDataShift->EndPX = cpMpbuf.x - cpMpLast.x;
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if (i == VecBuf.size() - 1)
-			{
-				pDataShift->AngleW += rest_Ang;
-			}
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			// TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 		}
@@ -1580,31 +1608,44 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
 	{
 		//求三維圓心與半徑
 		pCen = Circle.SpaceCircleCenterCalculation(dp1, dp2, dp3, dRad, angle);
-		Circle.m_cuttingLength = cutRad;
-		Circle.ArcCutPoint(p1, p2, p3, VecBuf); //3d切圓; VecBuf存針頭絕對座標
+		Circle.m_cuttingLength = cutRad;//切圓弧單位長
+		Circle.ArcCutPoint(p1, p2, p3, VecBuf); //3D切圓; VecBuf存針頭絕對座標
 	}
-	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();
+	DOUBLE SumAng = dAng2 - MO_ReadLogicPositionW();//W迴轉角度量(含+/-方向性)
 	size_t num = VecBuf.size();
-	DOUBLE num_Ang = fabs(SumAng) / (DOUBLE)num;
-	num_Ang = floor(num_Ang / 0.036)*0.036;
+	DOUBLE num_Ang = fabs(SumAng) / (DOUBLE)num;//依圓弧插補點數切割迴轉角度量
+	num_Ang = floor(num_Ang / 0.036)*0.036;//依馬達 0.036 [deg/pulse] 轉換為合理的角度分量
 	DOUBLE rest_Ang = (fabs(SumAng) - num_Ang*(DOUBLE)num)*((SumAng>0) ? 1 : -1);//剩餘的角度
 	DATA_4MOVE *pDataM = new DATA_4MOVE[num];
 	DATA_4MOVE *pDataShift = pDataM;
 	CPoint cpMpbuf(0, 0), cpMpLast(0, 0);
+	int Fin_cnt = (int)floor(fabs(rest_Ang) / 0.072);//最後個數
+	DOUBLE absAngle = MO_ReadLogicPositionW();
 
 	//機械絕對座標=>機械相對座標
 	for (size_t i = 0; i<VecBuf.size(); i++)
 	{
-		//Get 絕對角度、機械絕對座標
-		DOUBLE absAngle = MO_ReadLogicPositionW() + (num_Ang * (i + 1)*((SumAng>0) ? 1 : -1));
+		if (Fin_cnt != 0)
+		{
+			//Get 絕對角度
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang + 0.072 : -num_Ang - 0.072);
+			Fin_cnt--;
+		}
+		else
+		{
+			absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
+			pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+		}
+		//Get 機械絕對座標
 		cpMpbuf = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, absAngle, 1);
 
+		//進行絕對/相對座標轉換
 		if (i == 0)
 		{
 			pDataShift->EndPX = cpMpbuf.x - MO_ReadLogicPosition(0);
 			pDataShift->EndPY = cpMpbuf.y - MO_ReadLogicPosition(1);
 			pDataShift->EndPZ = VecBuf.at(i).z - MO_ReadLogicPosition(2);
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
@@ -1614,11 +1655,10 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
 			pDataShift->EndPX = cpMpbuf.x - cpMpLast.x;
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
-			pDataShift->AngleW = num_Ang;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if (i == VecBuf.size() - 1)
+			if ((i == VecBuf.size() - 2) || (i == VecBuf.size() - 1))
 			{
-				pDataShift->AngleW += rest_Ang;
+				_cwprintf(_T("lost_%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			}
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			// TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
@@ -1653,7 +1693,6 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
 	}
 	pDataShift = NULL;
 	delete[] pDataM;
-	delete pDataShift;
 	if (lCloseDistance == 0) //當沒有關機距離時有關機延遲就會執行
 	{
 		MO_Timer(0, 0, lCloseONDelayTime * 1000);
@@ -3370,7 +3409,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
 {
 #ifdef MOVE
 #ifdef PRINTF
-    _cwprintf(L"%s\n", L"Interrupt");
+  //  _cwprintf(L"%s\n", L"Interrupt");
 #endif
     LONG RR1X, RR1Y, RR1Z, RR1U;
     MO_ReadEvent(&RR1X, &RR1Y, &RR1Z, &RR1U);
@@ -3387,7 +3426,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
     {
 #ifdef LA
 #ifdef PRINTF
-        _cwprintf(L"%s\n", L"驅動結束中斷!");
+     //   _cwprintf(L"%s\n", L"驅動結束中斷!");
 #endif
         ((CAction *)param)->m_getHeightFlag = FALSE;
         //((CAction *)param)->m_bIsGetLAend = TRUE;
@@ -3445,7 +3484,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
     if(RR1Y & 0x0200)  //Y計時器中斷(出膠與斷膠)
     {
 #ifdef PRINTF
-        _cwprintf(L"y\n");
+    //    _cwprintf(L"y\n");
 #endif
         if(!((CAction *)param)->m_bIsStop)
         {
@@ -3456,7 +3495,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
     if(RR1Z & 0x0200)  //Z計時器中斷
     {
 #ifdef PRINTF
-        _cwprintf(L"z\n");
+  //      _cwprintf(L"z\n");
 #endif
         if(!((CAction *)param)->m_bIsStop)
         {
@@ -3487,7 +3526,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
                 {
                     ((CAction *)param)->LA_m_ptVec.push_back(((CAction *)param)->DATA_3Do[g_LaserNuCnt]);
 #ifdef PRINTF
-                    _cwprintf(L"%s\n", L"Get Point");
+     //               _cwprintf(L"%s\n", L"Get Point");
 #endif
                 }
                 g_LaserNuCnt++;
@@ -3503,7 +3542,7 @@ DWORD CAction::MoInterrupt(LPVOID param)
 UINT CAction::MoMoveThread(LPVOID param)
 {
 #ifdef MOVE
-    _cwprintf(L"%s\n", L"JogMove : W_Rotation");
+    //_cwprintf(L"%s\n", L"JogMove : W_Rotation");
     //m_ThreadFlag = 1 ------ W_Rotation
     //WangBuff         ------ dW
     //cpCirMidBuff[0].x------ lWorkVelociy;
@@ -3511,16 +3550,17 @@ UINT CAction::MoMoveThread(LPVOID param)
     //cpCirMidBuff[1].x------ lInitVelociy;
     if(((CAction *)param)->m_ThreadFlag == 1) //w軸自轉
     {
-        _cwprintf(L"%s\n", L"W_Rotation");
+    //_cwprintf(L"%s\n", L"W_Rotation");
         ((CAction *)param)->W_Rotation(((CAction *)param)->WangBuff, ((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].y, ((CAction *)param)->cpCirMidBuff[1].x);
     }
     else if(((CAction *)param)->m_ThreadFlag == 2)
     {
-        _cwprintf(L"%s\n", L"W_Rotation");
+    //_cwprintf(L"%s\n", L"GoHoming");
         //m_ThreadFlag = 2;------W_NeedleGoHoming
         //cpCirMidBuff[0].x------ Speed1;
         //cpCirMidBuff[0].y------ Speed2;
         //cpCirMidBuff[1].x------ bStep;
+		((CAction *)param)->m_IsHomingOK = 1;//原點復歸執行中
         if(!((CAction *)param)->cpCirMidBuff[1].x)
         {
             ((CAction *)param)->DecideInitializationMachine(((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].x, 15,0, 0, 0, 0);
@@ -3541,10 +3581,11 @@ UINT CAction::MoMoveThread(LPVOID param)
                 return 0;
             }
             ((CAction *)param)->DecideInitializationMachine(((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].y, 15,
-                    (((CAction *)param)->m_HomingPoint.x + ((CAction *)param)->m_MachineOffSet.x), (((CAction *)param)->m_HomingPoint.y + ((CAction *)param)->m_MachineOffSet.y), ((CAction *)param)->m_HomingPoint.z, ((CAction *)param)->m_HomingPoint.w);
-            if(!((CAction *)param)->m_bIsStop)
+                    (((CAction *)param)->m_HomingPoint.x ), (((CAction *)param)->m_HomingPoint.y), ((CAction *)param)->m_HomingPoint.z, ((CAction *)param)->m_HomingPoint.w);
+
+			if(!((CAction *)param)->m_bIsStop)
             {
-                MO_Do3DLineMove(-(((CAction *)param)->m_MachineOffSet.x), -(((CAction *)param)->m_MachineOffSet.y), 0,
+               MO_Do3DLineMove(-(((CAction *)param)->m_MachineOffSet.x), -(((CAction *)param)->m_MachineOffSet.y), 0,
                                 ((CAction *)param)->cpCirMidBuff[0].x, (((CAction *)param)->cpCirMidBuff[0].x) * 3, ((CAction *)param)->cpCirMidBuff[0].y);
                 ((CAction *)param)->PreventMoveError();
             }
@@ -3555,6 +3596,7 @@ UINT CAction::MoMoveThread(LPVOID param)
         Sleep(1);
     }
     //清除buff狀態
+	((CAction *)param)->m_IsHomingOK = 0;//原點復歸初始化
     ((CAction *)param)->m_ThreadFlag = 0;//復歸旗標狀態
     ((CAction *)param)->cpCirMidBuff[0].x = 0;
     ((CAction *)param)->cpCirMidBuff[0].y = 0;
@@ -4563,7 +4605,7 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
             PreventMoveError();
         }
         lTime = LONG(1000000 * (DOUBLE)lStartDistance / (DOUBLE)lWorkVelociy);
-        _cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
+        //_cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
         /*======計時器到觸發中斷執行出膠，使用y中斷執行================*/
         if(!m_bIsStop)
         {
@@ -4662,12 +4704,12 @@ void CAction::AttachFillType2(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
             CAction::m_ZtimeOutGlueSet = FALSE;
             if(lStartDistance > 0)
             {
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
+                //_cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
                 MO_TimerSetIntter(lTime + LONG(dCloseTime), 1);//計時到跳至執行序
             }
             else
             {
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
+                //_cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
                 MO_TimerSetIntter(LONG(dCloseTime), 1);//計時到跳至執行序
             }
         }
@@ -5039,7 +5081,7 @@ void CAction::AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, L
             if(!m_bIsStop)
             {
                 CAction::m_ZtimeOutGlueSet = FALSE;
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(timeUpGlue) + DOUBLE(dCloseTime / 1000000.0));
+                //_cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(timeUpGlue) + DOUBLE(dCloseTime / 1000000.0));
                 MO_TimerSetIntter(timeUpGlue + LONG(dCloseTime), 1);//計時到跳至執行序
             }
         }
@@ -5052,7 +5094,7 @@ void CAction::AttachFillType3(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, L
             if(!m_bIsStop)
             {
                 CAction::m_ZtimeOutGlueSet = FALSE;
-                _cwprintf(_T("End關機距離的時間=%d \n"), lCloseTime);
+                //_cwprintf(_T("End關機距離的時間=%d \n"), lCloseTime);
                 MO_TimerSetIntter(lCloseTime, 1);//計時到跳至執行序
             }
         }
@@ -5302,7 +5344,7 @@ void CAction::AttachFillType4(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ, L
         if((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+      //      _cwprintf(_T("兩端寬度過大 \n"));
 #endif
             m_ptVec.push_back(cPt1);
             break;
@@ -5506,7 +5548,7 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         }
         lTime = LONG(1000000 * (DOUBLE)lStartDistance / (DOUBLE)lWorkVelociy);
 #ifdef PRINTF
-        _cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
+        //_cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
 #endif
         /*======計時器到觸發中斷執行出膠，使用y中斷執行================*/
         if(!m_bIsStop)
@@ -5576,7 +5618,7 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         if((iBuff == 1) && (lDistance - (2 * dWidth2) < 0)) //表示使用單圓環不螺旋
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+            //_cwprintf(_T("兩端寬度過大 \n"));
 #endif
             dSumPath += M_PI*dRadius;
             iBuff = 1;
@@ -5586,7 +5628,7 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         else if((iBuff == 1) && dWidth2 == 0) //表示使用單圓環不螺旋
         {
 #ifdef PRINTF
-            _cwprintf(_T("單圓環 \n"));
+            //_cwprintf(_T("單圓環 \n"));
 #endif
             dSumPath += M_PI*dRadius;
             iBuff = 1;
@@ -5642,14 +5684,14 @@ void CAction::AttachFillType5(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
             if(lStartDistance > 0)
             {
 #ifdef PRINTF
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
+               // _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
 #endif
                 MO_TimerSetIntter(lTime + LONG(dCloseTime), 1);//計時到跳至執行序
             }
             else
             {
 #ifdef PRINTF
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
+             //   _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
 #endif
                 MO_TimerSetIntter(LONG(dCloseTime), 1);//計時到跳至執行序
             }
@@ -6139,7 +6181,7 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
         }
         lTime = CalPreglue(lStartDistance, lWorkVelociy, lAcceleration, lInitVelociy);
 #ifdef PRINTF
-        _cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
+        //_cwprintf(_T("計時器設置距離的時間=%lf \n"), DOUBLE(lTime / 1000000.0));
 #endif
         /*======計時器到觸發中斷執行出膠，使用y中斷執行================*/
         if(!m_bIsStop)
@@ -6193,14 +6235,14 @@ void CAction::AttachFillType7(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY,
             if(lStartDistance > 0)
             {
 #ifdef PRINTF
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
+           //     _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(lTime) + DOUBLE(dCloseTime / 1000000.0));
 #endif
                 MO_TimerSetIntter(lTime + LONG(dCloseTime), 1);//計時到跳至執行序
             }
             else
             {
 #ifdef PRINTF
-                _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
+            //    _cwprintf(_T("End關機距離的時間=%lf \n"), DOUBLE(dCloseTime / 1000000.0));
 #endif
                 MO_TimerSetIntter(LONG(dCloseTime), 1);//計時到跳至執行序
             }
@@ -6505,7 +6547,7 @@ void CAction::AttachFillType4_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LO
         if((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+         //   _cwprintf(_T("兩端寬度過大 \n"));
 #endif
             m_ptVec.push_back(cPt1);
             break;
@@ -6605,7 +6647,7 @@ void CAction::AttachFillType5_End(LONG &EndX, LONG &EndY, LONG lX1, LONG lY1, LO
         if((iBuff == 1) && (lDistance - (2 * dWidth2) < 0))
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+        //    _cwprintf(_T("兩端寬度過大 \n"));
 #endif
             break;
         }
@@ -6736,15 +6778,15 @@ void CAction::W_UpdateNeedleMotor_Robot(LONG lX, LONG lY, LONG lZ, DOUBLE dAngle
 	LONG idx_xVec = 0, idx_yVec = 0, idx_zVec = 0;
 	if (fmod((dAngle1 - dAngle0), (DisAngle * 1.008)) != 0.0)
 	{
-		idx_xVec = (LONG)((DOUBLE)(NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)(idx+1));
-		idx_yVec = (LONG)((DOUBLE)((NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)(idx+1)));
-		idx_zVec = (LONG)abs((DOUBLE)(NeedlePointEnd.y - NeedlePointStart.y) / (DOUBLE)(idx+1));//每個點走多遠
+		idx_xVec = (LONG)(DOUBLE(NeedlePointEnd.x - NeedlePointStart.x) / ((DOUBLE)abs(idx)+1.0));
+		idx_yVec = (LONG)(DOUBLE(NeedlePointEnd.x - NeedlePointStart.x) / ((DOUBLE)abs(idx) + 1.0));
+		idx_zVec = (LONG)fabs((DOUBLE)(NeedlePointEnd.y - NeedlePointStart.y) / ((DOUBLE)abs(idx) + 1.0));//每個點走多遠
 	}
 	else
 	{
-		idx_xVec = (LONG)((DOUBLE)(NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)idx);
-		idx_yVec = (LONG)((DOUBLE)((NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)idx));
-		idx_zVec = (LONG)abs((DOUBLE)(NeedlePointEnd.y - NeedlePointStart.y) / (DOUBLE)idx);//每個點走多遠
+		idx_xVec = (LONG)(DOUBLE(NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)abs(idx));
+		idx_yVec = (LONG)(DOUBLE(NeedlePointEnd.x - NeedlePointStart.x) / (DOUBLE)abs(idx));
+		idx_zVec = (LONG)fabs((DOUBLE)(NeedlePointEnd.y - NeedlePointStart.y) / (DOUBLE)abs(idx));//每個點走多遠
 	}
     if(idx > 767)
     {
@@ -6807,15 +6849,15 @@ void CAction::W_UpdateNeedleMotor_Needle(LONG lX, LONG lY, LONG lZ, DOUBLE dAngl
 	LONG idx_xVec = 0 , idx_yVec =0, idx_zVec =0;
 	if (fmod((dAngle1 - dAngle0),(DisAngle * 1.008)) != 0.0)
 	{
-		idx_xVec = (LONG)((DOUBLE)(lX2 - lX) / ((DOUBLE)idx+1));
-		idx_yVec = (LONG)((DOUBLE)(lY2 - lY) / ((DOUBLE)idx+1));
-		idx_zVec = (LONG)abs(((DOUBLE)(lZ2 - lZ) / ((DOUBLE)idx + 1)));//每個點走多遠
+		idx_xVec = (LONG)(DOUBLE(lX2 - lX) / ((DOUBLE)abs(idx) + 1.0));
+		idx_yVec = (LONG)(DOUBLE(lY2 - lY) / ((DOUBLE)abs(idx) + 1.0));
+		idx_zVec = (LONG)abs((DOUBLE(lZ2 - lZ) / ((DOUBLE)abs(idx) + 1.0)));//每個點走多遠
 	}
 	else
 	{
-		idx_xVec = (LONG)((DOUBLE)(lX2 - lX) / (DOUBLE)idx);
-		idx_yVec = (LONG)((DOUBLE)(lY2 - lY) / (DOUBLE)idx);
-		idx_zVec = (LONG)abs(((DOUBLE)(lZ2 - lZ) / (DOUBLE)idx));//每個點走多遠
+		idx_xVec = (LONG)(DOUBLE(lX2 - lX) / (DOUBLE)abs(idx));
+		idx_yVec = (LONG)(DOUBLE(lY2 - lY) / (DOUBLE)abs(idx));
+		idx_zVec = (LONG)abs((DOUBLE(lZ2 - lZ) / (DOUBLE)abs(idx)));//每個點走多遠
 	}
     DATA_4MOVE Data4buf = { 0 };//傳值用
     if(abs(idx) > 767)
@@ -6873,25 +6915,40 @@ void CAction::W_UpdateNeedleMotor_Needle(LONG lX, LONG lY, LONG lZ, DOUBLE dAngl
 void CAction::W_Rotation(DOUBLE dAngle, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, DOUBLE DisAngle)
 {
 #ifdef MOVE
+	if (MO_ReadLogicPositionW() == dAngle || dAngle >360 || dAngle <-360 || MO_ReadLogicPositionW() >361 || MO_ReadLogicPositionW() <-361)
+	{
+		return;
+	}
     CPoint cpNeedlePoint[2] = { 0 };//針頭座標(0使用現在位置/1使用要移動的目標位置)
     cpNeedlePoint[0] = W_GetNeedlePoint();//將當下位置轉換成針頭座標
     //cpNeedlePoint[1] = W_GetNeedlePoint(MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), dAngle, 1);//將W軸旋轉位置轉換成針頭座標
-    W_UpdateNeedleMotorOffset(cpNeedlePoint[1], dAngle);//拿到角度offset
+   // W_UpdateNeedleMotorOffset(cpNeedlePoint[1], dAngle);//拿到角度offset
     //W_UpdateNeedleMotor_Robot(MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), MO_ReadLogicPosition(2), MO_ReadLogicPositionW(), cpNeedlePoint[0].x - cpNeedlePoint[1].x, cpNeedlePoint[0].y - cpNeedlePoint[1].y, MO_ReadLogicPosition(2), dAngle, DisAngle);//切1度轉
     //W_UpdateNeedleMotor_Needle(cpNeedlePoint[0].x, cpNeedlePoint[0].y, MO_ReadLogicPosition(2), MO_ReadLogicPositionW(), cpNeedlePoint[1].x, cpNeedlePoint[1].y, MO_ReadLogicPosition(2), dAngle, DisAngle);//切1度轉
     CPoint offset(0, 0);
     DATA_4MOVE data4M = { 0 };
+	DOUBLE idx = (dAngle - MO_ReadLogicPositionW()) / (DisAngle * 1.008);
+	DOUBLE absAngle = 0;
     W_m_ptVec.clear();
-    for(int i = 0; i <= (LONG)abs(dAngle / DisAngle); i++)
+    for(int i = 0; i <=(LONG)fabs(idx); i++)
     {
-        W_UpdateNeedleMotorOffset(offset, MO_ReadLogicPositionW() + DisAngle*i*((dAngle>0) ? 1 : -1));//依角度更新offset
+		absAngle = MO_ReadLogicPositionW() + DisAngle*i* 1.008 * ((idx > 0) ? 1 : -1);
+        W_UpdateNeedleMotorOffset(offset, absAngle);//依角度更新offset
         //針頭座標轉回機械座標(絕對座標)
         data4M.EndPX = cpNeedlePoint[0].x - offset.x;
         data4M.EndPY = cpNeedlePoint[0].y - offset.y;
         data4M.EndPZ = MO_ReadLogicPosition(2);
-        data4M.AngleW = MO_ReadLogicPositionW() + DisAngle*i*((dAngle>0) ? 1 : -1);
+        data4M.AngleW = absAngle;
         W_m_ptVec.push_back(data4M);
     }
+	//最後一筆
+	W_UpdateNeedleMotorOffset(offset, dAngle);//依角度更新offset
+	data4M.EndPX = cpNeedlePoint[0].x - offset.x;
+	data4M.EndPY = cpNeedlePoint[0].y - offset.y;
+	data4M.EndPZ = MO_ReadLogicPosition(2);
+	data4M.AngleW = dAngle;
+	W_m_ptVec.push_back(data4M);
+
     if(!m_bIsStop)
     {
         W_Line4DtoMove(lWorkVelociy, lAcceleration, lInitVelociy);
@@ -7066,6 +7123,15 @@ void CAction::W_Correction(BOOL bStep, LONG lWorkVelociy, LONG lAcceleration, LO
         m_MachineCirMid.y = (LONG)round((cpCirMidBuff[0].y + cpCirMidBuff[1].y) / 2.0);//取得圓心(Y)
         m_MachineOffSet.x =  MO_ReadLogicPosition(0)- m_MachineCirMid.x;//取得offsetx
         m_MachineOffSet.y =  MO_ReadLogicPosition(1)- m_MachineCirMid.y;//取得offsety
+		//奇偶校正(RESOLUTION)
+		if (abs(m_MachineOffSet.x) % 2 == 1)
+		{
+			m_MachineOffSet.x = m_MachineOffSet.x + 1;
+		}
+		if (abs(m_MachineOffSet.y) % 2 == 1)
+		{
+			m_MachineOffSet.y = m_MachineOffSet.y + 1;
+		}
         m_MachineCirRad = (LONG)sqrt(pow(m_MachineCirMid.x - MO_ReadLogicPosition(0), 2) + pow(m_MachineCirMid.y - MO_ReadLogicPosition(1), 2));//半徑
     }
 #endif
@@ -7144,6 +7210,7 @@ void CAction::W_NeedleGoHoming(LONG Speed1, LONG Speed2,BOOL bStep)
 {
 #ifdef MOVE
     m_ThreadFlag = 2;//W_NeedleGoHoming
+	m_IsHomingOK = 0;//原點復歸初始化
     cpCirMidBuff[0].x = Speed1;
     cpCirMidBuff[0].y = Speed2;
     cpCirMidBuff[1].x = bStep;
@@ -7700,7 +7767,7 @@ void CAction::AttachFillType4_1(LONG lX1, LONG lY1, LONG lX2, LONG lY2, LONG lZ,
         if((iBuff == 1) && (dRadius - (2 * dWidth2) < 0))
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+        //    _cwprintf(_T("兩端寬度過大 \n"));
 #endif
             m_ptVec.push_back(cPt1);
             break;
@@ -7808,7 +7875,7 @@ void CAction::AttachFillType5_1(LONG lX1, LONG lY1, LONG lCenX, LONG lCenY, LONG
         if((iBuff == 1) && (lDistance - (2 * dWidth2) < 0))
         {
 #ifdef PRINTF
-            _cwprintf(_T("兩端寬度過大 \n"));
+      //      _cwprintf(_T("兩端寬度過大 \n"));
 #endif
             break;
         }
