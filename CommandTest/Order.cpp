@@ -415,12 +415,12 @@ UINT COrder::HomeThread(LPVOID pParam)
         Sleep(10);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
     }
     if (((COrder*)pParam)->GoHome.VisionGoHome)//做完賦歸移動位置
-	{   
-		((COrder*)pParam)->VisionSet.AdjustOffsetX = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetX;
-		((COrder*)pParam)->VisionSet.AdjustOffsetY = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetY;
+    {
+        ((COrder*)pParam)->VisionSet.AdjustOffsetX = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetX;
+        ((COrder*)pParam)->VisionSet.AdjustOffsetY = ((COrder*)pParam)->VisionDefault.VisionSet.AdjustOffsetY;
         ((COrder*)pParam)->m_Action.DecideVirtualPoint(-(((COrder*)pParam)->VisionSet.AdjustOffsetX), -(((COrder*)pParam)->VisionSet.AdjustOffsetY), 0, 0,
             ((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
-	}
+    }
 #endif
 	((COrder*)pParam)->RunStatusRead.GoHomeStatus = TRUE;//原點賦歸完成
 	g_pThread = NULL;
@@ -790,15 +790,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				//TODO::可選擇是否在影像模式不移動回CallSuboutine位置
 				//將機器手臂移動至呼叫時位置
 #ifdef MOVE
-				if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下才做回歸動作
-				{
+                if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下才做回歸動作
+                {
                     ((COrder*)pParam)->m_Action.DecideVirtualPoint(
                         ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
                         ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
                         ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
                         ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
                         ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
-				}
+                }
 #endif
 				if (((COrder*)pParam)->Program.SubroutineModelControlSwitch)//用在模式二進入模式三結束子程序
 				{
@@ -4785,9 +4785,9 @@ UINT COrder::CheckAction(LPVOID pParam)
                     AfxMessageBox(L"請選擇模板!");
                 }
 				//紀錄檢測結果
-				((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
-				{ L"TemplateCheck",((COrder*)pParam)->TemplateChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
-				{ 1,((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z } } });
+                ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff, {NULL,NULL},
+                { L"TemplateCheck",((COrder*)pParam)->TemplateChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
+                { 1,((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z } } });
 				//畫出檢測結果
 				if (!((COrder*)pParam)->CheckDraw())
 				{
@@ -4804,26 +4804,31 @@ UINT COrder::CheckAction(LPVOID pParam)
 				//檢測延遲
 				Sleep(VI_DCheckDelayTime);
 				//直徑檢測
-                int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->DiameterChecking.Tolerance);
-				if (tmpBeadVerify == 1)
-				{
-					((COrder*)pParam)->CheckResult.OKCount++;
-					Buff = L"OK";
-				}
-				else if(tmpBeadVerify == 0)
-				{
-					((COrder*)pParam)->CheckResult.NGCount++;
-					Buff = L"NG";
-				}
-                else
+                if (FilePathExist(((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Path))//判斷檔案路徑是否存在
                 {
-                    ((COrder*)pParam)->CheckResult.Error++;
-                    Buff = L"Err";
-                }
+                    ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Name = GetDataFileName();
+                    int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->DiameterChecking.Tolerance,
+                        ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Path, ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Name);
+                    if (tmpBeadVerify == 1)
+                    {
+                        ((COrder*)pParam)->CheckResult.OKCount++;
+                        Buff = L"OK";
+                    }
+                    else if (tmpBeadVerify == 0)
+                    {
+                        ((COrder*)pParam)->CheckResult.NGCount++;
+                        Buff = L"NG";
+                    }
+                    else
+                    {
+                        ((COrder*)pParam)->CheckResult.Error++;
+                        Buff = L"Err";
+                    }
+                }	
                 //直徑檢測訓練清除
                 VI_CircleBeadFree();
 				//紀錄檢測結果
-				((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,
+				((COrder*)pParam)->CheckFinishRecord.push_back({ Buff, ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave,
 				{ L"DiameterCheck",((COrder*)pParam)->DiameterChecking.Address, ((COrder*)pParam)->GetCommandAddress() ,
 				{ 1,((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y ,((COrder*)pParam)->FinalWorkCoordinateData.Z } } }); 
 				//畫出檢測結果
@@ -4930,7 +4935,7 @@ UINT COrder::CheckAction(LPVOID pParam)
                         AfxMessageBox(L"請選擇模板!");
                     }
 					//紀錄檢測結果
-					((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->CheckCoordinateRun });
+                    ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,{ NULL,NULL },((COrder*)pParam)->CheckCoordinateRun });
 					//畫出檢測結果
 					if (!((COrder*)pParam)->CheckDraw())
 					{
@@ -4949,26 +4954,31 @@ UINT COrder::CheckAction(LPVOID pParam)
 					//檢測延遲
 					Sleep(VI_DCheckDelayTime);
 					//直徑檢測
-                    int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance);
-					if (tmpBeadVerify == 1)
-					{
-						((COrder*)pParam)->CheckResult.OKCount++;
-						Buff = L"OK";
-					}
-					else if (tmpBeadVerify == 0)
-					{
-						((COrder*)pParam)->CheckResult.NGCount++;                   
-						Buff = L"NG";                                     
-					}
-                    else
+                    if (FilePathExist(((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Path))//判斷檔案路徑是否存在
                     {
-                        ((COrder*)pParam)->CheckResult.Error++;
-                        Buff = L"Err";
-                    }
+                        ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Name = GetDataFileName();
+                        int tmpBeadVerify = VI_CircleBeadVerify(0, ((COrder*)pParam)->IntervalDiameterCheck.at(i).Tolerance,
+                            ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Path, ((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave.Name);
+                        if (tmpBeadVerify == 1)
+                        {
+                            ((COrder*)pParam)->CheckResult.OKCount++;
+                            Buff = L"OK";
+                        }
+                        else if (tmpBeadVerify == 0)
+                        {
+                            ((COrder*)pParam)->CheckResult.NGCount++;
+                            Buff = L"NG";
+                        }
+                        else
+                        {
+                            ((COrder*)pParam)->CheckResult.Error++;
+                            Buff = L"Err";
+                        }
+                    }                
 					//直徑檢測訓練清除
 					VI_CircleBeadFree();
 					//紀錄檢測結果
-					((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->CheckCoordinateRun });
+                    ((COrder*)pParam)->CheckFinishRecord.push_back({ Buff,((COrder*)pParam)->DTCheckParamterDefault.DiameterResultSave,((COrder*)pParam)->CheckCoordinateRun });
 					//畫出檢測結果
 					if (!((COrder*)pParam)->CheckDraw())
 					{

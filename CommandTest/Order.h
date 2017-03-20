@@ -110,13 +110,6 @@ private:
 		GoHome          GoHome;
 		CleanerData     CleanerData;
 	};
-	//地址查表結構(編號、StepReap、Subroutine、Step&Sub)
-	struct AddressData {
-		std::vector<CString> Num;
-		std::vector<CString> StepRepeat;
-		std::vector<CString> Subroutine;
-		std::vector<CString> StepSub;
-	};
 	//修正表結構(命令地址、影像修正編號、雷射修正編號)
 	struct PositionModifyNumber {
 		CString Address;
@@ -256,6 +249,11 @@ private:
 		BOOL Color;
 		DOUBLE Binarization;
 	};
+    //檔案結構(檔案路徑、檔案名稱)
+    struct File {
+        CString Path;
+        CString Name;
+    };
 	//紀錄檢測結果數量結構(OK數量、NG數量、都否數量、OK重組圖、NG重組圖)
 	struct CheckResult {
 		LONG OKCount;
@@ -267,17 +265,17 @@ private:
 	//紀錄完成點檢測結構(檢測結果字串,檢測座標結構{檢測模式地址,檢測地址,檢測座標})
 	struct CheckFinishRecord {
 		CString Result;
+        File ResultFile;
 		CheckCoordinate CheckData;
 	};
+    //直徑、模板人機預設值結構(直徑檢測結果圖路徑)
+    struct DTCheckParamterDefault {
+        File DiameterResultSave;
+    };
 	//檢測設置目標結構(檢測結果目標數量、目標達成動作)
 	struct CheckSetGoal{
 		CheckResult Goal;
 		LONG Action;
-	};
-	//檔案結構(檔案路徑、檔案名稱)
-	struct File{
-		CString Path;
-		CString Name;
 	};
 	//訓練結構(儲存檔案結構、點資料、測量限制(直徑、線寬)、容許誤差量、色階、二值化界限值)
 	struct TrainData {
@@ -623,7 +621,8 @@ public:     //變數
 	//紀錄例外中間點
 	CoordinateData  PassingExceptionTemp;//紀錄中間點
 	/********************/
-
+    //直徑、模板檢測預設參數
+    DTCheckParamterDefault DTCheckParamterDefault;
 	//區域檢測預設值參數
 	AreaCheckParamterDefault AreaCheckParamterDefault;
 	//檢測結果存放
