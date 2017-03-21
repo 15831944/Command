@@ -164,29 +164,34 @@ void CPositionModify::OnNMDblclkModifylist(NMHDR *pNMHDR, LRESULT *pResult)
 void CPositionModify::OnNMRClickModifylist(NMHDR *pNMHDR, LRESULT *pResult)
 {
     LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
-    CListCtrl *CList = (CListCtrl *)GetDlgItem(IDC_MODIFYLIST);
-    CMenu menu, *pSubMenu;
-    CPoint CurPnt;
-    int ItemCount = m_Listposition.GetItemCount();//獲取項目總數
-    NM_LISTVIEW  *pEditCtrl = (NM_LISTVIEW *)pNMHDR;
+    //CListCtrl *CList = (CListCtrl *)GetDlgItem(IDC_MODIFYLIST);
+    //CMenu menu, *pSubMenu;
+    //CPoint CurPnt;
+    //int ItemCount = m_Listposition.GetItemCount();//獲取項目總數
+    //NM_LISTVIEW  *pEditCtrl = (NM_LISTVIEW *)pNMHDR;
 
-    if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
-        menu.LoadMenu(IDR_MENU3);//加入菜單
-        pSubMenu = menu.GetSubMenu(0);
-        GetCursorPos(&CurPnt);
-        pSubMenu->TrackPopupMenu(TPM_LEFTALIGN, CurPnt.x, CurPnt.y, this);//點右鍵出現的菜單位置
-    }
+    //if (pEditCtrl->iItem != -1 || pEditCtrl->iSubItem != 0) {
+    //    menu.LoadMenu(IDR_MENU3);//加入菜單
+    //    pSubMenu = menu.GetSubMenu(0);
+    //    GetCursorPos(&CurPnt);
+    //    pSubMenu->TrackPopupMenu(TPM_LEFTALIGN, CurPnt.x, CurPnt.y, this);//點右鍵出現的菜單位置
+    //}
     *pResult = 0;
 }
 //修改陣列值
 void CPositionModify::PositionModifyMO()
 {
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    int ListCount = 0;
     for (UINT i = 0; i < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.size(); i++)
     {
-        ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).Address = m_Listposition.GetItemText(i, 1);
-        ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).VisionNumber = _ttol(m_Listposition.GetItemText(i, 2));
-        ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).LaserNumber = _ttol(m_Listposition.GetItemText(i, 3));
+        for (UINT j = 0; j < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).size(); j++)
+        {
+            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).Address = m_Listposition.GetItemText(ListCount, 1);
+            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).VisionNumber = _ttol(m_Listposition.GetItemText(ListCount, 2));
+            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).LaserNumber = _ttol(m_Listposition.GetItemText(ListCount, 3));
+            ListCount++;
+        }
     }
 }
 //刷新列表
@@ -194,17 +199,21 @@ void CPositionModify::ListRefresh()
 {
     CString StrBuff;
     m_Listposition.DeleteAllItems();
-    int nCount = ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.size();
-    for (int i = 0; i < nCount; i++)
+    int ListCount = 0;
+    for (UINT i = 0; i < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.size(); i++)
     {
-        m_Listposition.InsertItem(i, NULL);
-        (i > 8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
-        m_Listposition.SetItemText(i, 0, StrBuff);
-        m_Listposition.SetItemText(i, 1, ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).Address);
-        StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).VisionNumber);
-        m_Listposition.SetItemText(i, 2, StrBuff);
-        StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).LaserNumber);
-        m_Listposition.SetItemText(i, 3, StrBuff);
+        for (UINT j = 0; j < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).size(); j++)
+        {
+            m_Listposition.InsertItem(ListCount, NULL);
+            (ListCount > 8) ? StrBuff.Format(_T("0%d"), ListCount + 1) : StrBuff.Format(_T("00%d"), ListCount + 1);
+            m_Listposition.SetItemText(ListCount, 0, StrBuff);
+            m_Listposition.SetItemText(ListCount, 1, ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).Address);
+            StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).VisionNumber);
+            m_Listposition.SetItemText(ListCount, 2, StrBuff);
+            StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).LaserNumber);
+            m_Listposition.SetItemText(ListCount, 3, StrBuff);
+            ListCount++;
+        }
     }
     int ListnCount = m_Listposition.GetItemCount();
     m_Listposition.EnsureVisible(ListnCount - 1, FALSE);//使List中一項可見(如滾動條向下滾)
@@ -212,23 +221,23 @@ void CPositionModify::ListRefresh()
 //插入
 void CPositionModify::OnInsert3()
 {
-    int istat = m_Listposition.GetSelectionMark();//獲取選擇的項
-    m_Listposition.InsertItem(istat, NULL);
-    ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.insert(((CCommandTestDlg*)pMain)->a.PositionModifyNumber.begin() + istat, { L"",-1,-1 });
-    ListRefresh();
+    //int istat = m_Listposition.GetSelectionMark();//獲取選擇的項
+    //m_Listposition.InsertItem(istat, NULL);
+    //((CCommandTestDlg*)pMain)->a.PositionModifyNumber.insert(((CCommandTestDlg*)pMain)->a.PositionModifyNumber.begin() + istat, { L"",-1,-1 });
+    //ListRefresh();
 }
 //刪除
 void CPositionModify::OnDelete3()
 {
-    int istat = m_Listposition.GetSelectionMark();//獲取選擇的項
-    ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.erase(((CCommandTestDlg*)pMain)->a.PositionModifyNumber.begin() + istat);
-    ListRefresh();
+    //int istat = m_Listposition.GetSelectionMark();//獲取選擇的項
+    //((CCommandTestDlg*)pMain)->a.PositionModifyNumber.erase(((CCommandTestDlg*)pMain)->a.PositionModifyNumber.begin() + istat);
+    //ListRefresh();
 }
 /*新增*/
 void CPositionModify::OnBnClickedBtnnew()
 {
-    ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.push_back({ L"",-1,-1 });
-    ListRefresh();
+    /*((CCommandTestDlg*)pMain)->a.PositionModifyNumber.push_back({ L"",-1,-1 });
+    ListRefresh();*/
 }
 /*清空*/
 void CPositionModify::OnBnClickedBtnclear()

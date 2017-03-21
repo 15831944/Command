@@ -589,7 +589,7 @@ public:     //變數
 	CoordinateData  VirtualCoordinateData;
 	
 	//動作修正表
-	std::vector<PositionModifyNumber> PositionModifyNumber;
+    std::vector<std::vector<PositionModifyNumber>> PositionModifyNumber;
 	//影像修正資料
 	std::vector<VisionAdjust> VisionAdjust;
 	//雷射修正資料

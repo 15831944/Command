@@ -239,7 +239,7 @@ extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
 //點膠檢測樣板建立
 extern "C" _declspec(dllexport) void VI_CircleBeadTrain(double Diameter, double MaxOffset, bool WhiteOrBlack, double Threshold);
 //點膠檢測驗證
-extern "C" _declspec(dllexport) int VI_CircleBeadVerify(bool UnitsEnable, double MaxOffset, CString Path, CString Name);
+extern "C" _declspec(dllexport) 	int VI_CircleBeadVerify(bool UnitsEnable, double MaxOffset, CString Path, CString Name);
 
 //---------------------------------------------------------------------------------------------------
 // 影像拼接重組 Registration & 影像尋邊 Edge Finder 

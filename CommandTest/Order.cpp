@@ -5115,14 +5115,14 @@ void COrder::LineGotoActionJudge(LPVOID pParam)
 			((COrder*)pParam)->LaserCount++;
 			((COrder*)pParam)->LaserAdjust.push_back({ ((COrder*)pParam)->LaserContinuousControl.ContinuousLineCount });
 			/*修改紀錄修正表*/
-			for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)//判斷表中地址是否存在
-			{
-				if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == ((COrder*)pParam)->CurrentTableAddress)
-				{      
-					((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
-					break;
-				}
-			}
+            for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress, 0))).size(); i++)//判斷表中地址是否存在
+            {
+                if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress, 0))).at(i).Address == ((COrder*)pParam)->CurrentTableAddress)
+                {
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress, 0))).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+                    break;
+                }
+            }
 #ifdef  PRINTF
 			_cwprintf(_T("LineGotoActionJudge()::執行完特殊線段雷射掃描(LP接點)\n"));
 #endif
@@ -5689,12 +5689,12 @@ void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 BOOL COrder::LaserPointDetect()
 {
 	CString CurrentAddress = GetCommandAddress();
-	for (UINT i = 0; i < PositionModifyNumber.size(); i++)
-	{
-		if (PositionModifyNumber.at(i).Address == GetCommandAddress())
-		{
-			if (PositionModifyNumber.at(i).LaserNumber != -1)
-			{
+    for (UINT i = 0; i < PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress, 0))).size(); i++)
+    {
+        if (PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress, 0))).at(i).Address == GetCommandAddress())
+        {
+            if (PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress, 0))).at(i).LaserNumber != -1)
+            {
 				return TRUE;//該地址點檢查過               
 			}
 		}
@@ -5799,112 +5799,193 @@ void COrder::PassingException(LPVOID pParam)
 /*選擇影像修正*/
 void COrder::ChooseVisionModify(LPVOID pParam) {
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-	for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)
-	{
-		if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
-		{
-			if (((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber == -1)
-			{
-				((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber = 0;
-			}
-			((COrder*)pParam)->VisionOffset = ((COrder*)pParam)->VisionAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber).VisionOffset;
-		}
-	}
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber = 0;
+            }
+            ((COrder*)pParam)->VisionOffset = ((COrder*)pParam)->VisionAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber).VisionOffset;
+        }
+    }
 }
 /*選擇雷射修正*/
 void COrder::ChooseLaserModify(LPVOID pParam){
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-	for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)
-	{
-		if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
-		{
-			if (((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber == -1)
-			{
-				((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber = 0;
-			}
-			((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber).LaserMeasureHeight;
-		}
-	}
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber = 0;
+            }
+            ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber).LaserMeasureHeight;
+        }
+    }
 }
 /*紀錄修正表*/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-	if (((COrder*)pParam)->PositionModifyNumber.size())//修正表有值
-	{ 
-		for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)//判斷表中地址是否存在
-		{
-			if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
-			{
-				if (((COrder*)pParam)->ModelControl.Mode == 1)//目前是影像模式
-				{
-					if (((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber == -1)//且此地址影像表沒有值
-					{
-						((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
-					}            
-				}
-				else if (((COrder*)pParam)->ModelControl.Mode == 2)
-				{
-					if (((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber == -1)//且此地址雷射表沒有值
-					{
-						((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
-					}
-				}
-				((COrder*)pParam)->CurrentTableAddress = StrBuff;//紀錄表中目前的地址
+    if (((COrder*)pParam)->PositionModifyNumber.size() - 1 < (UINT)_ttol(CommandResolve(StrBuff, 0)))//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
+    {
+        ((COrder*)pParam)->PositionModifyNumber.resize(((COrder*)pParam)->PositionModifyNumber.size() + 10000);
+    }
+    //判斷雜湊表
+    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size() == 0)//尚未新增過
+    {
+        if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
+        {
+            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, -1, -1 });
+        }
+        else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+        {
+            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+        }
+        else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
+        {
+            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+        }
+        ((COrder*)pParam)->CurrentTableAddress = StrBuff;
 #ifdef PRINTF
-				_cwprintf(L"RecordCorrectionTable()::地址%s成功加入數值:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(i).Address, ((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber, ((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber);
+        _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().Address,
+            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().VisionNumber,
+            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().LaserNumber);
 #endif
-				break;
-			} 
-			else if (i == ((COrder*)pParam)->PositionModifyNumber.size() - 1)//地址不存在表中
-			{
-				if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
-				{
-					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, -1, -1 });
-				}
-				else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
-				{
-					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
-				}
-				else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
-				{
-					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
-				}
-				((COrder*)pParam)->CurrentTableAddress = StrBuff;
+    }
+    else//新增過
+    {
+        for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)//尋找是否相同地址
+        {
+            if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)//已經新增過相同地址
+            {
+                if (((COrder*)pParam)->ModelControl.Mode == 1)//目前是影像模式
+                {
+                    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber == -1)//且此地址影像表沒有值
+                    {
+                        ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
+                    }
+                }
+                else if (((COrder*)pParam)->ModelControl.Mode == 2)//目前是雷射模式時
+                {
+                    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber == -1)//且此地址雷射表沒有值
+                    {
+                        ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+                    }
+                }
+                ((COrder*)pParam)->CurrentTableAddress = StrBuff;//紀錄表中目前的地址
 #ifdef PRINTF
-				_cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.back().Address, ((COrder*)pParam)->PositionModifyNumber.back().VisionNumber, ((COrder*)pParam)->PositionModifyNumber.back().LaserNumber);
+                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入數值:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address,
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber,
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber);
 #endif
-				break;
-			}
-		}   
-	}
-	else
-	{
-		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
-		{
-			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, -1, -1 });
+                break;
+            }
+            else if (i == ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size() - 1)//地址不存在表中(step 或 sub 時發生)
+            {
+                if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
+                {
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff,-1,-1 });
+                }
+                else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+                {
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+                }
+                else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
+                {
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+                }
+                ((COrder*)pParam)->CurrentTableAddress = StrBuff;
 #ifdef PRINTF
-			_cwprintf(L"RecordCorrectionTable()::進入建表模式增加PositionModifNumber\n");
+                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().Address,
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().VisionNumber,
+                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().LaserNumber);
 #endif
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
-		{
-			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
-#ifdef PRINTF
-			_cwprintf(L"RecordCorrectionTable()::進入影像模式增加PositionModifNumber\n");
-#endif
-		}
-		else if (((COrder*)pParam)->ModelControl.Mode == 2)//跳過影像模式直接雷射模式
-		{
-			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, 0, ((COrder*)pParam)->LaserCount });
-#ifdef PRINTF
-			_cwprintf(L"RecordCorrectionTable()::跳過影像進入雷射模式增加PositionModifNumber\n");
-#endif
-		}
-#ifdef PRINTF
-		_cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.back().Address, ((COrder*)pParam)->PositionModifyNumber.back().VisionNumber, ((COrder*)pParam)->PositionModifyNumber.back().LaserNumber);
-#endif
-	}
+                break;
+            }
+        }
+    }
 
+
+
+    /*舊版2017/03/20以前*/
+//	if (((COrder*)pParam)->PositionModifyNumber.size())//修正表有值
+//	{ 
+//		for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)//判斷表中地址是否存在
+//		{
+//			if (((COrder*)pParam)->PositionModifyNumber.at(i).Address == StrBuff)
+//			{
+//				if (((COrder*)pParam)->ModelControl.Mode == 1)//目前是影像模式
+//				{
+//					if (((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber == -1)//且此地址影像表沒有值
+//					{
+//						((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
+//					}            
+//				}
+//				else if (((COrder*)pParam)->ModelControl.Mode == 2)
+//				{
+//					if (((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber == -1)//且此地址雷射表沒有值
+//					{
+//						((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+//					}
+//				}
+//				((COrder*)pParam)->CurrentTableAddress = StrBuff;//紀錄表中目前的地址
+//#ifdef PRINTF
+//				_cwprintf(L"RecordCorrectionTable()::地址%s成功加入數值:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(i).Address, ((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber, ((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber);
+//#endif
+//				break;
+//			} 
+//			else if (i == ((COrder*)pParam)->PositionModifyNumber.size() - 1)//地址不存在表中
+//			{
+//				if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
+//				{
+//					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, -1, -1 });
+//				}
+//				else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+//				{
+//					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+//				}
+//				else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
+//				{
+//					((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+//				}
+//				((COrder*)pParam)->CurrentTableAddress = StrBuff;
+//#ifdef PRINTF
+//				_cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.back().Address, ((COrder*)pParam)->PositionModifyNumber.back().VisionNumber, ((COrder*)pParam)->PositionModifyNumber.back().LaserNumber);
+//#endif
+//				break;
+//			}
+//		}   
+//	}
+//	else
+//	{
+//		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
+//		{
+//			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, -1, -1 });
+//#ifdef PRINTF
+//			_cwprintf(L"RecordCorrectionTable()::進入建表模式增加PositionModifNumber\n");
+//#endif
+//		}
+//		else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
+//		{
+//			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+//#ifdef PRINTF
+//			_cwprintf(L"RecordCorrectionTable()::進入影像模式增加PositionModifNumber\n");
+//#endif
+//		}
+//		else if (((COrder*)pParam)->ModelControl.Mode == 2)//跳過影像模式直接雷射模式
+//		{
+//			((COrder*)pParam)->PositionModifyNumber.push_back({ StrBuff, 0, ((COrder*)pParam)->LaserCount });
+//#ifdef PRINTF
+//			_cwprintf(L"RecordCorrectionTable()::跳過影像進入雷射模式增加PositionModifNumber\n");
+//#endif
+//		}
+//#ifdef PRINTF
+//		_cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.back().Address, ((COrder*)pParam)->PositionModifyNumber.back().VisionNumber, ((COrder*)pParam)->PositionModifyNumber.back().LaserNumber);
+//#endif
+//	}
 }
 /**************************************************************************命令處理區塊***************************************************************************/
 /*命令分解*/
@@ -6483,7 +6564,7 @@ CString COrder::CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE 
 CString COrder::GetCommandAddress()
 {
 	CString StrBuff, Temp;
-	StrBuff.Format(_T("%d"), RunData.RunCount.at(RunData.MSChange.at(RunData.StackingCount)));
+	StrBuff.Format(_T("%d"), RunData.RunCount.at(RunData.MSChange.at(RunData.StackingCount)));//獲取命令編號
 	if (RepeatData.StepRepeatNum.size())//有StepRepeat時地址紀錄的方式
 	{
 		for (UINT i = 0; i < RepeatData.StepRepeatNum.size(); i++)
@@ -6536,10 +6617,7 @@ void COrder::DecideInit()
 	m_Action.g_bIsStop = FALSE;
 	m_Action.g_bIsPause = FALSE;
 	//程序狀態堆疊
-	InitData.Status = FALSE;
-	InitData.X = 0;
-	InitData.Y = 0;
-	InitData.Z = 0;
+    InitData = { 0,0,0,0 };
 	ArcData.push_back(InitData);
 	CircleData1.push_back(InitData);
 	CircleData2.push_back(InitData);
@@ -6618,7 +6696,8 @@ void COrder::DecideInit()
 		_cwprintf(L"DecideInit()::我有進入歸零PositionModifyNumber&&LaserAdjust\n");
 #endif
 		m_Action.LA_Clear();//清除連續線段陣列
-		PositionModifyNumber.clear();   
+		PositionModifyNumber.clear();
+        PositionModifyNumber.resize(10000);//預設resize 10000筆資料
 		LaserAdjust.clear();
 		LaserAdjust.push_back({ -999999999 });
 	}  
@@ -6716,7 +6795,7 @@ void COrder::DecideClear()
 #ifdef PRINTF
 		_cwprintf(L"DecideClear()::我有進入清除PositionModifyNumber&&LaserAdjust\n");
 #endif
-		PositionModifyNumber.clear();
+		PositionModifyNumber.clear();//清除修正表
 		LaserAdjust.clear();      
 	}
 	VisionAdjust.clear();
@@ -8356,11 +8435,14 @@ void COrder::SavePointData(LPVOID pParam)
 			ar << Distinguish1;
 			for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.size(); i++)
 			{
-				ar << ((COrder*)pParam)->PositionModifyNumber.at(i).Address;
-				StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).LaserNumber);
-				ar << StrBuff;
-				StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).VisionNumber);
-				ar << StrBuff;
+                for (UINT j = 0; j < ((COrder*)pParam)->PositionModifyNumber.at(i).size(); j++)
+                {
+                    ar << ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).Address;
+                    StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).LaserNumber);
+                    ar << StrBuff;
+                    StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).VisionNumber);
+                    ar << StrBuff;
+                }
 			}
 			//高度訊息
 			ar << Distinguish2;
@@ -8393,6 +8475,7 @@ void COrder::LoadPointData()
 	//清空所有陣列
 	CommandMemory.clear();
 	PositionModifyNumber.clear();
+    PositionModifyNumber.resize(10000);
 	LaserAdjust.clear();
 	m_Action.LA_Clear();
 	//判斷字串
@@ -8409,6 +8492,7 @@ void COrder::LoadPointData()
 	{
 		CFile File;
 		CString StrBuff;
+        CString Address;
 		if (File.Open(FileDlg.GetPathName(), CFile::modeRead))
 		{
 			CArchive ar(&File, CArchive::load);//讀取檔案
@@ -8425,20 +8509,25 @@ void COrder::LoadPointData()
 				}
 				else if (Control == 2)
 				{
-					Count++;
-					if (Count == 1)
-					{
-						PositionModifyNumber.push_back({ StrBuff,0,0 });
-					}
-					else if (Count == 2)
-					{
-						PositionModifyNumber.back().LaserNumber = _ttoi(StrBuff);
-					}
-					else if (Count == 3)
-					{
-						PositionModifyNumber.back().VisionNumber = -1;
-						Count = 0;
-					}
+                    Count++;
+                    if (Count == 1)
+                    {
+                        Address = StrBuff;
+                        if ((UINT)_ttol(CommandResolve(Address, 0)) > PositionModifyNumber.size() - 1)
+                        {
+                            PositionModifyNumber.resize(PositionModifyNumber.size() + 10000);
+                        }
+                        PositionModifyNumber.at(_ttol(CommandResolve(Address, 0))).push_back({ StrBuff,0,0 });
+                    }
+                    else if (Count == 2)
+                    {
+                        PositionModifyNumber.at(_ttol(CommandResolve(Address, 0))).back().LaserNumber = _ttoi(StrBuff);
+                    }
+                    else if (Count == 3)
+                    {
+                        PositionModifyNumber.at(_ttol(CommandResolve(Address, 0))).back().VisionNumber = -1;
+                        Count = 0;
+                    }
 				}
 				else if (Control == 3)
 				{
@@ -8830,11 +8919,14 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 			{
 				if (IntervalQueue.at(i).End > IntervalQueue.at(j).End)
 				{
+                    if (IntervalQueue.at(j).End > IntervalQueue.at(i).Begin)
+                    {
 #ifdef PRINTF
-					_cwprintf(L"%s和%s交錯\n", CommandResolve(IntervalQueue.at(i).Command, 0), CommandResolve(IntervalQueue.at(j).Command, 0));
+                        _cwprintf(L"%s和%s交錯\n", CommandResolve(IntervalQueue.at(i).Command, 0), CommandResolve(IntervalQueue.at(j).Command, 0));
 #endif
-					ErrorAddress = IntervalQueue.at(i).Begin + 1;
-					return 11;//區間形成交錯
+                        ErrorAddress = IntervalQueue.at(i).Begin + 1;
+                        return 11;//區間形成交錯
+                    }
 				}
 				/*else if(IntervalQueue.at(i).End == IntervalQueue.at(j).End)不用判斷 因為SubroutineEnd可以相同*/
 			}
