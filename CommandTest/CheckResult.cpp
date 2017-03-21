@@ -83,7 +83,7 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"OK")
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(0, 255, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"NG")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 102, 0));//橘
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 108, 0));//橘
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"Err")
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255,0,0));
         }   
@@ -164,6 +164,39 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
                 m_pPictureViewDlg = new CPictureViewDlg();
                 ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Path;
                 ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.AreaCheckFinishRecord.at(pEditCtrl->iItem - pCCommandTestDlg->a.CheckFinishRecord.size()).ResultImage.Name;
+                m_pPictureViewDlg->Create(IDD_DIALOG13, this);
+                m_pPictureViewDlg->ShowWindow(SW_SHOW);
+            }
+        }
+        else if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"DiameterCheck")
+        {
+            if (m_pPictureViewDlg == NULL)
+            {
+#ifdef PRINTF
+                _cwprintf(L"%s\n", pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path +
+                    pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name);
+#endif
+                m_pPictureViewDlg = new CPictureViewDlg();
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
+                m_pPictureViewDlg->Create(IDD_DIALOG13, this);
+                m_pPictureViewDlg->ShowWindow(SW_SHOW);
+            }
+            else
+            {
+                //秀出圖片:方式二(使用MIL做好的功能)
+                if (::IsWindow(((CPictureViewDlg*)m_pPictureViewDlg)->m_hWnd))//判斷視窗是否有銷毀
+                {
+                    ((CPictureViewDlg*)m_pPictureViewDlg)->OnCancel();
+                }
+                if (m_pPictureViewDlg != NULL)
+                {
+                    delete (CDialog*)m_pPictureViewDlg;
+                    m_pPictureViewDlg = NULL;
+                }
+                m_pPictureViewDlg = new CPictureViewDlg();
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
+                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
                 m_pPictureViewDlg->Create(IDD_DIALOG13, this);
                 m_pPictureViewDlg->ShowWindow(SW_SHOW);
             }

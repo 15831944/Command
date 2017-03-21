@@ -5937,7 +5937,7 @@ void COrder::ChooseLaserModify(LPVOID pParam){
 /*紀錄修正表*/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-    if (((COrder*)pParam)->PositionModifyNumber.size() - 1 < _ttol(CommandResolve(StrBuff, 0)))//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
+    if (((COrder*)pParam)->PositionModifyNumber.size() - 1 < (UINT)_ttol(CommandResolve(StrBuff, 0)))//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
     {
         ((COrder*)pParam)->PositionModifyNumber.resize(((COrder*)pParam)->PositionModifyNumber.size() + 10000);
     }
@@ -8619,7 +8619,7 @@ void COrder::LoadPointData()
 					if (Count == 1)
 					{
                         Address = StrBuff;
-                        if (_ttol(CommandResolve(Address, 0)) > PositionModifyNumber.size() - 1)
+                        if ((UINT)_ttol(CommandResolve(Address, 0)) > PositionModifyNumber.size() - 1)
                         {
                             PositionModifyNumber.resize(PositionModifyNumber.size() + 10000);
                         }

@@ -904,16 +904,16 @@ void CCommandTestDlg::OnBnClickedBtncheck()
     if (m_pCheckResultDlg == NULL)
     {
         //測試用    
-        /*static int count = 0;
+        static int count = 0;
         if (count == 0)
         {
             int i = 0;
             while (i < 10)
             {
                 if (i % 2)
-                    a.CheckFinishRecord.push_back({ L"OK",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
+                    a.CheckFinishRecord.push_back({ L"OK",{ GetCurrentPath(L"\\CheckResult\\"),L"Result_20170202_17_03_14_885" }, { L"DiameterCheck",L"1",L"2",{ 0,490009,500000,666 } } });
                 else
-                    a.CheckFinishRecord.push_back({ L"Err",{ L"TemplateCheck",L"1",L"2",{ 0,490009,500000,666 } } });
+                    a.CheckFinishRecord.push_back({ L"Err",{ GetCurrentPath(L"\\CheckResult\\"),L"Result_20170202_17_03_14_885" }, { L"DiameterCheck",L"1",L"2",{ 0,490009,500000,666 } } });
                 i++;
             }
             i = 0;
@@ -926,7 +926,7 @@ void CCommandTestDlg::OnBnClickedBtncheck()
                 i++;
             }
             count++;
-        }*/
+        }
         m_pCheckResultDlg = new CCheckResult();
         //模態式對話框
         //m_pCheckResultDlg->DoModal();

@@ -36,6 +36,8 @@ extern "C" _declspec(dllexport) void VI_CameraInit(bool color, bool move);
 extern "C" _declspec(dllexport) void VI_GetCameraFrameRate(int &FrameRate);
 //取得攝影機 像素大小、解析度
 extern "C" _declspec(dllexport) void VI_GetCameraResolution(int &PixelWidth, int &PixelHeight);
+//攝影機影像,像素單位設置
+extern "C" _declspec(dllexport) void VI_DiaplayImageUnitSetup(BYTE DisplayID);
 //Display 視窗顯示位置配置:move:1->移至小視窗用
 extern "C" _declspec(dllexport) void VI_DisplayAlloc(CWnd* DisplayWindow, bool move);
 //顯示位置配置。搭配VI_VisionAlloc使用。用於初始化不配置CWnd* DisplayWindow
@@ -72,6 +74,8 @@ extern "C" _declspec(dllexport) void VI_SetPatternMatch(void* MilModel, bool acc
 extern "C" _declspec(dllexport) void VI_SetSearchAngle(void* MilModel, double startangle, double endangle);
 //設定PatternMatch 搜尋範圍，視野中心位置，指定寬度、高度
 extern "C" _declspec(dllexport) void VI_SetSearchRange(void* MilModel, int width, int height);
+//設定PatternMatch 搜尋範圍，OffsetX、OffsetY，寬度、高度
+extern "C" _declspec(dllexport) void VI_SetSearchScope(void* MilModel, int offsetX, int offsetY, int width, int height);
 //搜尋標記，依模式功能
 extern "C" _declspec(dllexport) bool VI_FindMarkProc(BYTE mode, void* MilModel, double &X, double &Y, double &Angle, double &Score);
 //搜尋標記，然後繪製其位置
@@ -235,7 +239,7 @@ extern "C" _declspec(dllexport) void VI_MatrixModelFree(void* Model[], int Num);
 //點膠檢測樣板建立
 extern "C" _declspec(dllexport) void VI_CircleBeadTrain(double Diameter, double MaxOffset, bool WhiteOrBlack, double Threshold);
 //點膠檢測驗證
-extern "C" _declspec(dllexport) int VI_CircleBeadVerify(bool UnitsEnable, double MaxOffset);
+extern "C" _declspec(dllexport) int VI_CircleBeadVerify(bool UnitsEnable, double MaxOffset, CString Path, CString Name);
 
 //---------------------------------------------------------------------------------------------------
 // 影像拼接重組 Registration & 影像尋邊 Edge Finder 
@@ -283,14 +287,15 @@ extern "C" _declspec(dllexport) bool VI_LoadMosaicImageEdgeFind(CString path, CS
 // 區域Bead檢測 (單點點膠直徑和塗膠線段膠寬) 
 //---------------------------------------------------------------------------------------------------
 //區域Bead檢測：單點點膠直徑，檢測訓練
-extern "C" _declspec(dllexport) void VI_ImagesCircleBeadTrain(CString DotPath, CString DotName, CPoint DotPosition[], double Diameter, double MaxOffset, bool WhiteOrBlack, double Threshold, int DotPositionNum);
+extern "C" _declspec(dllexport) bool VI_ImagesCircleBeadTrain(CString DotPath, CString DotName, CPoint DotPosition[], double Diameter, double MaxOffset, bool WhiteOrBlack, double Threshold, int DotPositionNum);
 //區域Bead檢測：塗膠線段膠寬，檢測訓練
-extern "C" _declspec(dllexport) void VI_ImagesLineBeadTrain(CString LinePath, CString LineName, CPoint LinePosition[], double LineWidth, double MaxOffset, bool WhiteOrBlack, int LinePositionNum);
+extern "C" _declspec(dllexport) bool VI_ImagesLineBeadTrain(CString LinePath, CString LineName, CPoint LinePosition[], double LineWidth, double MaxOffset, bool WhiteOrBlack, int LinePositionNum);
 //區域Bead檢測與驗證
 extern "C" _declspec(dllexport) bool VI_AreaBeadVerify(CString ImagePath, CString ImageName, CString DotPath, CString DotName, CString LinePath, CString LineName, CString ResultImagePath, CString ResultImageName, int Mode);
 
 
 //===================================================================================================
+
 //------------------------------------------------------------------------------
 // CVisionApp
 // 這個類別的實作請參閱 Vision.cpp
