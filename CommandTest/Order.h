@@ -415,7 +415,7 @@ private:
 		std::vector<UINT> LoopAddressNum;
 		std::vector<UINT> LoopCount;
 		CString StepRepeatLabel;
-		CString StepRepeatLabelPrevious;
+		CString StepRepeatLabelPrevious;//目前沒用到
 		BOOL StepRepeatLabelLock;
 		UINT StepRepeatAddress;
 		BOOL AddInStepRepeatSwitch;
@@ -429,6 +429,8 @@ private:
 		std::vector<int> StepRepeatCountY;
 		std::vector<StepRepeatBlockData> StepRepeatBlockData;
 		std::vector<IntervalData> StepRepeatIntervel;
+        std::vector<UINT> StepRepeatTotalX;//只有用在建立修正表時
+        std::vector<UINT> StepRepeatTotalY;//只有用在建立修正表時
 	};
 	//程序循環運行結構(控制循環開關、循環次數、循環計數、最大運行次數(設 -1 =沒有限制))
 	struct RunLoopData {      
@@ -444,6 +446,8 @@ private:
 		void* pObject;
 	};
 private:    //變數
+    HANDLE          ThreadEvent;
+    HANDLE          OutThreadEvent;
 	HANDLE          wakeEvent;
 	/*運行時間計算*/
 	LARGE_INTEGER   startTime, endTime, fre;
@@ -498,7 +502,9 @@ private:    //函式
 	/*資料表處理區塊*/
 	static  void    ChooseVisionModify(LPVOID pParam);//選擇影像修正值
 	static  void    ChooseLaserModify(LPVOID pParam);//選擇雷射修正值
-	static  void    RecordCorrectionTable(LPVOID pParam);//紀錄修正表
+	static  void    RecordCorrectionTable(LPVOID pParam);
+    void            GetHashAddress(CString CommandAddress, UINT &D1, UINT &D2);//獲取hash表地址
+    //紀錄修正表
 	//記錄運動修正表
 	/*命令處理*/
 	static  CString CommandResolve(CString Command, UINT Choose);//命令分解
@@ -592,7 +598,7 @@ public:     //變數
 	CoordinateData  VirtualCoordinateData;
 	
 	//動作修正表
-	std::vector<std::vector<PositionModifyNumber>> PositionModifyNumber;
+	std::vector<std::vector<std::vector<PositionModifyNumber>>> PositionModifyNumber;
 	//影像修正資料
 	std::vector<VisionAdjust> VisionAdjust;
 	//雷射修正資料

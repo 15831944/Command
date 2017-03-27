@@ -229,9 +229,9 @@ BOOL CCommandTestDlg::OnInitDialog()
     MO_SetHardLim(15, 1);//極限開啟
     MO_SetDecOK(1);//開啟減速有效
     MO_InterruptCase(1, 1, a.m_Action.MoInterrupt, a.m_Action.pAction);//中斷開啟
-    MO_SetSoftLim(15, 1);//軟極限開啟
-    MO_SetCompSoft(1, -500000, -500000, -120000, -370);//負-
-    MO_SetCompSoft(0, 500000, 500000, 120000, 370); //正-0, 150000, 190000, 80000
+    //MO_SetSoftLim(15, 1);//軟極限開啟
+    //MO_SetCompSoft(1, -500000, -500000, -120000, -370);//負-
+    //MO_SetCompSoft(0, 500000, 500000, 120000, 370); //正-0, 150000, 190000, 80000
     a.m_Action.LA_SetInit();//雷射開啟
 #endif
 	//命令列表
@@ -2031,12 +2031,8 @@ void CCommandTestDlg::Counter()
     std::vector<int> asd;
     int i = 0;
 	QueryPerformanceFrequency(&fre); //取得CPU頻率
-	QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
-    while (i < 10000)
-    {
-        asd.push_back(i);
-        i++;
-    }
+	QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle  
+    //...do something
 	QueryPerformanceCounter(&endTime); //取得開機到程式執行完成經過幾個CPU Cycle
 	times = ((double)endTime.QuadPart - (double)startTime.QuadPart) / fre.QuadPart;
 #ifdef PRINTF
@@ -2068,7 +2064,8 @@ void CCommandTestDlg::SaveParameter()
             a.m_Action.m_HeightLaserZero << 
             a.m_Action.m_TablelZ << 
             a.m_Action.m_MachineOffSet.x <<
-            a.m_Action.m_MachineOffSet.y;
+            a.m_Action.m_MachineOffSet.y << 
+            a.m_Action.m_MachineCirRad;
 	}
 	File.Close();
 }
@@ -2097,7 +2094,8 @@ void CCommandTestDlg::LoadParameter()
             a.m_Action.m_HeightLaserZero >> 
             a.m_Action.m_TablelZ >>
             a.m_Action.m_MachineOffSet.x >>
-            a.m_Action.m_MachineOffSet.y;
+            a.m_Action.m_MachineOffSet.y >>
+            a.m_Action.m_MachineCirRad;
 		File.Close();
 	}
 	TipOffset.x = a.VisionDefault.VisionSet.AdjustOffsetX;
@@ -2357,23 +2355,34 @@ void CCommandTestDlg::OnBnClickedBtntest()
     _cwprintf(L"%d",GetLastError());*/
     //所有狀態印出
     //a.ShowAllStatus();
-    /*struct Test {
+
+
+    struct Test {
         CString abc;
         int iii;
     };
-    std::vector<std::vector<Test>> ads;
-    ads.resize(50);
+    //std::vector<std::vector<std::vector<Test>>> ads;
+    ////ads.reserve(500000);
+    //ads.resize(50000);
+    //ads.at(48).resize(1);
+    //ads.at(48).at(0).resize(100);
+    //ads.at(48).at(0).at(0) = {L"123",123};
+    //_cwprintf(L"%d", ads.size());
+    /*ads.resize(50);
     ads.at(0).resize(50, {L"",-1});
     ads.at(20).push_back({ L"123",123 });
-    _cwprintf(L"%d,%d,%d,%s,%d,%d", ads.size(),ads.at(0).size(),ads.at(20).size(),ads.at(20).at(0).abc, ads.at(20).at(0).iii,ads.at(1).size());*/
-    StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
+    _cwprintf(L"%d,%d,%d,%s,%d,%d", ads.size(),ads.at(0).size(),ads.at(20).size(),ads.at(20).at(0).abc, ads.at(20).at(0).iii,ads.at(1).size());
+*/
+
+    /*StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
     int i = 0;
-    while (i < 30000)
+    a.CommandMemory.reserve(50000);
+    while (i < 50000)
     {
         a.CommandMemory.push_back(StrBuff);
         i++;
     }
        
-    ListRefresh(NULL);
+    ListRefresh(NULL);*/   
 }
 

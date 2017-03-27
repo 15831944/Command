@@ -641,7 +641,7 @@ void CCamera::OnBnClickedBtnwregulate()
     else if (StrBuff == L"W校正2")
     {
         ((CCommandTestDlg*)pMain)->a.m_Action.W_Correction(1, AdjustSpeedW, AdjustSpeedA, AdjustSpeedI);
-        ((CCommandTestDlg*)pMain)->a.Home(0);
+        //((CCommandTestDlg*)pMain)->a.Home(0);
         TCOffstAdjust = FALSE;
         SetDlgItemText(IDC_BTNWREGULATE, _T("W校正"));
         StrBuff.Format(_T("TCX:%d"), ((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.x);

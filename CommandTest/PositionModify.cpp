@@ -187,10 +187,13 @@ void CPositionModify::PositionModifyMO()
     {
         for (UINT j = 0; j < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).size(); j++)
         {
-            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).Address = m_Listposition.GetItemText(ListCount, 1);
-            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).VisionNumber = _ttol(m_Listposition.GetItemText(ListCount, 2));
-            ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).LaserNumber = _ttol(m_Listposition.GetItemText(ListCount, 3));
-            ListCount++;
+            for (UINT k = 0; k < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).size(); k++)
+            {
+                ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).Address = m_Listposition.GetItemText(ListCount, 1);
+                ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).VisionNumber = _ttol(m_Listposition.GetItemText(ListCount, 2));
+                ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).LaserNumber = _ttol(m_Listposition.GetItemText(ListCount, 3));
+                ListCount++;
+            }
         } 
     }
 }
@@ -204,15 +207,18 @@ void CPositionModify::ListRefresh()
     {
         for (UINT j = 0; j < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).size(); j++)
         {
-            m_Listposition.InsertItem(ListCount, NULL);
-            (ListCount > 8) ? StrBuff.Format(_T("0%d"), ListCount + 1) : StrBuff.Format(_T("00%d"), ListCount + 1);
-            m_Listposition.SetItemText(ListCount, 0, StrBuff);
-            m_Listposition.SetItemText(ListCount, 1, ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).Address);
-            StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).VisionNumber);
-            m_Listposition.SetItemText(ListCount, 2, StrBuff);
-            StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).LaserNumber);
-            m_Listposition.SetItemText(ListCount, 3, StrBuff);
-            ListCount++;
+            for (UINT k = 0; k < ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).size(); k++)
+            {
+                m_Listposition.InsertItem(ListCount, NULL);
+                (ListCount > 8) ? StrBuff.Format(_T("0%d"), ListCount + 1) : StrBuff.Format(_T("00%d"), ListCount + 1);
+                m_Listposition.SetItemText(ListCount, 0, StrBuff);
+                m_Listposition.SetItemText(ListCount, 1, ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).Address);
+                StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).VisionNumber);
+                m_Listposition.SetItemText(ListCount, 2, StrBuff);
+                StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).LaserNumber);
+                m_Listposition.SetItemText(ListCount, 3, StrBuff);
+                ListCount++;
+            }
         }      
     }
     int ListnCount = m_Listposition.GetItemCount();

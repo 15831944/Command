@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/17
+*＠data 更新日期:2017/3/21
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
@@ -55,6 +55,9 @@ public:     //變數
 	LONG	m_HomeSpeed_DEF; //原點復歸預設速度(Z,W軸)
 	DOUBLE  m_WSpeed;         //W速度變數
 	BOOL    m_IsHomingOK;     //原點復歸完成參數(沒有執行0,執行中1)
+	BOOL    m_IsCorrection;   //W軸offset是否校正(沒有校正0,校正完成1)
+	CPoint  m_WorkRange;      //針頭的工作範圍
+	const int m_MaxRangeDeg90 = 302000;//針頭在90度的最大長度(210000+92000)
 #ifdef MOVE
     std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
 #endif
@@ -151,6 +154,8 @@ public:
 	void HMPosLim(LONG lX, LONG lY, LONG lZ, DOUBLE dW);
     //人機用函數-移動命令(Z軸抬生→W軸旋轉→X,Y移動→Z軸下降)
 	void HMGoPosition(LONG lX, LONG lY, LONG lZ, DOUBLE dW, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+	//人機用函數-參數寫入(機械同心圓偏移量X.Y,機械同心圓半徑,工作平台高度(Z軸總工作高度))
+	void HMSetWOffset(LONG Xoffset, LONG Yoffset, LONG MachineCirRad, LONG TablelZ);
 
 	/**********其它命令*****************************************/
 

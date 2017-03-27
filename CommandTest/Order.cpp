@@ -93,12 +93,13 @@ END_MESSAGE_MAP()
 BOOL COrder::Run()
 {
 	if (!g_pThread) {
-		//時間計時開始
-		QueryPerformanceFrequency(&fre); //取得CPU頻率
-		QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
-		Commanding = _T("Start");
+        Commanding = _T("Start");
 		if (!CommandMemory.empty())
 		{
+            //時間計時開始
+            QueryPerformanceFrequency(&fre); //取得CPU頻率
+            QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
+            /*****可以不用在檢查ㄧ次命令*****/
 			int Test = 0;
 			if (CheckCommandRule(Test))//檢查命令表
 			{
@@ -106,7 +107,7 @@ BOOL COrder::Run()
 				_cwprintf(L"Run()::錯誤代碼:%d,命令地址為:%d\n", CheckCommandRule(Test), Test);
 #endif
 				return FALSE;
-			}
+			}          
 			//刪除檢測結果檔案
 			//FileDelete(AreaCheckParamterDefault.Result.Path);
 			int pos = AreaCheckParamterDefault.Result.Path.ReverseFind('\\');
@@ -124,19 +125,18 @@ BOOL COrder::Run()
 			//載入所有檔案名
 			ListAllFileInDirectory(VisionFile.ModelPath,TEXT("*_*_*_*_*.mod"));
 			//出膠控制器模式
-			m_Action.m_bIsDispend = TRUE;   
+			m_Action.m_bIsDispend = TRUE; 
+            //初始化事件
+            ThreadEvent = ::CreateEvent(NULL, TRUE, TRUE, L"MY_THREAD_EVT");
+            OutThreadEvent = ::OpenEvent(EVENT_ALL_ACCESS, FALSE, L"MY_THREAD_EVT");
+            //開啟執行緒
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
+
+            //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件(測試用)
 			return TRUE;
-		}  
-		else
-		{
-			return FALSE;
-		}    
+		}   
 	}
-	else
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 /*循環開始*/
 BOOL COrder::RunLoop(int LoopNumber) {
@@ -148,10 +148,7 @@ BOOL COrder::RunLoop(int LoopNumber) {
 		g_pRunLoopThread = AfxBeginThread(RunLoopThread, (LPVOID)this);
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}
+    return FALSE;
 }
 /*停止*/
 BOOL COrder::Stop()
@@ -174,6 +171,7 @@ BOOL COrder::Stop()
 			#ifdef MOVE
 				MO_DecSTOP();//立即減速停止運動指令
 			#endif
+            /*測試用*/
 			//SetEvent(wakeEvent);//設置事件
 			//WaitForSingleObject(g_pThread->m_hThread, INFINITE);//等待线程安全返回
 			//CloseHandle(wakeEvent);//關閉事件句柄
@@ -187,11 +185,8 @@ BOOL COrder::Stop()
 			#endif
 			return TRUE;
 		}
-	}
-	else
-	{     
-		return FALSE;
-	}
+	}  
+    return FALSE;
 }
 /*暫停*/
 BOOL COrder::Pause()
@@ -211,10 +206,7 @@ BOOL COrder::Pause()
 		}		
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}
+    return FALSE;
 }
 /*繼續*/
 BOOL COrder::Continue()
@@ -243,15 +235,8 @@ BOOL COrder::Continue()
 			}
 			return TRUE;
 		}
-		else
-		{
-			return FALSE;
-		}
 	}
-	else
-	{
-		return FALSE;
-	}
+    return FALSE;
 }
 /*原點賦歸*/
 BOOL COrder::Home(BOOL mode)
@@ -269,10 +254,7 @@ BOOL COrder::Home(BOOL mode)
 		g_pThread = AfxBeginThread(HomeThread, (LPVOID)this);  
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}     
+    return FALSE;   
 }
 /*View查看*/
 BOOL COrder::View(BOOL mode)
@@ -281,7 +263,8 @@ BOOL COrder::View(BOOL mode)
 		Commanding = _T("Start");
 		if (!CommandMemory.empty())
 		{
-			int Test = 0;
+            /*****可以不用在檢查ㄧ次命令*****/
+			int Test = 0;       
 			if (CheckCommandRule(Test))//檢查命令表
 			{
 #ifdef PRINTF
@@ -303,15 +286,17 @@ BOOL COrder::View(BOOL mode)
 			ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*_*_*_*_*.mod"));
 			//出膠控制器模式
 			m_Action.m_bIsDispend = FALSE;
-			//wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件
+            //初始化事件
+            ThreadEvent = ::CreateEvent(NULL, TRUE, TRUE, L"MY_THREAD_EVT");
+            OutThreadEvent = ::OpenEvent(EVENT_ALL_ACCESS, FALSE, L"MY_THREAD_EVT");
+            //開啟執行緒
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
-		}
-		return TRUE;
+
+            //wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件(測試用)
+            return TRUE;
+		}	
 	}
-	else {
-		return FALSE;
-	}
-	return 0;
+	return FALSE;
 }
 /*I/O偵測執行緒開*/
 BOOL COrder::IODetectionSwitch(BOOL Switch, int mode)
@@ -411,6 +396,7 @@ UINT COrder::HomeThread(LPVOID pParam)
 	//	((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
     //((COrder*)pParam)->m_Action.DecideInitializationMachine(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2, ((COrder*)pParam)->GoHome.Axis, ((COrder*)pParam)->GoHome.MoveX, ((COrder*)pParam)->GoHome.MoveY, ((COrder*)pParam)->GoHome.MoveZ, ((COrder*)pParam)->GoHome.MoveW);
     ((COrder*)pParam)->m_Action.W_NeedleGoHoming(((COrder*)pParam)->GoHome.Speed1, ((COrder*)pParam)->GoHome.Speed2);
+    /*****有機會產生死結*****/
     while (((COrder*)pParam)->m_Action.m_IsHomingOK){
         Sleep(10);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
     }
@@ -440,7 +426,7 @@ UINT COrder::Thread(LPVOID pParam)
 #endif
 	while ((!((COrder*)pParam)->m_Action.m_bIsStop) && ((COrder*)pParam)->ModelControl.Mode != 4/*&& ((COrder*)pParam)->Commanding != _T("End")*/)//新增模式判斷
 	{
-		if (((COrder*)pParam)->RunData.SubProgramName != _T(""))//雙程式使用
+		if (((COrder*)pParam)->RunData.SubProgramName != _T(""))//雙程式使用(目前尚未用到)
 		{
 			for (UINT i = 1; i < ((COrder*)pParam)->Command.size(); i++)
 			{
@@ -480,7 +466,7 @@ UINT COrder::Thread(LPVOID pParam)
 #endif
 					((COrder*)pParam)->RepeatData.LoopSwitch = FALSE;//清除Loop呼叫狀態
 					//判斷StepRepeat是否有強行跳轉
-					StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+                    StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 				}
 				//找到GotoLabel或Intput標籤
 				else
@@ -583,23 +569,27 @@ UINT COrder::Thread(LPVOID pParam)
 			//LARGE_INTEGER   StartTime, EndTime, Fre;
 			//QueryPerformanceFrequency(&Fre); //取得CPU頻率
 			//QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
-			CString Temp;
+			/*CString Temp;
 			Temp.Format(L"%s:%d\nStatus:%d,OffsetX=%d,OffsetY=%d,OffsetZ=%d\n\n", ((COrder*)pParam)->Commanding, ((COrder*)pParam)->Program.SubroutinCount,
 				((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status,
 				((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 				((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
 				((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z);
-			InitFileLog(Temp);
+			InitFileLog(Temp);*/
 #endif
 			/*****命令執行緒*****/
+            ::ResetEvent(((COrder*)pParam)->ThreadEvent);//釋放事件
 			g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
-			while (g_pSubroutineThread) {
-				Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-			}
+            ::WaitForSingleObject(((COrder*)pParam)->OutThreadEvent, INFINITE);//等待事件被設置
+            /*舊版2017/03/21*/
+			//while (g_pSubroutineThread) {
+			//	//Sleep(2);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+			//}
 			/*****檢測執行緒*****/
 			if (((COrder*)pParam)->CheckModel == 1 && ((COrder*)pParam)->CheckSwitch.ImmediateCheck)//判斷即時檢測是否執行
 			{
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
+                /*****有機會產生死結*****/
 				while (g_pCheckActionThread) {
 					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				}
@@ -611,6 +601,7 @@ UINT COrder::Thread(LPVOID pParam)
                 MO_StopGumming();//關閉出膠
 #endif
 				g_pCheckCoordinateScanThread = AfxBeginThread(((COrder*)pParam)->CheckCoordinateScan, pParam);
+                /*****有機會產生死結*****/
 				while (g_pCheckCoordinateScanThread) {
 					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				}
@@ -686,6 +677,7 @@ UINT COrder::Thread(LPVOID pParam)
 		((COrder*)pParam)->m_Action.BackGOZero(((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
 	}
 	//TODO::DEMO所以加入
+    
 	if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
 	{
 		SavePointData(pParam);
@@ -707,11 +699,11 @@ UINT COrder::Thread(LPVOID pParam)
 }
 /*命令動作(子)執行緒*/
 UINT COrder::SubroutineThread(LPVOID pParam) {
-	//HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;
+	//HANDLE wakeEvent = (HANDLE)((COrder*)pParam)->wakeEvent;//獲取事件句柄(測試用)
 	((COrder*)pParam)->RunStatusRead.StepCommandStatus = TRUE;//執行命令狀態
 	CString Command = ((COrder*)pParam)->Commanding;//命令字串 
 	UINT CurrentRunCommandNum = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));//命令地址
-	if (CommandResolve(Command, 0) == L"Printf")
+	if (CommandResolve(Command, 0) == L"Printf")//命令測試用
 	{
 #ifdef PRINTF
 		/*for (UINT i = 0; i < ((COrder*)pParam)->IntervalTemplateCheck.size(); i++)
@@ -723,10 +715,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		//((COrder*)pParam)->m_Action.WaitTime(wakeEvent, _ttoi(CommandResolve(Command, 1)));//啟動事件計時
         //_cwprintf(L"%d...\n", ((COrder*)pParam)->PointAreaJudge({ 500,500 }, { 1000,0,0,0 }));
         //((COrder*)pParam)->CircleAreaJudge({ 145378,78612 }, { 199096,110359 }, { 183319,140973 }, 0);
-        /*static int  aaaa = 0;
-        _cwprintf(L"%d",aaaa);
-        aaaa++;
-        Sleep(1000);*/
 	}
 	/************************************************************程序**************************************************************/
 	else if (CommandResolve(Command, 0) == L"GotoLabel") 
@@ -957,12 +945,12 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					((COrder*)pParam)->RepeatData.AllNewStepRepeatNum++;
 					//紀錄StepRepeat地址
 					((COrder*)pParam)->RepeatData.StepRepeatNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-					//紀錄初始offset位置
+                    //紀錄初始offset位置
 					if (((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)//防止CallSubroutine第一個為StepRepeat時
 					{
 						((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
 						((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-					}
+                    }
 					else
 					{
 						ModifyPointOffSet(pParam,((COrder*)pParam)->Program.SubroutineCommandPretreatment);
@@ -970,6 +958,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					//紀錄X、Y計數
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    //紀錄X、Y總數
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 					//記錄StepRepeat區間
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatAddress,CurrentRunCommandNum });
 					//S行迴圈狀態初始化
@@ -1126,6 +1117,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
 							_cwprintf(L"SubroutineThread()::刪除StepRepeatCountY陣列\n");
 #endif 
+                            ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + i);//只有用在建立修正表時
+#ifdef PRINTF
+                            _cwprintf(L"SubroutineThread()::刪除StepRepeatTotalX陣列\n");
+#endif 
+                            ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + i);//只有用在建立修正表時
+#ifdef PRINTF
+                            _cwprintf(L"SubroutineThread()::刪除StepRepeatTotalY陣列\n");
+#endif 
 							((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + i);
 #ifdef PRINTF
 							_cwprintf(L"SubroutineThread()::刪除StepRepeatIntervel區間陣列\n");
@@ -1172,7 +1171,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								{
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-								}
+                                }
 								else
 								{
 									ModifyPointOffSet(pParam, ((COrder*)pParam)->Program.SubroutineCommandPretreatment);
@@ -1180,6 +1179,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								//紀錄X、Y計數
 								((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 								((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //紀錄X、Y總數
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 								//記錄StepRepeat區間
 								((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatAddress,CurrentRunCommandNum });
 								//S行迴圈狀態初始化
@@ -1229,10 +1231,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								{
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-								}
+                                }
+                                else/***2017/03/24***/
+                                {
+                                    ModifyPointOffSet(pParam, ((COrder*)pParam)->Program.SubroutineCommandPretreatment);
+                                }
 								//紀錄X、Y計數
 								((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 								((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //紀錄X、Y總數
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 								//記錄StepRepeat區間
 								((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress,CurrentRunCommandNum });
 								//S行迴圈狀態初始化
@@ -1328,6 +1337,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					//紀錄X、Y計數
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                    //紀錄X、Y總數
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 					//記錄StepRepeat區間
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatAddress,CurrentRunCommandNum });
 					//S行迴圈狀態初始化
@@ -1483,6 +1495,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
 							_cwprintf(L"SubroutineThread()::刪除StepRepeatCountY陣列\n");
 #endif 
+                            ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + i);
+#ifdef PRINTF
+                            _cwprintf(L"SubroutineThread()::刪除StepRepeatToatlX陣列\n");
+#endif 
+                            ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + i);
+#ifdef PRINTF
+                            _cwprintf(L"SubroutineThread()::刪除StepRepeatTotalY陣列\n");
+#endif
 							((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + i);
 #ifdef PRINTF
 							_cwprintf(L"SubroutineThread()::刪除StepRepeatIntervel區間陣列\n");
@@ -1529,7 +1549,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								{
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
-								}
+                                }
 								else
 								{
 									ModifyPointOffSet(pParam, ((COrder*)pParam)->Program.SubroutineCommandPretreatment);
@@ -1537,6 +1557,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								//紀錄X、Y計數
 								((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 								((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //紀錄X、Y總數
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 								//記錄StepRepeat區間
 								((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatAddress,CurrentRunCommandNum });
 								//S行迴圈狀態初始化
@@ -1587,9 +1610,16 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X);
 									((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.push_back(((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y);
 								}
+                                else/***2017/03/24***/
+                                {
+                                    ModifyPointOffSet(pParam, ((COrder*)pParam)->Program.SubroutineCommandPretreatment);
+                                }
 								//紀錄X、Y計數
 								((COrder*)pParam)->RepeatData.StepRepeatCountX.push_back(_ttol(CommandResolve(Command, 3)));
 								((COrder*)pParam)->RepeatData.StepRepeatCountY.push_back(_ttol(CommandResolve(Command, 4)));
+                                //紀錄X、Y總數
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalX.push_back(_ttol(CommandResolve(Command, 3)));//只有用在建立修正表時
+                                ((COrder*)pParam)->RepeatData.StepRepeatTotalY.push_back(_ttol(CommandResolve(Command, 4)));//只有用在建立修正表時
 								//記錄StepRepeat區間
 								((COrder*)pParam)->RepeatData.StepRepeatIntervel.push_back({ L"StepRepeat",((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress,CurrentRunCommandNum });
 								//S行迴圈狀態初始化
@@ -1650,11 +1680,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->RepeatData.StepRepeatLabel = _T("");
 		}
 	}
-	else if (CommandResolve(Command, 0) == L"CallSubProgram")
+	else if (CommandResolve(Command, 0) == L"CallSubProgram")//目前尚未用到
 	{
 		//((COrder*)pParam)->RunData.SubProgramName = _T("SubProgramStart,") + CommandResolve(Command, 1);
 	}
-	else if (CommandResolve(Command, 0) == L"SubProgramEnd")
+	else if (CommandResolve(Command, 0) == L"SubProgramEnd")//目前尚未用到
 	{
 		//((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = 0;//副程序計數清零
 		//((COrder*)pParam)->RunData.MSChange.pop_back();
@@ -1738,8 +1768,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			{
 				((COrder*)pParam)->ModelControl.Mode = 4;//結束程序
 			}
-		}
-	}
+		}     
+	}                 
 	/************************************************************動作**************************************************************/
 	else if (CommandResolve(Command, 0) == L"Dot")
 	{
@@ -4597,6 +4627,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	}
 	((COrder*)pParam)->RunStatusRead.StepCommandStatus = FALSE;
 	g_pSubroutineThread = NULL;
+    ::SetEvent(((COrder*)pParam)->ThreadEvent);
 	return 0;
 }
 /*I/O偵測執行緒*/
@@ -4664,6 +4695,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 				((COrder*)pParam)->CheckCoordinateRun = ((COrder*)pParam)->IntervalCheckCoordinate.at(i);//設定檢測座標
 				((COrder*)pParam)->CheckModel = 2;//設定檢測模式
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
+                /*****有機會產生死結*****/
 				while (g_pCheckActionThread) {
 					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				}
@@ -4684,6 +4716,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 				((COrder*)pParam)->AreaCheckRun = ((COrder*)pParam)->IntervalAreaCheck.at(i);//設定區域檢測資料
 				((COrder*)pParam)->CheckModel = 3;//設定檢測模式
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
+                /*****有機會產生死結*****/
 				while (g_pCheckActionThread) {
 					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				}
@@ -5219,11 +5252,13 @@ void COrder::LineGotoActionJudge(LPVOID pParam)
 			((COrder*)pParam)->LaserCount++;
 			((COrder*)pParam)->LaserAdjust.push_back({ ((COrder*)pParam)->LaserContinuousControl.ContinuousLineCount });
 			/*修改紀錄修正表*/
-			for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress,0))).size(); i++)//判斷表中地址是否存在
+            UINT D1 = 0, D2 = 0;
+            ((COrder*)pParam)->GetHashAddress(((COrder*)pParam)->CurrentTableAddress, D1, D2);//獲取雜湊表地址
+			for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size(); i++)//判斷表中地址是否存在
 			{
-				if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress, 0))).at(i).Address == ((COrder*)pParam)->CurrentTableAddress)
+				if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).Address == ((COrder*)pParam)->CurrentTableAddress)
 				{      
-					((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(((COrder*)pParam)->CurrentTableAddress, 0))).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+					((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
 					break;
 				}
 			}
@@ -5243,6 +5278,7 @@ void COrder::ModifyPointOffSet(LPVOID pParam ,CString Command)
 {
 	if (!((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Status)
 	{
+        //舊版CallSubroutine 修正
 		/*if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 2)
 		{
 		XYZOffset = ((COrder*)pParam)->VirtualNowOffSet(pParam, Command);
@@ -5794,11 +5830,13 @@ void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 BOOL COrder::LaserPointDetect()
 {
 	CString CurrentAddress = GetCommandAddress();
-	for (UINT i = 0; i < PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress, 0))).size(); i++)
+    UINT D1 = 0, D2 = 0;
+    GetHashAddress(CurrentAddress, D1, D2);//獲取雜湊表地址
+	for (UINT i = 0; i < PositionModifyNumber.at(D1).at(D2).size(); i++)
 	{
-		if (PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress,0))).at(i).Address == GetCommandAddress())
+		if (PositionModifyNumber.at(D1).at(D2).at(i).Address == GetCommandAddress())
 		{
-			if (PositionModifyNumber.at(_ttol(CommandResolve(CurrentAddress, 0))).at(i).LaserNumber != -1)
+			if (PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber != -1)
 			{
 				return TRUE;//該地址點檢查過               
 			}
@@ -5900,116 +5938,136 @@ void COrder::PassingException(LPVOID pParam)
         ((COrder*)pParam)->AreaCheckChangTemp.Status = FALSE;
     }
 #ifdef PRINTF
-    _cwprintf(L"PassingException()::座標(%d,%d,%d,%.3f)\n", ((COrder*)pParam)->AreaCheckChangTemp.X, ((COrder*)pParam)->AreaCheckChangTemp.Y, ((COrder*)pParam)->AreaCheckChangTemp.Z , ((COrder*)pParam)->AreaCheckChangTemp.W);
+    _cwprintf(L"PassingException()::座標(%d,%d,%d,%.3f)\n", ((COrder*)pParam)->AreaCheckChangTemp.X, ((COrder*)pParam)->AreaCheckChangTemp.Y, ((COrder*)pParam)->AreaCheckChangTemp.Z, ((COrder*)pParam)->AreaCheckChangTemp.W);
 #endif
-}
+    }
 /**************************************************************************資料表處理區塊*************************************************************************/
 /*選擇影像修正*/
 void COrder::ChooseVisionModify(LPVOID pParam) {
-	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-	for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)
-	{
-		if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)
-		{
-			if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber == -1)
-			{
-				((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber = 0;
-			}
-			((COrder*)pParam)->VisionOffset = ((COrder*)pParam)->VisionAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber).VisionOffset;
-		}
-	}
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
+    UINT D1 = 0, D2 = 0;
+    ((COrder*)pParam)->GetHashAddress(StrBuff, D1, D2);//獲取雜湊表地址
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size(); i++)
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber = 0;
+            }
+            ((COrder*)pParam)->VisionOffset = ((COrder*)pParam)->VisionAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber).VisionOffset;
+        }
+    }
 }
 /*選擇雷射修正*/
-void COrder::ChooseLaserModify(LPVOID pParam){
-	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-	for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)
-	{
-		if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)
-		{
-			if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber == -1)
-			{
-				((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber = 0;
-			}
-			((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber).LaserMeasureHeight;
-		}
-	}
+void COrder::ChooseLaserModify(LPVOID pParam) {
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
+    UINT D1 = 0, D2 = 0;
+    ((COrder*)pParam)->GetHashAddress(StrBuff, D1, D2);//獲取雜湊表地址
+    for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size(); i++)
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).Address == StrBuff)
+        {
+            if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber == -1)
+            {
+                ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber = 0;
+            }
+            ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber).LaserMeasureHeight;
+        }
+    }
 }
 /*紀錄修正表*/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
-	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
-    if (((COrder*)pParam)->PositionModifyNumber.size() - 1 < (UINT)_ttol(CommandResolve(StrBuff, 0)))//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
+    CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
+    UINT D1 = 0, D2 = 0;
+    ((COrder*)pParam)->GetHashAddress(StrBuff, D1, D2);//獲取雜湊表地址
+    if (((COrder*)pParam)->PositionModifyNumber.size() - 1 < D1)//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
     {
         ((COrder*)pParam)->PositionModifyNumber.resize(((COrder*)pParam)->PositionModifyNumber.size() + 10000);
     }
+    if (D2 == 0)
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(D1).size() == 0)
+        {
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).resize(1);
+        }  
+    }
+    else
+    {
+        if (((COrder*)pParam)->PositionModifyNumber.at(D1).size() < D2)
+        {
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).resize(D2 + 1000);
+        }
+    }
     //判斷雜湊表
-    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size() == 0)//尚未新增過
+    if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size() == 0)//尚未新增過
     {
         if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
         {
-            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, -1, -1 });
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff, -1, -1 });
         }
         else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
         {
-            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
         }
         else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
         {
-            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
         }
         ((COrder*)pParam)->CurrentTableAddress = StrBuff;
 #ifdef PRINTF
-        _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().Address,
-            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().VisionNumber, 
-            ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().LaserNumber);
+        _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().Address,
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().VisionNumber,
+            ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().LaserNumber);
 #endif
     }
     else//新增過
     {
-        for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size(); i++)//尋找是否相同地址
+        for (UINT i = 0; i < ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size(); i++)//尋找是否相同地址
         {
-            if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address == StrBuff)//已經新增過相同地址
+            if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).Address == StrBuff)//已經新增過相同地址
             {
                 if (((COrder*)pParam)->ModelControl.Mode == 1)//目前是影像模式
                 {
-                    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber == -1)//且此地址影像表沒有值
+                    if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber == -1)//且此地址影像表沒有值
                     {
-                        ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
+                        ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber = ((COrder*)pParam)->VisionCount;
                     }
                 }
                 else if (((COrder*)pParam)->ModelControl.Mode == 2)//目前是雷射模式時
                 {
-                    if (((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber == -1)//且此地址雷射表沒有值
+                    if (((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber == -1)//且此地址雷射表沒有值
                     {
-                        ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
+                        ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber = ((COrder*)pParam)->LaserCount;
                     }
                 }
                 ((COrder*)pParam)->CurrentTableAddress = StrBuff;//紀錄表中目前的地址
 #ifdef PRINTF
-                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入數值:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).Address,
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).VisionNumber,
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).at(i).LaserNumber);
+                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入數值:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).Address,
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).VisionNumber,
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber);
 #endif
                 break;
             }
-            else if (i == ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).size() - 1)//地址不存在表中(step 或 sub 時發生)
+            else if (i == ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).size() - 1)//地址不存在表中(step 或 sub 時發生)
             {
                 if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式時
                 {
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff,-1,-1 });
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff,-1,-1 });
                 }
                 else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式時
                 {
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, -1 });
                 }
                 else  if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式時
                 {
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff, ((COrder*)pParam)->VisionCount, ((COrder*)pParam)->LaserCount });
                 }
                 ((COrder*)pParam)->CurrentTableAddress = StrBuff;
 #ifdef PRINTF
-                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().Address,
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().VisionNumber,
-                    ((COrder*)pParam)->PositionModifyNumber.at(_ttol(CommandResolve(StrBuff, 0))).back().LaserNumber);
+                _cwprintf(L"RecordCorrectionTable()::地址%s成功加入修正表:%d,%d\n", ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().Address,
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().VisionNumber,
+                    ((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).back().LaserNumber);
 #endif
                 break;
             }
@@ -6092,7 +6150,30 @@ void COrder::RecordCorrectionTable(LPVOID pParam) {
 //#endif
 //	}
 }
-
+/*獲取雜湊表地址*/
+void COrder::GetHashAddress(CString CommandAddress, UINT &D1, UINT &D2)
+{
+    D1 = _ttol(CommandResolve(CommandAddress, 0));
+    if (RepeatData.StepRepeatNum.size())
+    {
+        D2 = 1;
+        for (UINT i = RepeatData.StepRepeatNum.size(); i > 0; i--)
+        {
+            UINT TotalY = 1;
+            for (UINT j = RepeatData.StepRepeatNum.size(); j > i; j--)
+            {
+                TotalY = TotalY * RepeatData.StepRepeatTotalX.at(j - 1) * RepeatData.StepRepeatTotalY.at(j - 1);
+            }
+            D2 = D2 + ((RepeatData.StepRepeatCountX.at(i - 1) - 1) * (RepeatData.StepRepeatTotalY.at(i - 1) * TotalY))
+                + ((RepeatData.StepRepeatCountY.at(i - 1) - 1) * TotalY);
+        }
+    }   
+#ifdef LOG
+    CString Temp;
+    Temp.Format(L"%s:D1 = %d,D2 = %d\n", CommandAddress, D1, D2);
+    InitFileLog(Temp);
+#endif
+}
 /**************************************************************************命令處理區塊***************************************************************************/
 /*命令分解*/
 CString COrder::CommandResolve(CString Command, UINT Choose)
@@ -6841,6 +6922,9 @@ void COrder::DecideInit()
 /*判斷指標清除*/
 void COrder::DecideClear() 
 { 
+    //關閉事件
+    ::CloseHandle(OutThreadEvent);
+    ::CloseHandle(ThreadEvent);
 	//狀態堆疊清除
 	ArcData.clear();
 	CircleData1.clear();
@@ -7157,46 +7241,51 @@ BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
 void COrder::StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address)
 {
 	//判斷是否有StepRepeat時且跳出區間
-	if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//判斷是否有StepRepeat
-	{
-		if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.size())//判斷是否有區間
-		{
-			for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatIntervel.size(); i++)
-			{
-				if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress > Address ||
-					Address > ((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().EndAddress)
-				{
+    if (((COrder*)pParam)->Program.SubroutineStack.empty()) 
+    {
+        if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//判斷是否有StepRepeat
+        {
+            if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.size())//判斷是否有區間
+            {
+                for (UINT i = 0; i < ((COrder*)pParam)->RepeatData.StepRepeatIntervel.size(); i++)
+                {
+                    if (((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().BeginAddress > Address ||
+                        Address > ((COrder*)pParam)->RepeatData.StepRepeatIntervel.back().EndAddress)
+                    {
 #ifdef PRINTF
-					_cwprintf(L"StepRepeatJumpforciblyJudge()::發生跳出StepRepeat刪除StepRepeat陣列\n");
+                        _cwprintf(L"StepRepeatJumpforciblyJudge()::發生跳出StepRepeat刪除StepRepeat陣列\n");
 #endif
-					//刪除最後一項StepRepeat
-					((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
-					((COrder*)pParam)->RepeatData.SSwitch.pop_back();
-					((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
-					((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
-					((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
-					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
-					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
-					((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
-					((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
-					((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
-					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
-					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
-					{
-						((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
-						((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
+                        //刪除最後一項StepRepeat
+                        ((COrder*)pParam)->RepeatData.StepRepeatBlockData.pop_back();
+                        ((COrder*)pParam)->RepeatData.SSwitch.pop_back();
+                        ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.back();
+                        ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatNum.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetX.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatTotalX.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatTotalY.pop_back();
+                        ((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
+                        //判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
+                        if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
+                        {
+                            ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum = 0;
+                            ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum = 0;
 #ifdef PRINTF
-						_cwprintf(L"StepRepeatJumpforciblyJudge()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
+                            _cwprintf(L"StepRepeatJumpforciblyJudge()::新增、刪除總數:%d,%d\n", ((COrder*)pParam)->RepeatData.AllNewStepRepeatNum, ((COrder*)pParam)->RepeatData.AllDeleteStepRepeatNum);
 #endif 
-					}
-				}
-				else//越內層區間會越小所以找一個不成立就可以Break
-				{
-					break;
-				}
-			}
-		}
-	}
+                        }
+                    }
+                    else//越內層區間會越小所以找一個不成立就可以Break
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }	
 }
 /**************************************************************************阻斷處理區塊****************************************************************************/
 /*阻斷處理方式(加入StepRepeatX時)
@@ -7283,6 +7372,8 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.pop_back();//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.pop_back();//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7335,6 +7426,8 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.pop_back();//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.pop_back();//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7482,6 +7575,8 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + NowCount);//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + NowCount);//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7553,6 +7648,8 @@ BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + NowCount);//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + NowCount);//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7666,6 +7763,8 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.pop_back();//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.pop_back();//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7718,6 +7817,8 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.pop_back();
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.pop_back();
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.pop_back();//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.pop_back();//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.pop_back();
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7865,6 +7966,8 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + NowCount);//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + NowCount);//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -7936,6 +8039,8 @@ BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
 					((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.erase(((COrder*)pParam)->RepeatData.StepRepeatInitOffsetY.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountX.erase(((COrder*)pParam)->RepeatData.StepRepeatCountX.begin() + NowCount);
 					((COrder*)pParam)->RepeatData.StepRepeatCountY.erase(((COrder*)pParam)->RepeatData.StepRepeatCountY.begin() + NowCount);
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalX.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalX.begin() + NowCount);//只有用在建立修正表時
+                    ((COrder*)pParam)->RepeatData.StepRepeatTotalY.erase(((COrder*)pParam)->RepeatData.StepRepeatTotalY.begin() + NowCount);//只有用在建立修正表時
 					((COrder*)pParam)->RepeatData.StepRepeatIntervel.erase(((COrder*)pParam)->RepeatData.StepRepeatIntervel.begin() + NowCount);
 					//判斷是否為最後一個StepRepeat,如果是清除刪除、新增計數
 					if (!((COrder*)pParam)->RepeatData.StepRepeatNum.size())
@@ -8543,11 +8648,14 @@ void COrder::SavePointData(LPVOID pParam)
 			{
                 for (UINT j = 0; j < ((COrder*)pParam)->PositionModifyNumber.at(i).size(); j++)
                 {
-                    ar << ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).Address;
-                    StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).LaserNumber);
-                    ar << StrBuff;
-                    StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).VisionNumber);
-                    ar << StrBuff;
+                    for (UINT k = 0; k < ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).size(); k++)
+                    {
+                        ar << ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).at(k).Address;
+                        StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).at(k).LaserNumber);
+                        ar << StrBuff;
+                        StrBuff.Format(L"%d", ((COrder*)pParam)->PositionModifyNumber.at(i).at(j).at(k).VisionNumber);
+                        ar << StrBuff;
+                    }              
                 }				
 			}
 			//高度訊息
@@ -8615,23 +8723,43 @@ void COrder::LoadPointData()
 				}
 				else if (Control == 2)
 				{
-					Count++;
+					Count++;            
 					if (Count == 1)
 					{
                         Address = StrBuff;
-                        if ((UINT)_ttol(CommandResolve(Address, 0)) > PositionModifyNumber.size() - 1)
+                        UINT D1 = 0, D2 = 0;
+                        GetHashAddress(Address, D1, D2);//獲取雜湊表地址
+                        if (PositionModifyNumber.size() - 1 < D1)//判斷雜湊表數量是否足夠  size必須-1才是陣列編號
                         {
                             PositionModifyNumber.resize(PositionModifyNumber.size() + 10000);
                         }
-                        PositionModifyNumber.at(_ttol(CommandResolve(Address,0))).push_back({ StrBuff,0,0 });
+                        if (D2 == 0)
+                        {
+                            if (PositionModifyNumber.at(D1).size() == 0)
+                            {
+                                PositionModifyNumber.at(D1).resize(1);
+                            }
+                        }
+                        else
+                        {
+                            if (PositionModifyNumber.at(D1).size() < D2)
+                            {
+                                PositionModifyNumber.at(D1).resize(D2 + 1000);
+                            }
+                        }                       
+                        PositionModifyNumber.at(D1).at(D2).push_back({ StrBuff,0,0 });
 					}
 					else if (Count == 2)
 					{
-						PositionModifyNumber.at(_ttol(CommandResolve(Address, 0))).back().LaserNumber = _ttoi(StrBuff);
+                        UINT D1 = 0, D2 = 0;
+                        GetHashAddress(Address, D1, D2);//獲取雜湊表地址
+						PositionModifyNumber.at(D1).at(D2).back().LaserNumber = _ttoi(StrBuff);
 					}
 					else if (Count == 3)
 					{
-						PositionModifyNumber.at(_ttol(CommandResolve(Address, 0))).back().VisionNumber = -1;
+                        UINT D1 = 0, D2 = 0;
+                        GetHashAddress(Address, D1, D2);//獲取雜湊表地址
+						PositionModifyNumber.at(D1).at(D2).back().VisionNumber = -1;
 						Count = 0;
 					}
 				}
@@ -8753,7 +8881,7 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 			else
 			{
 				//檢查StepRepeat標籤是否重複
-				for (UINT j = 0; j < Label.size(); j++)
+				for (UINT j = 0; j < StepRepeatLabel.size(); j++)
 				{
 					if (StepRepeatLabel.at(j).Num == _ttol(CommandResolve(CommandMemory.at(i), 1)))
 					{
@@ -9015,6 +9143,10 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 	}
 #ifdef PRINTF
 	_cwprintf(L"第二次檢查完畢\n");
+    for (UINT i = 0; i < IntervalQueue.size(); i++)
+    {
+        _cwprintf(L"CheckCommandRule():%s:%d:%d\n", IntervalQueue.at(i).Command, IntervalQueue.at(i).Begin, IntervalQueue.at(i).End);
+    }
 #endif
 	//第三次檢查(檢查所有區間是否交錯)
 	for (UINT i = 0; i < IntervalQueue.size(); i++)
@@ -9064,10 +9196,6 @@ int COrder::CheckCommandRule(int &ErrorAddress)
 	}
 #ifdef PRINTF
 	_cwprintf(L"第三次檢查完畢\n");
-	for (UINT i = 0; i < IntervalQueue.size(); i++)
-	{
-		_cwprintf(L"CheckCommandRule():%s:%d:%d\n", IntervalQueue.at(i).Command, IntervalQueue.at(i).Begin, IntervalQueue.at(i).End);
-	}
 #endif
 	return 0;
 }

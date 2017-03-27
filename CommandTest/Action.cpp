@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/3/17
+*＠data 更新日期:2017/3/21
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 #include "stdafx.h"
 #include "Action.h"
@@ -60,6 +60,8 @@ CAction::CAction()
 	m_HomeSpeed_DEF = 15000;	//原點復歸預設速度(Z,W軸)
 	m_WSpeed = 6.0;				//W軸速度調整變數(1~10)
 	m_IsHomingOK = 0;           //原點復歸參數
+	m_WorkRange = { 0 };	    //針頭的工作範圍
+	m_IsCorrection = 1;			//w軸offset是否校正
 #ifdef MOVE
     W_m_ptVec.clear();//W資料初使化
     LA_m_ptVec2D.clear();
@@ -1063,10 +1065,6 @@ void CAction::DecideArc(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if ((i == VecBuf.size() - 2) || (i == VecBuf.size() - 1))
-			{
-				_cwprintf(_T("lost_%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
-			}
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			//TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 		}
@@ -1212,7 +1210,7 @@ void CAction::DecideLineSToCirP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
     //LONG lBuffX = 0, lBuffY = 0;
     //LONG lTime = 0;
     //lLineClose = lStartDistance;
-    //LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lX, lY, lZ2, lZ, lLineClose);
+    //LineGetToPoint(lXClose, lYClose, lZClose, lX2, lY2, lZ2, lY, lZ2, lZ, lLineClose);
     //lBuffX = (-(lXClose - lX)) + lX;
     //lBuffY = (-(lYClose - lY)) + lY;
     //if ((lStartDelayTime > 0 && lStartDistance > 0) || lStartDistance == 0)//(當兩者都有值時以"移動前延遲"優先)  執行__移動前延遲
@@ -1656,10 +1654,6 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
 			pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
 			pDataShift->EndPZ = VecBuf.at(i).z - VecBuf.at(i - 1).z;
 			pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-			if ((i == VecBuf.size() - 2) || (i == VecBuf.size() - 1))
-			{
-				_cwprintf(_T("lost_%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
-			}
 			//_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 			// TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
 		}
@@ -1954,14 +1948,14 @@ void CAction::DecideInitializationMachine(LONG lSpeed1, LONG lSpeed2, LONG lAxis
     MO_FinishGumming();
     MO_SetSoftLim(lAxis, 0);    //TODO::軟體極限關
     MO_SetHardLim(lAxis, 1);
-    if(lAxis > 3 && lAxis != 8 && lAxis != 9 && lAxis != 10 && lAxis != 11)
+    if(lAxis > 3 && lAxis != 8 && lAxis != 9 && lAxis != 10 && lAxis != 11)//z軸回升
     {
         MO_MoveToHome(m_HomeSpeed_DEF, lSpeed2, 4, 0, 0, lMoveZ);//*******************復歸速度依照 m_HomeSpeed_INIT 執行驅動速度
         PreventMoveError();//防止軸卡出錯
         MO_SetSoftLim(4, 1);
         lAxis = lAxis - 4;
     }
-    if(lAxis >= 10 || lAxis == 8 || lAxis == 9)
+    if(lAxis >= 10 || lAxis == 8 || lAxis == 9)//w軸回升
     {
         DecideGoHomeW(m_HomeSpeed_DEF, 500);//*******************復歸速度依照 m_HomeSpeed_INIT 執行驅動速度,二階段速度建議值為500
         lAxis = lAxis - 8;
@@ -2547,6 +2541,15 @@ void CAction::HMGoPosition(LONG lX, LONG lY, LONG lZ, DOUBLE dW, LONG lWorkVeloc
         PreventMoveError();//防止軸卡出錯
     }
 #endif
+}
+//人機用函數-參數寫入(機械同心圓偏移量X.Y,機械同心圓半徑,工作平台高度(Z軸總工作高度))
+/*開機須先寫入!!!!*/
+void CAction::HMSetWOffset(LONG Xoffset, LONG Yoffset, LONG MachineCirRad, LONG TablelZ)
+{
+	m_MachineOffSet.x = Xoffset;	  //機械同心圓偏移量x
+	m_MachineOffSet.y = Yoffset;	  //機械同心圓偏移量y
+	m_MachineCirRad = MachineCirRad;  //機械同心圓半徑
+	m_TablelZ = TablelZ;			  //工作平台高度(Z軸總工作高度)
 }
 /***********************************************************
 **                                                        **
@@ -3408,9 +3411,7 @@ void CAction::Fill_EndPoint(LONG &lEndX, LONG &lEndY, LONG lX1, LONG lY1, LONG l
 DWORD CAction::MoInterrupt(LPVOID param)
 {
 #ifdef MOVE
-#ifdef PRINTF
   //  _cwprintf(L"%s\n", L"Interrupt");
-#endif
     LONG RR1X, RR1Y, RR1Z, RR1U;
     MO_ReadEvent(&RR1X, &RR1Y, &RR1Z, &RR1U);
     if(RR1X & 0x0010) //原本為RR1X&0x0020 驅動開始中斷
@@ -3555,14 +3556,17 @@ UINT CAction::MoMoveThread(LPVOID param)
     }
     else if(((CAction *)param)->m_ThreadFlag == 2)
     {
-    //_cwprintf(L"%s\n", L"GoHoming");
+		//_cwprintf(L"%s\n", L"GoHoming");
         //m_ThreadFlag = 2;------W_NeedleGoHoming
         //cpCirMidBuff[0].x------ Speed1;
         //cpCirMidBuff[0].y------ Speed2;
         //cpCirMidBuff[1].x------ bStep;
 		((CAction *)param)->m_IsHomingOK = 1;//原點復歸執行中
-        if(!((CAction *)param)->cpCirMidBuff[1].x)
+        if(((CAction *)param)->cpCirMidBuff[1].x==0)
         {
+			((CAction *)param)->HMNegLim(500000, 500000, 100000, 370);//負
+			((CAction *)param)->HMPosLim(500000, 500000, 100000, 370);//正
+			((CAction *)param)->m_IsCorrection = 0;//w沒有校正
             ((CAction *)param)->DecideInitializationMachine(((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].x, 15,0, 0, 0, 0);
 			if (!((CAction *)param)->m_bIsStop)
 			{
@@ -3576,13 +3580,22 @@ UINT CAction::MoMoveThread(LPVOID param)
             //判斷W軸是否校正
             if(((CAction *)param)->m_MachineOffSet.x == -99999 && ((CAction *)param)->m_MachineOffSet.y == -99999)
             {
+				//沒校正則不執行原點復歸!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 //((CAction *)param)->DecideInitializationMachine(((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].x, 15,
                 //  ((CAction *)param)->m_HomingOffset_INIT.x, ((CAction *)param)->m_HomingOffset_INIT.y, ((CAction *)param)->m_HomingOffset_INIT.z, ((CAction *)param)->m_HomingOffset_INIT.w);
-                return 0;
+				((CAction *)param)->m_IsCorrection = 0;//w沒有校正
+				return 0;
             }
+			if (((CAction *)param)->m_IsCorrection == 1)//有校正offsets
+			{
+
+				((CAction *)param)->HMNegLim(((CAction *)param)->m_MachineCirRad, ((CAction *)param)->m_MachineCirRad, 10000, 370);//負軟極限
+				((CAction *)param)->HMPosLim(((CAction *)param)->m_MaxRangeDeg90, ((CAction *)param)->m_MaxRangeDeg90, ((CAction *)param)->m_TablelZ, 370);//正極限
+				((CAction *)param)->m_WorkRange.x = ((CAction *)param)->m_MaxRangeDeg90 - ((CAction *)param)->m_MachineCirRad;//工作範圍座標x
+				((CAction *)param)->m_WorkRange.y = ((CAction *)param)->m_MaxRangeDeg90 - ((CAction *)param)->m_MachineCirRad;//工作範圍座標y
+			}
             ((CAction *)param)->DecideInitializationMachine(((CAction *)param)->cpCirMidBuff[0].x, ((CAction *)param)->cpCirMidBuff[0].y, 15,
                     (((CAction *)param)->m_HomingPoint.x ), (((CAction *)param)->m_HomingPoint.y), ((CAction *)param)->m_HomingPoint.z, ((CAction *)param)->m_HomingPoint.w);
-
 			if(!((CAction *)param)->m_bIsStop)
             {
                MO_Do3DLineMove(-(((CAction *)param)->m_MachineOffSet.x), -(((CAction *)param)->m_MachineOffSet.y), 0,
@@ -3940,7 +3953,17 @@ void CAction::LineGetToPoint(LONG &lXClose, LONG &lYClose, LONG &lZClose, LONG l
     }
     else
     {
-        lZClose = (lLineClose * (lZ1 - lZ0) / lLength) + lZ0;
+		lZClose = (lLineClose * (lZ1 - lZ0) / lLength);
+		if (lZ0 > lZ1)
+		{
+			lZClose =  lZ0 + lZClose;
+		}
+		else
+		{
+			lZClose =  lZ0 - lZClose;
+		}
+
+	
     }
     LineGetToPoint(lXClose, lYClose, lX0, lY0, lX1, lY1, lLineClose);
 }
@@ -7133,6 +7156,9 @@ void CAction::W_Correction(BOOL bStep, LONG lWorkVelociy, LONG lAcceleration, LO
 			m_MachineOffSet.y = m_MachineOffSet.y + 1;
 		}
         m_MachineCirRad = (LONG)sqrt(pow(m_MachineCirMid.x - MO_ReadLogicPosition(0), 2) + pow(m_MachineCirMid.y - MO_ReadLogicPosition(1), 2));//半徑
+		m_IsCorrection = 1;//w校正完成
+		W_NeedleGoHoming(lWorkVelociy, 2000, 1);//自動原點復歸
+		
     }
 #endif
 }
@@ -7210,7 +7236,7 @@ void CAction::W_NeedleGoHoming(LONG Speed1, LONG Speed2,BOOL bStep)
 {
 #ifdef MOVE
     m_ThreadFlag = 2;//W_NeedleGoHoming
-	m_IsHomingOK = 0;//原點復歸初始化
+	m_IsHomingOK = 1;//原點復歸初始化
     cpCirMidBuff[0].x = Speed1;
     cpCirMidBuff[0].y = Speed2;
     cpCirMidBuff[1].x = bStep;
