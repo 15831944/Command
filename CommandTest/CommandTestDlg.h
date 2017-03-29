@@ -171,6 +171,7 @@ public:
     //外部畫圖函式
     static void myDrawFunction(void* pParam, CPoint pt, int pencolor);
     
+	afx_msg void OnBnClickedBtnloadcommand();
 };
 
 

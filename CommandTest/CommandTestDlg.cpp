@@ -202,6 +202,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	
 	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
 	
+	ON_BN_CLICKED(IDC_BTNLOADCOMMAND, &CCommandTestDlg::OnBnClickedBtnloadcommand)
 END_MESSAGE_MAP()
 
 
@@ -421,6 +422,11 @@ void CCommandTestDlg::OnBnClickedBtnview()
 void CCommandTestDlg::OnBnClickedBtncleancount()
 {
 	a.RunStatusRead.FinishProgramCount = 0;	
+}
+/*載入新命令*/
+void CCommandTestDlg::OnBnClickedBtnloadcommand()
+{
+	a.LoadCommand();
 }
 /*刷新*/
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
@@ -2205,6 +2211,7 @@ void CCommandTestDlg::OnBnClickedBtntest()
 
 
 }
+
 
 
 
