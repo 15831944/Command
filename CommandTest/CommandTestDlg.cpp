@@ -204,7 +204,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
 	
     ON_WM_CLOSE()
-END_MESSAGE_MAP()
+		ON_BN_CLICKED(IDC_BTNWRITECOMMAND, &CCommandTestDlg::OnBnClickedBtnwritecommand)
+		END_MESSAGE_MAP()
 
 // CCommandTestDlg 訊息處理常式
 BOOL CCommandTestDlg::OnInitDialog()
@@ -418,6 +419,11 @@ void CCommandTestDlg::OnBnClickedBtnview()
 void CCommandTestDlg::OnBnClickedBtncleancount()
 {
 	a.RunStatusRead.FinishProgramCount = 0;	
+}
+/*寫入命令*/
+void CCommandTestDlg::OnBnClickedBtnwritecommand()
+{
+	a.LoadCommand();
 }
 /*刷新*/
 void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
@@ -2357,10 +2363,10 @@ void CCommandTestDlg::OnBnClickedBtntest()
     //a.ShowAllStatus();
 
 
-    struct Test {
+	/*struct Test {
         CString abc;
         int iii;
-    };
+    };    
     //std::vector<std::vector<std::vector<Test>>> ads;
     ////ads.reserve(500000);
     //ads.resize(50000);
@@ -2368,11 +2374,11 @@ void CCommandTestDlg::OnBnClickedBtntest()
     //ads.at(48).at(0).resize(100);
     //ads.at(48).at(0).at(0) = {L"123",123};
     //_cwprintf(L"%d", ads.size());
-    /*ads.resize(50);
+	ads.resize(50);
     ads.at(0).resize(50, {L"",-1});
     ads.at(20).push_back({ L"123",123 });
     _cwprintf(L"%d,%d,%d,%s,%d,%d", ads.size(),ads.at(0).size(),ads.at(20).size(),ads.at(20).at(0).abc, ads.at(20).at(0).iii,ads.at(1).size());
-*/
+	*/
 
     /*StrBuff.Format(_T("Dot,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
     int i = 0;
@@ -2385,4 +2391,6 @@ void CCommandTestDlg::OnBnClickedBtntest()
        
     ListRefresh(NULL);*/   
 }
+
+
 

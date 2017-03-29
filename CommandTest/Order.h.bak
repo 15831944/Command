@@ -1,6 +1,6 @@
 /*
 *檔案名稱:Order.h
-*檔案用途:4Axis
+*檔案用途:3Axis
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下

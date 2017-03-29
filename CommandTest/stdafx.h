@@ -33,8 +33,8 @@
 //#define MOVE
 //#define VI                                                     
 //#define LA
-#define PRINTF
-#define LOG
+//#define PRINTF
+//#define LOG
 
 #ifdef MOVE
     #include "mcc.h"
