@@ -671,6 +671,7 @@ UINT COrder::Thread(LPVOID pParam)
 		((COrder*)pParam)->m_Action.BackGOZero(((COrder*)pParam)->MoveSpeedSet.EndSpeed, ((COrder*)pParam)->MoveSpeedSet.AccSpeed, ((COrder*)pParam)->MoveSpeedSet.InitSpeed);
 	}
 	//TODO::DEMO所以加入
+	/*
 	if (AfxMessageBox(_T("資料即將清除，是否儲存?"), MB_OKCANCEL, 0) == IDOK) 
 	{
 		SavePointData(pParam);
@@ -679,7 +680,7 @@ UINT COrder::Thread(LPVOID pParam)
 	{
 		((COrder*)pParam)->m_Action.LA_Clear();//清除連續線段陣列
 	} 
-	  
+	*/  
 	((COrder*)pParam)->DecideClear();//清除所有陣列
 	((COrder*)pParam)->m_Action.m_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
 	//計算執行時間

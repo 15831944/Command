@@ -62,6 +62,8 @@ public:
 	CString BlockStr;
 	CString CheckStrBuff;
 
+	BOOL CommandModify;
+
 public:
 	/*刷新*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
@@ -83,6 +85,7 @@ public:
 	afx_msg void OnBnClickedBtnprintcline();
     afx_msg void OnBnClickedBtntest();
     afx_msg void OnBnClickedBtncheck();
+	afx_msg void OnBnClickedBtnwritecommand();
 	//設置
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
@@ -171,10 +174,10 @@ public:
 	afx_msg void OnDestroy();
     //外部畫圖函式
     static void myDrawFunction(void* pParam, CPoint pt, int pencolor);
-    
+    //離開
     afx_msg void OnClose();
     virtual void OnCancel();
-	afx_msg void OnBnClickedBtnwritecommand();
+	
 };
 
 

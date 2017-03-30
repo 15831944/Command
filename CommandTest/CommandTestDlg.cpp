@@ -66,6 +66,7 @@ CCommandTestDlg::CCommandTestDlg(CWnd* pParent /*=NULL*/)
     NoPushEsc = TRUE;
 
     StrCutout_Copy = L"";
+	CommandModify = FALSE;
 }
 CCommandTestDlg::~CCommandTestDlg()
 {
@@ -116,6 +117,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNHOME, &CCommandTestDlg::OnBnClickedBtnhome)
 	ON_BN_CLICKED(IDC_BTNVIEW, &CCommandTestDlg::OnBnClickedBtnview)
 	ON_BN_CLICKED(IDOK, &CCommandTestDlg::OnBnClickedOk)
+	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
 
 	ON_COMMAND(IDM_INSERT, &CCommandTestDlg::OnInsert)
 	ON_COMMAND(IDM_DELETE, &CCommandTestDlg::OnDelete)
@@ -201,7 +203,7 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNMODIFY, &CCommandTestDlg::OnBnClickedBtnmodify)
 	ON_BN_CLICKED(IDC_BTNPRINTCLINE, &CCommandTestDlg::OnBnClickedBtnprintcline)
 	
-	ON_BN_CLICKED(IDC_BTNTEST, &CCommandTestDlg::OnBnClickedBtntest)
+	
 	
     ON_WM_CLOSE()
 		ON_BN_CLICKED(IDC_BTNWRITECOMMAND, &CCommandTestDlg::OnBnClickedBtnwritecommand)
@@ -316,12 +318,18 @@ HCURSOR CCommandTestDlg::OnQueryDragIcon()
 /*開始*/
 void CCommandTestDlg::OnBnClickedStart()
 {	
+	/*判斷命令表是否修改過*/
+	if (CommandModify)
+	{
+		MessageBox(L"請先寫入命令!");
+		return;
+	}	
 	/*列表停用*/
 	m_CommandList.EnableWindow(FALSE);
 	/*列表改為單選*/
 	DWORD dwStyle = m_CommandList.GetExtendedStyle();
 	dwStyle |= LVS_SHOWSELALWAYS;
-	m_CommandList.SetExtendedStyle(dwStyle); //設置擴展風格
+	m_CommandList.SetExtendedStyle(dwStyle);//設置擴展風格
 	/*設置區域檢測目錄*/
 	a.AreaCheckParamterDefault.ImageSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
 	a.AreaCheckParamterDefault.DotTrainSave.Path = GetCurrentPath(_T("\\CheckTemp\\")).GetBuffer();
@@ -398,7 +406,12 @@ void CCommandTestDlg::OnBnClickedBtnview()
     //lstrcpy(lpszText, path);
     //a.VisionDefault.VisionFile.ModelPath = lpszText;
     */
-
+	/*判斷命令表是否修改過*/
+	if (CommandModify)
+	{
+		MessageBox(L"請先寫入命令!");
+		return;
+	}
     /*列表停用*/
     m_CommandList.EnableWindow(FALSE);
     /*列表改為單選*/
@@ -423,6 +436,7 @@ void CCommandTestDlg::OnBnClickedBtncleancount()
 /*寫入命令*/
 void CCommandTestDlg::OnBnClickedBtnwritecommand()
 {
+	CommandModify = FALSE;
 	a.LoadCommand();
 }
 /*刷新*/
@@ -494,7 +508,7 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 	FinishCountBuff.Format(_T("完整程序運行次數:%d"), a.RunStatusRead.FinishProgramCount);
 	SetDlgItemText(IDC_FINISHCOUNT, FinishCountBuff);
 	if (a.RunStatusRead.RunStatus != 0)
-	{
+	{	
 		m_CommandList.SetItemState(a.RunStatusRead.CurrentRunCommandNum, LVIS_SELECTED, LVIS_SELECTED);//將工作點設為高亮
 		m_CommandList.SetSelectionMark(a.RunStatusRead.CurrentRunCommandNum);//改變選中索引
 		m_CommandList.EnsureVisible(a.RunStatusRead.CurrentRunCommandNum, FALSE);//使List中一項可見(如滾動條向下滾)
@@ -563,6 +577,7 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 		StrBuff.Format(_T("%d"), a.Command.at(1).size());
 		m_CommandList.SetItemText(1, 1, StrBuff);*/
 	}
+	CommandModify = TRUE;
 }
 /*列表中按兩下左鍵*/
 void CCommandTestDlg::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
