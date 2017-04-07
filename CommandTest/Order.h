@@ -450,9 +450,17 @@ private:
 		CDrawFunction CDrawFunction;
 		void* pObject;
 	};
+	//控制執行緒同步事件結構
+	struct ThreadEvent {
+		HANDLE Thread;
+		HANDLE RunLoopThread;
+		HANDLE CheckActionThread;
+		HANDLE CheckCoordinateScanThread;
+		HANDLE MosaicDlgThread;
+	};
 private:    //變數
-	HANDLE          ThreadEvent;
-	HANDLE          OutThreadEvent;
+	ThreadEvent     ThreadEvent;
+	//HANDLE          OutThreadEvent;//測試OpenEvent用
 	HANDLE          wakeEvent;
 	/*運行時間計算*/
 	LARGE_INTEGER   startTime, endTime, fre;

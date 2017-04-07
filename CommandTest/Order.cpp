@@ -126,10 +126,14 @@ BOOL COrder::Run()
 			//載入所有檔案名
 			ListAllFileInDirectory(VisionFile.ModelPath, TEXT("*_*_*_*_*.mod"));
 			//出膠控制器模式
-			m_Action.m_bIsDispend = TRUE; 
+			m_Action.m_bIsDispend = TRUE;
+			//判斷是否循環執行
+			if (g_pRunLoopThread)
+			{
+				::ResetEvent(ThreadEvent.RunLoopThread);//釋放事件
+			}	
 			//開啟執行緒
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
-
 			//wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件(測試用)
 			return TRUE;
 		}
@@ -143,6 +147,8 @@ BOOL COrder::RunLoop(int LoopNumber) {
 		RunLoopData.RunSwitch = TRUE;
 		RunLoopData.LoopNumber = LoopNumber;
 		RunLoopData.LoopCount = 0;  
+		//初始化事件
+		ThreadEvent.RunLoopThread = ::CreateEvent(NULL, TRUE, TRUE, L"MY_RUNTHREAD_EVT");
 		g_pRunLoopThread = AfxBeginThread(RunLoopThread, (LPVOID)this);
 		return TRUE;
 	}
@@ -349,8 +355,12 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 				}
 				else if (((COrder*)pParam)->RunStatusRead.RunStatus == 0 && g_pThread == NULL)
 				{
-					Sleep(10);
-					if (!((COrder*)pParam)->Run()) {
+					if (((COrder*)pParam)->Run()) //成功運行
+					{
+						::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.RunLoopThread, INFINITE);//等待事件被設置
+					}
+					else//運行開啟失敗
+					{
 						((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
 					}
 				}
@@ -359,10 +369,13 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 			{
 				if (((COrder*)pParam)->RunStatusRead.RunStatus == 0 && g_pThread == NULL)
 				{
-					Sleep(10);
-					if (!((COrder*)pParam)->Run()) {
-						((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+					if (((COrder*)pParam)->Run()) {//成功運行
+						::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.RunLoopThread, INFINITE);//等待事件被設置
 					}  
+					else//運行開啟失敗
+					{
+						((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
+					}
 				}
 			}
 			else if (((COrder*)pParam)->RunLoopData.LoopCount == ((COrder*)pParam)->RunLoopData.LoopNumber)
@@ -378,6 +391,7 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 #endif
 	}
 	((COrder*)pParam)->RunStatusRead.RunLoopStatus = FALSE;
+	::CloseHandle(((COrder*)pParam)->ThreadEvent.RunLoopThread);//關閉事件
 	g_pRunLoopThread = NULL;
 	return 0;
 }
@@ -572,21 +586,24 @@ UINT COrder::Thread(LPVOID pParam)
 			InitFileLog(Temp);
 #endif
 			/*****命令執行緒*****/
-			::ResetEvent(((COrder*)pParam)->ThreadEvent);//釋放事件
+			::ResetEvent(((COrder*)pParam)->ThreadEvent.Thread);//釋放事件
 			g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
-			::WaitForSingleObject(((COrder*)pParam)->OutThreadEvent, INFINITE);//等待事件被設置
+			::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.Thread, INFINITE);//等待事件被設置
 			/*舊版2017/03/21*/
 			//while (g_pSubroutineThread) {
-			//	Sleep(2);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+			//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 			//}
+
 			/*****檢測執行緒*****/
 			if (((COrder*)pParam)->CheckModel == 1 && ((COrder*)pParam)->CheckSwitch.ImmediateCheck)//判斷即時檢測是否執行
 			{
+				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
-				/*****有機會產生死結*****/
-				while (g_pCheckActionThread) {
-					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-				}
+				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置
+				/*舊版2017/04/05*/
+				//while (g_pCheckActionThread) {
+				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+				//}
 			}
 			if (((COrder*)pParam)->CheckSwitch.RunCheck)//判斷區間檢測是否執行
 			{
@@ -594,11 +611,13 @@ UINT COrder::Thread(LPVOID pParam)
 #ifdef MOVE
 				MO_StopGumming();//關閉出膠
 #endif
+				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread);//釋放事件
 				g_pCheckCoordinateScanThread = AfxBeginThread(((COrder*)pParam)->CheckCoordinateScan, pParam);
-				/*****有機會產生死結*****/
-				while (g_pCheckCoordinateScanThread) {
-					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-				}
+				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread, INFINITE);//等待事件被設置			
+				/*舊版2017/04/05*/
+				//while (g_pCheckCoordinateScanThread) {
+				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+				//}
 			}
 #ifdef LOG
 			//QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
@@ -661,7 +680,7 @@ UINT COrder::Thread(LPVOID pParam)
 	if (((COrder*)pParam)->Commanding == _T("End"))//計數運行次數使用
 	{
 		((COrder*)pParam)->RunStatusRead.FinishProgramCount++;//完成加工計數+1
-		if (((COrder*)pParam)->RunLoopData.RunSwitch)//判斷是否開啟循環迴圈
+		if (((COrder*)pParam)->RunLoopData.RunSwitch)//判斷是否開啟循環迴圈(變數有衝突)
 		{
 			((COrder*)pParam)->RunLoopData.LoopCount++;//循環迴圈次數+1
 		}
@@ -689,6 +708,8 @@ UINT COrder::Thread(LPVOID pParam)
 	
 	((COrder*)pParam)->RunStatusRead.RunStatus = 0;//狀態設為未運行
 	g_pThread = NULL;
+	if(g_pRunLoopThread)//判斷是否是循環迴圈
+		::SetEvent(((COrder*)pParam)->ThreadEvent.RunLoopThread);
 	return 0;
 }
 /*命令動作(子)執行緒*/
@@ -4622,7 +4643,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	}
 	((COrder*)pParam)->RunStatusRead.StepCommandStatus = FALSE;
 	g_pSubroutineThread = NULL;
-	::SetEvent(((COrder*)pParam)->ThreadEvent);
+	::SetEvent(((COrder*)pParam)->ThreadEvent.Thread);
 	return 0;
 }
 /*I/O偵測執行緒*/
@@ -4689,11 +4710,13 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 			{
 				((COrder*)pParam)->CheckCoordinateRun = ((COrder*)pParam)->IntervalCheckCoordinate.at(i);//設定檢測座標
 				((COrder*)pParam)->CheckModel = 2;//設定檢測模式
+				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
-				/*****有機會產生死結*****/
-				while (g_pCheckActionThread) {
-					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-				}
+				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置
+				/*舊版2017/04/05*/
+				//while (g_pCheckActionThread) {
+				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+				//}
 			} 
 		} 
 		((COrder*)pParam)->IntervalCheckCoordinate.clear();//清除檢測點陣列
@@ -4710,17 +4733,20 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 			{
 				((COrder*)pParam)->AreaCheckRun = ((COrder*)pParam)->IntervalAreaCheck.at(i);//設定區域檢測資料
 				((COrder*)pParam)->CheckModel = 3;//設定檢測模式
+				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
-				/*****有機會產生死結*****/
-				while (g_pCheckActionThread) {
-					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-				}
+				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置		
+				/*舊版2017/04/05*/
+				//while (g_pCheckActionThread) {
+				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+				//}
 			}
 		}
 	}
 	((COrder*)pParam)->ClearCheckData(FALSE,TRUE);//區間檢測資料釋放
 	((COrder*)pParam)->CheckSwitch.RunCheck = FALSE;//區間檢測運行關閉
 	g_pCheckCoordinateScanThread = NULL;
+	::SetEvent(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread);
 	return 0;
 }
 /*檢測點執行執行續*/
@@ -5093,11 +5119,14 @@ UINT COrder::CheckAction(LPVOID pParam)
 			if (FilePathExist(((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Path))//判斷檔案路徑是否存在
 			{
 				((COrder*)pParam)->RunStatusRead.MosaicStatus = -1;//將狀態設為重組中
+				::ResetEvent(((COrder*)pParam)->ThreadEvent.MosaicDlgThread);//釋放事件
 				g_pMosaicDlgThread = AfxBeginThread(((COrder*)pParam)->MosaicDlg, pParam);//開啟重組中視窗執行緒
 				((COrder*)pParam)->RunStatusRead.MosaicStatus = VI_MosaicingImagesProcess(((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Path, ((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Name, 0);//影像重組計算
-				while (g_pMosaicDlgThread) {
-					Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
-				}
+				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.MosaicDlgThread, INFINITE);//等待事件被設置
+				/*舊版2017/04/05*/
+				//while (g_pMosaicDlgThread) {
+				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
+				//}
 			}
 #endif   
 		}
@@ -5184,6 +5213,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 	}
 	((COrder*)pParam)->CheckModel = 0;//執行完後檢測模式改為不執行檢測
 	g_pCheckActionThread = NULL;
+	::SetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);
 	return 0;
 }
 //重組中對話框執行緒
@@ -5195,6 +5225,7 @@ UINT COrder::MosaicDlg(LPVOID pParam)
 		((COrder*)pParam)->AreaCheckParamterDefault.pMosaicDlg->DoModal();
 	}
 	g_pMosaicDlgThread = NULL;
+	::SetEvent(((COrder*)pParam)->ThreadEvent.MosaicDlgThread);
 	return 0;
 }
 /**************************************************************************動作處理區塊*************************************************************************/
@@ -6793,8 +6824,11 @@ void COrder::ParameterDefult() {
 void COrder::DecideInit()
 {
 	//初始化事件
-	ThreadEvent = ::CreateEvent(NULL, TRUE, TRUE, L"MY_THREAD_EVT");
-	OutThreadEvent = ::OpenEvent(EVENT_ALL_ACCESS, FALSE, L"MY_THREAD_EVT");
+	ThreadEvent.Thread = ::CreateEvent(NULL, TRUE, TRUE, L"MY_THREAD_EVT");
+	ThreadEvent.CheckActionThread = ::CreateEvent(NULL, TRUE, TRUE, L"MY_CHECKACTIONTHREAD_EVT");
+	ThreadEvent.CheckCoordinateScanThread = ::CreateEvent(NULL, TRUE, TRUE, L"MY_CHECKCOORDINATESCANTHREAD_EVT");
+	ThreadEvent.MosaicDlgThread = ::CreateEvent(NULL, TRUE, TRUE, L"MY_MOSAICDLGTHREAD_EVT");
+	//OutThreadEvent = ::OpenEvent(EVENT_ALL_ACCESS, FALSE, L"MY_THREAD_EVT");//測試用
 	//原點賦歸狀態設為賦歸完成
 	RunStatusRead.GoHomeStatus = TRUE;
 	//運動運行狀態清除
@@ -6917,8 +6951,11 @@ void COrder::DecideInit()
 void COrder::DecideClear()
 {
 	//關閉事件
-	::CloseHandle(OutThreadEvent);
-	::CloseHandle(ThreadEvent);
+	//::CloseHandle(OutThreadEvent);
+	::CloseHandle(ThreadEvent.Thread);
+	::CloseHandle(ThreadEvent.CheckActionThread);
+	::CloseHandle(ThreadEvent.CheckCoordinateScanThread);
+	::CloseHandle(ThreadEvent.MosaicDlgThread);
 	//狀態堆疊清除
 	ArcData.clear();
 	CircleData1.clear();
@@ -9220,10 +9257,14 @@ void COrder::ShowAllStatus()
 /*載入命令*/
 BOOL COrder::LoadCommand()
 {
-	LoadCommandData.FirstRun = TRUE;//第一次運行開啟
-	if (PositionModifyNumber.size())//清除修正表
+	if (!g_pThread && !g_pRunLoopThread)
 	{
-		PositionModifyNumber.clear();
+		LoadCommandData.FirstRun = TRUE;//第一次運行開啟
+		if (PositionModifyNumber.size())//清除修正表
+		{
+			PositionModifyNumber.clear();
+		}
+		return 1;
 	}
 	return 0;
 }

@@ -345,7 +345,7 @@ void CCommandTestDlg::OnBnClickedStart()
 	else
 	{
 		//判斷目前運行次數是否大於 最大運行次數限制
-		if (a.RunLoopData.MaxRunNumber == -1 || a.RunStatusRead.FinishProgramCount < a.RunLoopData.MaxRunNumber)
+		if ((a.RunLoopData.MaxRunNumber == -1 || (a.RunStatusRead.FinishProgramCount < a.RunLoopData.MaxRunNumber)) && a.RunStatusRead.RunLoopStatus == 0)
 		{		
 			/*運行*/
 			a.Run();
@@ -2054,10 +2054,12 @@ void CCommandTestDlg::Counter()
 	QueryPerformanceFrequency(&fre); //取得CPU頻率
 	QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle  
     //...do something
+	for(i = 0; i<100000;i++)
+		a = 1;
 	QueryPerformanceCounter(&endTime); //取得開機到程式執行完成經過幾個CPU Cycle
-	times = ((double)endTime.QuadPart - (double)startTime.QuadPart) / fre.QuadPart;
+	times = ((double)endTime.QuadPart - (double)startTime.QuadPart) / (double)fre.QuadPart;
 #ifdef PRINTF
-	_cwprintf(L"%f", times);
+	_cwprintf(L"%lf", times);
 #endif
 }
 /*儲存參數檔案*/
@@ -2404,7 +2406,8 @@ void CCommandTestDlg::OnBnClickedBtntest()
         i++;
     }
        
-    ListRefresh(NULL);*/   
+    ListRefresh(NULL);  */
+	Counter();
 }
 
 
