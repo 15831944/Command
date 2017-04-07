@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/03/28
+*更新日期:2017/04/07
 *作者名稱:Rong
 */
 #pragma once
@@ -448,9 +448,17 @@ private:
 		CDrawFunction CDrawFunction;
 		void* pObject;
 	};
+	//控制執行緒同步事件結構
+	struct ThreadEvent {
+		HANDLE Thread;
+		HANDLE RunLoopThread;
+		HANDLE CheckActionThread;
+		HANDLE CheckCoordinateScanThread;
+		HANDLE MosaicDlgThread;
+	};
 private:    //變數
-	HANDLE          ThreadEvent;
-	HANDLE          OutThreadEvent;
+	ThreadEvent     ThreadEvent;
+	//HANDLE          OutThreadEvent;//測試OpenEvent用
 	HANDLE          wakeEvent;
 	/*運行時間計算*/
 	LARGE_INTEGER   startTime, endTime, fre;

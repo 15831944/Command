@@ -61,6 +61,8 @@ public:
 	CString BlockStr;
 	CString CheckStrBuff;
 
+	BOOL CommandModify;
+
 public:
 	/*¨ê·s*/
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
