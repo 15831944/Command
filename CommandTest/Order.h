@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/03/28
+*更新日期:2017/04/07
 *作者名稱:Rong
 */
 #pragma once

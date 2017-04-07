@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/03/28
+*更新日期:2017/04/07
 *作者名稱:Rong
 */
 #include "stdafx.h"
@@ -131,7 +131,7 @@ BOOL COrder::Run()
 			if (g_pRunLoopThread)
 			{
 				::ResetEvent(ThreadEvent.RunLoopThread);//釋放事件
-			}	
+			}
 			//開啟執行緒
 			g_pThread = AfxBeginThread(Thread, (LPVOID)this);
 			//wakeEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//創建事件(測試用)
@@ -371,7 +371,7 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 				{
 					if (((COrder*)pParam)->Run()) {//成功運行
 						::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.RunLoopThread, INFINITE);//等待事件被設置
-					}  
+					}
 					else//運行開啟失敗
 					{
 						((COrder*)pParam)->RunLoopData.RunSwitch = FALSE;
@@ -699,7 +699,7 @@ UINT COrder::Thread(LPVOID pParam)
 	{
 		((COrder*)pParam)->m_Action.LA_Clear();//清除連續線段陣列
 	} 
-	*/  
+	*/
 	((COrder*)pParam)->DecideClear();//清除所有陣列
 	((COrder*)pParam)->m_Action.m_bIsDispend = TRUE;//將控制出膠設回可出膠(防止View後人機要使用)
 	//計算執行時間
@@ -7285,7 +7285,7 @@ BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
 void COrder::StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address)
 {
 	//判斷是否有StepRepeat時且跳出區間
-	if (((COrder*)pParam)->Program.SubroutineStack.empty())
+	if (((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時不做此種判斷
 	{
 		if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//判斷是否有StepRepeat
 		{
