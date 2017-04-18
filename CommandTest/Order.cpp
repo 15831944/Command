@@ -734,15 +734,21 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	/************************************************************程序**************************************************************/
 	else if (CommandResolve(Command, 0) == L"GotoLabel") 
 	{
-		((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+		if (((COrder*)pParam)->ModelControl.Mode != 0)//建表模式
+		{
+			((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+		}
 	}
 	else if (CommandResolve(Command, 0) == L"GotoAddress")
 	{
-		if (_ttoi(CommandResolve(Command, 1)) && _ttoi(CommandResolve(Command, 1)) < (int)((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())//判斷Goto地址是否在命令列中
+		if (((COrder*)pParam)->ModelControl.Mode != 0)//建表模式
 		{
-			((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = _ttoi(CommandResolve(Command, 1)) - 2;
-			//判斷StepRepeat是否有強行跳轉
-			StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+			if (_ttoi(CommandResolve(Command, 1)) && _ttoi(CommandResolve(Command, 1)) < (int)((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size())//判斷Goto地址是否在命令列中
+			{
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = _ttoi(CommandResolve(Command, 1)) - 2;
+				//判斷StepRepeat是否有強行跳轉
+				StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+			}
 		}
 	}
 	else if (CommandResolve(Command, 0) == L"CallSubroutine")
@@ -894,44 +900,47 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	}
 	else if (CommandResolve(Command, 0) == L"Loop")
 	{
-		if (_ttol(CommandResolve(Command, 2)))
+		if (((COrder*)pParam)->ModelControl.Mode == 3)//建表模式
 		{
-			if (!((COrder*)pParam)->RepeatData.LoopAddressNum.size())//都沒有Loop時
+			if (_ttol(CommandResolve(Command, 2)))
 			{
-				((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
-				((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-				((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
-				((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
-			}
-			else
-			{
-				UINT LoopAddressNumSize = ((COrder*)pParam)->RepeatData.LoopAddressNum.size();
-				for (UINT i = 0; i < LoopAddressNumSize; i++)
+				if (!((COrder*)pParam)->RepeatData.LoopAddressNum.size())//都沒有Loop時
 				{
-					if (((COrder*)pParam)->RepeatData.LoopAddressNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
+					((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
+					((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+					((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
+					((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+				}
+				else
+				{
+					UINT LoopAddressNumSize = ((COrder*)pParam)->RepeatData.LoopAddressNum.size();
+					for (UINT i = 0; i < LoopAddressNumSize; i++)
 					{
-						if (((COrder*)pParam)->RepeatData.LoopCount.at(i) > 1)
+						if (((COrder*)pParam)->RepeatData.LoopAddressNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
 						{
-							((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
-							((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
-							--((COrder*)pParam)->RepeatData.LoopCount.at(i);
+							if (((COrder*)pParam)->RepeatData.LoopCount.at(i) > 1)
+							{
+								((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
+								((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+								--((COrder*)pParam)->RepeatData.LoopCount.at(i);
+							}
+							else
+							{
+								((COrder*)pParam)->RepeatData.LoopAddressNum.erase(((COrder*)pParam)->RepeatData.LoopAddressNum.begin() + i);
+								((COrder*)pParam)->RepeatData.LoopCount.erase(((COrder*)pParam)->RepeatData.LoopCount.begin() + i);
+							}
 						}
 						else
 						{
-							((COrder*)pParam)->RepeatData.LoopAddressNum.erase(((COrder*)pParam)->RepeatData.LoopAddressNum.begin() + i);
-							((COrder*)pParam)->RepeatData.LoopCount.erase(((COrder*)pParam)->RepeatData.LoopCount.begin() + i);
-						} 
-					}
-					else
-					{
-						if (i == LoopAddressNumSize - 1)//掃到最後一個時
-						{
-							((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
-							((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-							((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
-							((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+							if (i == LoopAddressNumSize - 1)//掃到最後一個時
+							{
+								((COrder*)pParam)->RepeatData.LoopSwitch = TRUE;
+								((COrder*)pParam)->RepeatData.LoopAddressNum.push_back(((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+								((COrder*)pParam)->RepeatData.LoopCount.push_back(_ttol(CommandResolve(Command, 2)));
+								((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 1);
+							}
+
 						}
-	   
 					}
 				}
 			}
@@ -3343,6 +3352,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
+			//if (_ttol(CommandResolve(Command, 1)))
+			//{
+			//	((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
+			//}
 #ifdef MOVE
 			if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) /*&& _ttol(CommandResolve(Command, 3))*/)
 			{
@@ -3683,7 +3696,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				else//手動模式時
 				{
 #if defined VI &&  defined MOVE
-					if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+					if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
 					{
 						//沒有找到
 #ifdef PRINTF
@@ -3921,7 +3934,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//手動未找到
 				{
 #if defined VI &&  defined MOVE
-					if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+					if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
 					{
 #ifdef PRINTF
 						_cwprintf(L"SubroutineThread()::手動模式第一點未找到\r\n");
@@ -3994,7 +4007,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//如果手動模式開啟 且對位點2未找到但對位點1找到
 				{
 #if defined VI &&  defined MOVE
-					if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, MO_ReadLogicPosition(0), MO_ReadLogicPosition(1), ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+					if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
 					{
 						//沒有找到
 #ifdef PRINTF

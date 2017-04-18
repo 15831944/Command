@@ -2,7 +2,7 @@
 *檔案名稱:mcc.h
 *內容簡述:運動軸卡API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠date 更新日期:2017/03/16
+*＠date 更新日期:2017/04/11
 *@虹橋2號W軸機專用 */
 // mcc.h : mcc DLL 的主要標頭檔
 //
@@ -26,7 +26,7 @@
 //X,Y皮帶導程40mm(20齒1齒2mm)
 //Z軸螺桿導程25mm
 //解析度對照 XY:2  Z:2.5 W:1
-//馬達驅動器上數值X: 20000,Y:20000, Z:10000 ,W: 4000;
+//馬達驅動器上數值X: 20000,Y:20000, Z:10000 ,W: 20000;
 #ifndef RESOLUTION
 #define RESOLUTION 2.0
 #endif
@@ -52,7 +52,7 @@
 #endif
 //步進馬達驅動器設定解析度
 #ifndef W_MOTOR_DRIVER
-#define W_MOTOR_DRIVER 4000.0
+#define W_MOTOR_DRIVER 20000.0
 #endif
 
 /***********雷射掃描使用********************/
@@ -235,15 +235,19 @@ MO_DLL void MO_ReadEvent(long *RR1X, long *RR1Y, long *RR1Z, long *RR1U);
 //3軸連續補間(8筆)
 MO_DLL void MO_DO3Continuous(LONG lInitSpeed, LONG lAcceleration, LONG lSpeed,DATA_3MOVE *DATA_3M, int iNum);
 //4軸連續補間_資料
-MO_DLL void MO_DO4Curve(DATA_4MOVE *DATA_4M, int dataCnt, LONG lSpeed);
+MO_DLL void MO_DO4Curve(DATA_4MOVE *DATA_4M, int dataCnt, LONG lSpeed, LONG lAcceleration);
 //3軸連續補間_資料
-MO_DLL void MO_DO3Curve(DATA_3MOVE *DATA_3M, int dataCnt, LONG lSpeed);
+MO_DLL void MO_DO3Curve(DATA_3MOVE *DATA_3M, int dataCnt, LONG lSpeed, LONG lAcceleration);
 //2軸連續補間_資料
-MO_DLL void MO_DO2Curve(DATA_2MOVE *DATA_2M, int dataCnt, LONG lSpeed);
+MO_DLL void MO_DO2Curve(DATA_2MOVE *DATA_2M, int dataCnt, LONG lSpeed, LONG lAcceleration);
+//4軸連續補間_計算完成時間與真實速度
+MO_DLL void MO_CalFinishTimeOf4ContIP(LONG &finishTime, LONG &lastFinishTime, LONG &TrueSpeed, LONG lSpeed, LONG lAcceleration, DATA_4MOVE *DATA_4M, int dataCnt);
 //連續插補的減速點計算
 LONG CalCipDecP(LONG InitSpd, LONG Dec, LONG Spd);
 //絕對位置轉成相對位置-3軸插補
 void MO_AbsToOppo3Move(std::vector<DATA_3MOVE> &);
+
+
 
 //====================================其他設定========================================================
 
