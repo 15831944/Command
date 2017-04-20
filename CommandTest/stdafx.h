@@ -93,7 +93,7 @@ BOOL FileExist(LPCWSTR FilePathName);
 #define CheckEndDlgcode 0x000
 #define UseNeedleMode 0
 #define UseMachineMode 1
-#define UseCoordinateMode 1
+#define UseCoordinateMode 0
 #define dCCDOffsetW 0.0
 #define dFillAreaW 0.0
 

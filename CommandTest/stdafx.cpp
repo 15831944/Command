@@ -32,19 +32,20 @@ LRESULT CALLBACK GetMsgProc(
 
 void InitConsoleWindow()
 {
-    /*AllocConsole();
+    AllocConsole();
     HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
     int hCrt = _open_osfhandle((long)handle, _O_TEXT);
     FILE * hf = _fdopen(hCrt, "w");
-    *stdout = *hf;*/
+    *stdout = *hf;
 
-    int nCrt = 0;
-    FILE* fp = fopen("C:\\abc.txt","w");
-    AllocConsole();
+    /*int nCrt = 0;
+    FILE* fp = fopen("C:\\abc.txt","w");.
+	AllocConsole();
     nCrt = _open_osfhandle((long)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT);
     fp = _fdopen(nCrt, "w");
     *stdout = *fp;
-    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);*/
+	
                  
     //刪除Menu 關閉按鈕 方式1
     //char oldTitle[100];

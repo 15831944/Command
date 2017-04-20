@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/04/17
+*＠data 更新日期:2017/04/18
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
@@ -69,6 +69,7 @@ class CAction
         BOOL    m_IsUseLineSet;   //線段設定使用(沒有使用0,有設定1)
         BOOL    m_IsSetLineOK;    //線段設置距離是否正常
         const int m_MaxRangeDeg90 = 302000;//針頭在90度的最大長度(210000+92000)
+        const int m_CirRadDeg90 = 92000;//針頭在90度的半徑長度(92000)
         LONG    m_lCutDis;        //四軸線段切點距離
 #ifdef MOVE
         std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
@@ -122,21 +123,21 @@ class CAction
 
         /**********連接動作****************************************/
 
-        //線段開始到中間點動作--(線段開始X,Y,Z,W,線段中點X,Y,Z,W,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
+        //線段開始到中間點動作(S-P)--(線段開始X,Y,Z,W,線段中點X,Y,Z,W,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
         void DecideLineSToP(LONG lX, LONG lY, LONG lZ, DOUBLE dAng, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lStartDelayTime, LONG lStartDistance, LONG lMidDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段開始到結束動作--(線段開始X,Y,Z,W,結束點X,Y,Z,W,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升距離,Z軸回升型態,點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
+        //線段開始到結束動作(S-E)--(線段開始X,Y,Z,W,結束點X,Y,Z,W,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升距離,Z軸回升型態,點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
         void DecideLineSToE(LONG lX, LONG lY, LONG lZ, DOUBLE dAng, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段開始到圓中間點動作--(圓形動作--(線段開始X1,Y1,Z1,W1,圓形座標X2,Y2,Z2,W2圓形座標X3,Y3,Z3,W3,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
-        void DecideLineSToCirP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lStartDelayTime, LONG lStartDistance, LONG lMidDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段開始到圓弧中間點動作--(圓形動作--(線段開始X1,Y1,Z1,W1,圓弧座標X2,Y2,Z2,W2圓弧座標X3,Y3,Z3,W3,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
+        //線段開始到圓中間點動作(S-C-P)--(圓形動作--(線段開始X1,Y1,Z1,W1,圓形座標X2,Y2,Z2,W2圓形座標X3,Y3,Z3,W3,中間點X4,Y4,Z4,W4,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
+        void DecideLineSToCirP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lX4, LONG lY4, LONG lZ4, DOUBLE dAng4, LONG lStartDelayTime, LONG lStartDistance, LONG lMidDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
+        //線段開始到圓弧中間點動作(S-A-P)--(圓形動作--(線段開始X1,Y1,Z1,W1,圓弧座標X2,Y2,Z2,W2圓弧座標X3,Y3,Z3,W3,移動前延遲,開機前從起點移動距離(設置距離),對線段中點的停留時間(節點時間ms),驅動速度,加速度,初速度)
         void DecideLineSToArcP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lStartDelayTime, LONG lStartDistance, LONG lMidDelayTime, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段開始到圓中間點到結束點動作--(圓形動作--(線段開始X1,Y1,Z1,W1,圓形座標X2,Y2,Z2,W2圓形座標X3,Y3,Z3,W3,結束座標X4,Y4,Z4,W4,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
+        //線段開始到圓中間點到結束點動作(S-C-E)--(圓形動作--(線段開始X1,Y1,Z1,W1,圓形座標X2,Y2,Z2,W2圓形座標X3,Y3,Z3,W3,結束座標X4,Y4,Z4,W4,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
         void DecideLineSToCirEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lX4, LONG lY4, LONG lZ4, DOUBLE dAng4, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段開始到圓弧中間點到結束點動作--(圓弧動作--(線段開始X1,Y1,Z1,W1,圓弧座標X2,Y2,Z2,W2結束座標X3,Y3,Z3,W3,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
+        //線段開始到圓弧中間點到結束點動作(S-A-E)--(圓弧動作--(線段開始X1,Y1,Z1,W1,圓弧座標X2,Y2,Z2,W2結束座標X3,Y3,Z3,W3,移動前延遲,開機前從起點移動距離(設置距離),關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
         void DecideLineSToArcEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lStartDelayTime, LONG lStartDistance, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);
-        //線段圓-中間點到結束動作--(圓形動作--(圓形座標X1,Y1,Z1,W1圓形座標X2,Y2,Z2,W2,線段結束X3,Y3,Z3,W3,關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
+        //線段圓-中間點到結束動作(C-P-E)--(圓形動作--(圓形座標X1,Y1,Z1,W1圓形座標X2,Y2,Z2,W2,線段結束X3,Y3,Z3,W3,關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
         void DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lX3, LONG lY3, LONG lZ3, DOUBLE dAng3, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIsNeedleP = 0);
-        //線段圓弧-中間點到結束動作--(圓弧動作--(圓弧座標X1,Y1,Z1,W1,線段結束X2,Y2,Z2,W2,關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
+        //線段圓弧-中間點到結束動作(A-P-E)--(圓弧動作--(圓弧座標X1,Y1,Z1,W1,線段結束X2,Y2,Z2,W2,關機後在結束點停留時間(停留時間),距離結束點多遠距離關機(關機距離),關機後的延遲時間(關機延遲),Z軸回升相對距離,Z軸型態(0絕對位置/1相對位置),點膠結束設定(高速度),返回長度,z返回高度,返回速度(低速),返回類型,驅動速度,加速度,初速度)
         void DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, LONG lCloseOffDelayTime, LONG lCloseDistance, LONG lCloseONDelayTime, LONG lZBackDistance, BOOL bZDisType, LONG lHighVelocity, LONG lDistance, LONG lHigh, LONG lLowVelocity, int iType, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, BOOL bIsNeedleP = 0);
 
         /**********單點&復歸****************************************/

@@ -129,7 +129,7 @@ private:
 		CDialog* pEMGDlg;
 	};
 	/************************************************************影像參數結構*******************************************************/
-	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
+	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y、Trigger陣列)
 	struct Vision {
 		BOOL FindMarkStatus;
 		CoordinateData Point;
@@ -138,6 +138,7 @@ private:
 		void* MilModel; 
 		DOUBLE OffsetX;
 		DOUBLE OffsetY;
+		std::vector<CoordinateData> Trigger;
 	};
 	//影像修正計算結構(對位點、對位點後偏移量X、對位點後偏移量Y、對位點後偏移角度)
 	struct VisionOffset {
@@ -169,10 +170,7 @@ private:
 	//影像擴大搜尋(調整狀態、擴大對位1開關、擴大對位2開關、擴大對位區間1、擴大對位區間2)
 	struct VisionTrigger {
 		UINT AdjustStatus;
-		BOOL Trigger1Switch;
-		BOOL Trigger2Switch;
-		std::vector<CoordinateData> Trigger1;
-		std::vector<CoordinateData> Trigger2;
+		int TriggerSwitch;
 	};
 	//影像搜尋錯誤結構(搜尋錯誤方式、尋問對話框指針、手動模式開關、暫停模式判斷)
 	struct VisionSerchError {
@@ -562,6 +560,9 @@ private:    //函式
 	CRect           MosaicAreaJudge(AreaCheck &AreaCheck);//判斷重組區域是否為同一點
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
+
+public:     //變數
+
 
 public:     //變數
 	//主運動物件
