@@ -3446,10 +3446,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
-			if (_ttol(CommandResolve(Command, 1)))
-			{
-				((COrder*)pParam)->Program.LabelName = _T("Label,") + CommandResolve(Command, 3);//跳到標籤
-			}
 #ifdef MOVE
 			if (((COrder*)pParam)->m_Action.DecideInPutSign(_ttol(CommandResolve(Command, 1)), _ttol(CommandResolve(Command, 2))) /*&& _ttol(CommandResolve(Command, 3))*/)
 			{
@@ -5481,7 +5477,7 @@ void COrder::VisionModify(LPVOID pParam)
 #ifdef VI 
 	if (((COrder*)pParam)->Program.SubroutineStack.empty())//沒有CallSubroutine時修正方式
 	{
-		VI_CorrectLocation(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+		VI_CorrectLocation_W(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.W,
 			((COrder*)pParam)->VisionOffset.Contraposition.X, ((COrder*)pParam)->VisionOffset.Contraposition.Y,
 			((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY, ((COrder*)pParam)->VisionOffset.Angle, ((COrder*)pParam)->VisionSet.ModifyMode);
 		((COrder*)pParam)->VisioModifyJudge = TRUE;
@@ -5490,7 +5486,7 @@ void COrder::VisionModify(LPVOID pParam)
 	{
 		if (((COrder*)pParam)->Program.SubroutineVisioModifyJudge.at((((COrder*)pParam)->Program.SubroutinCount-1)))//判斷Subroutine是否執行修正
 		{
-			VI_CorrectLocation(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y,
+			VI_CorrectLocation_W(((COrder*)pParam)->FinalWorkCoordinateData.X, ((COrder*)pParam)->FinalWorkCoordinateData.Y, ((COrder*)pParam)->FinalWorkCoordinateData.W,
 				((COrder*)pParam)->VisionOffset.Contraposition.X, ((COrder*)pParam)->VisionOffset.Contraposition.Y,
 				((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY, ((COrder*)pParam)->VisionOffset.Angle, ((COrder*)pParam)->VisionSet.ModifyMode);
 #ifdef PRINTF

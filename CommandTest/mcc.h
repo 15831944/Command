@@ -2,7 +2,7 @@
 *檔案名稱:mcc.h
 *內容簡述:運動軸卡API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠date 更新日期:2017/04/11
+*＠date 更新日期:2017/04/20
 *@虹橋2號W軸機專用 */
 // mcc.h : mcc DLL 的主要標頭檔
 //
@@ -118,6 +118,8 @@ typedef std::vector<DATA_4MOVE> DATA_4MOVE_VECTOR;
 MO_DLL BOOL MO_Open(int interrupt);
 //關閉軸卡
 MO_DLL void MO_Close();
+//重設軸卡
+MO_DLL void MO_Reset();
 //停止驅動
 MO_DLL void MO_STOP();
 //減速停止
@@ -229,6 +231,8 @@ MO_DLL LONG MO_ReadReg(int iRegSelect, int iAxis);
 MO_DLL LONG MO_ReadSetData(int iSelect, int iAxis);
 //讀取中斷暫存器RR1
 MO_DLL void MO_ReadEvent(long *RR1X, long *RR1Y, long *RR1Z, long *RR1U);
+//讀取連續插補預存緩衝暫存器狀態
+MO_DLL int MO_ReadStackCntCIP();
 
 //====================================連續插補========================================================
 
@@ -241,7 +245,7 @@ MO_DLL void MO_DO3Curve(DATA_3MOVE *DATA_3M, int dataCnt, LONG lSpeed, LONG lAcc
 //2軸連續補間_資料
 MO_DLL void MO_DO2Curve(DATA_2MOVE *DATA_2M, int dataCnt, LONG lSpeed, LONG lAcceleration);
 //4軸連續補間_計算完成時間與真實速度
-MO_DLL void MO_CalFinishTimeOf4ContIP(LONG &finishTime, LONG &lastFinishTime, LONG &TrueSpeed, LONG lSpeed, LONG lAcceleration, DATA_4MOVE *DATA_4M, int dataCnt);
+MO_DLL void MO_CalFinishTimeOf4ContIP(LONG &finishTime, LONG &TrueSpeed, LONG lSpeed, LONG lAcceleration, DATA_4MOVE *DATA_4M, int dataCnt);
 //連續插補的減速點計算
 LONG CalCipDecP(LONG InitSpd, LONG Dec, LONG Spd);
 //絕對位置轉成相對位置-3軸插補
@@ -261,6 +265,8 @@ MO_DLL void MO_StopGumming();
 MO_DLL CString MO_StreamToUnit(int iValue);
 //中斷條件選擇(0:等速脈波輸出開始/ 1:輸出結束/ 2:驅動開始/ 3:驅動結束/ 4:釋放驅動)
 MO_DLL void MO_InterruptCase(BOOL bIsClose, int iData, LPTHREAD_START_ROUTINE Thread = NULL, LPVOID lpParameter = NULL);
+//錯誤狀態檢查
+MO_DLL void MO_ErrorStateCheck();
 
 //====================================馬達解析度========================================================
 //馬達解析度X,Y(傳入)

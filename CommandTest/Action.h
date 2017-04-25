@@ -26,6 +26,7 @@ struct LINEGLUESET
 {
     LONG StartDelayTime;
     LONG StartDistance;
+    LONG lMidDelayTime;
     LONG CloseOffDelayTime;
     LONG CloseDistance;
     LONG CloseONDelayTime;
@@ -317,8 +318,8 @@ class CAction
         void W_UpdateNeedleMotor_Setting(LONG lX, LONG lY, LONG lZ, DOUBLE dAngle0, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAngle1, AxeSpace APoint, BOOL bStart0End1, DOUBLE DisAngle = 1);
         //w軸連續更新數值(多載_設置距離與關機距離用)_階使用-線段設定
         void W_UpdateNeedleMotor_Setting(LONG lX, LONG lY, LONG lZ, DOUBLE dAngle0, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAngle1, AxeSpace APoint_Start, AxeSpace APoint_End, int iS0E1O2 = 2, DOUBLE DisAngle = 1);
-        //圓形多載_加入設置距離APoint--(圓點座標X,Y,Z,W,圓點座標X2,Y2,,Z2,W2,APoint,驅動速度,初速度)
-        void W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, AxeSpace APoint_Start, AxeSpace APoint_Set, LINEGLUESET glueSet, LONG lWorkVelocity, LONG lAcceleration, LONG lInitVelocity);
+        //圓形/圓弧(True/False)_加入設置距離APoint--(圓點座標X,Y,Z,W,圓點座標X2,Y2,,Z2,W2,APoint,驅動速度,初速度)
+        void W_CirArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, AxeSpace APoint_Start, AxeSpace APoint_Set, LINEGLUESET glueSet, LONG lWorkVelocity, LONG lAcceleration, LONG lInitVelocity, BOOL cirArcType = TRUE);
         //圓弧多載_加入設置距離APoint--(圓弧點座標X,Y,Z,W,圓弧點座標X2,Y2,,Z2,W2,APoint,驅動速度,初速度)
         void W_ArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, AxeSpace APoint_Start, AxeSpace APoint_Set, LINEGLUESET glueSet, LONG lWorkVelocity, LONG lAcceleration, LONG lInitVelocity);
         /**********************填充專用************************/

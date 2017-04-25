@@ -959,7 +959,7 @@ void CAction::DecideCircle(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
 *圓形動作-多載(加入線段用_設置距離APoint)
 *輸入(圓形、圓形結束點、線速、系統參數)
 */
-void CAction::W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, AxeSpace APoint_Start, AxeSpace APoint_Set,LINEGLUESET glueSet, LONG lWorkVelocity, LONG lAcceleration, LONG lInitVelocity)
+void CAction::W_CirArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LONG lY2, LONG lZ2, DOUBLE dAng2, AxeSpace APoint_Start, AxeSpace APoint_Set,LINEGLUESET glueSet, LONG lWorkVelocity, LONG lAcceleration, LONG lInitVelocity, BOOL cirArcType)
 {
     /*圓形(x座標，y座標，W軸角度)
     LONG lX1, LONG lY1,LONG lZ1, DOUBLE dAng1
@@ -988,7 +988,7 @@ void CAction::W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
     LONG cutRad = 1000;//以1mm，也就是1000um的弧長做切點
     if(lZ1 == lZ2&& lZ1 == APoint_Start.z)
     {
-        Circle.CircleCutPath_2D_unit(p1, p2, p3, TRUE, cutRad, VecBuf);//2D切圓
+        Circle.CircleCutPath_2D_unit(p1, p2, p3, cirArcType, cutRad, VecBuf);//2D切圓
     }
     else
     {
@@ -1033,27 +1033,27 @@ void CAction::W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
         VecBuf.erase(VecBuf.begin());
     }
 
-    for(size_t i = 0; i < VecBuf.size() - 1; i++)
+    for(size_t i = 0; i<VecBuf.size()-1; i++)
     {
         //進行絕對/相對座標轉換
-        if(i == 0)
+        if(i==0)
         {
             cpMpLast = W_GetMachinePoint(VecBuf.at(i).x, VecBuf.at(i).y, absAngle, 1);
         }
-        if(fabs(SumAng) > EPSILON) //旋轉切割角度
+        if(fabs(SumAng)>EPSILON) //旋轉切割角度
         {
             //Get 絕對角度
-            if(Fin_cnt != 0)
+            if(Fin_cnt!=0)
             {
                 //Get 絕對角度
-                absAngle = absAngle + ((SumAng > 0) ? num_Ang + degreeOverPulse : -num_Ang - degreeOverPulse);
-                pDataShift->AngleW = ((SumAng > 0) ? num_Ang + degreeOverPulse : -num_Ang - degreeOverPulse);
+                absAngle = absAngle+((SumAng>0) ? num_Ang+degreeOverPulse : -num_Ang-degreeOverPulse);
+                pDataShift->AngleW = ((SumAng>0) ? num_Ang+degreeOverPulse : -num_Ang-degreeOverPulse);
                 Fin_cnt--;
             }
             else
             {
-                absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
-                pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+                absAngle = absAngle+((SumAng>0) ? num_Ang : -num_Ang);
+                pDataShift->AngleW = ((SumAng>0) ? num_Ang : -num_Ang);
             }
         }
         else//不旋轉角度不切割
@@ -1067,33 +1067,35 @@ void CAction::W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
         pDataShift->EndPY = cpMpbuf.y-cpMpLast.y;
         pDataShift->EndPZ = VecBuf.at(i+1).z-VecBuf.at(i).z;
         pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2)+pow(pDataShift->EndPY, 2)+pow(pDataShift->EndPZ, 2));
-        if(i==1)
+
+        /*if(i==1)
         {
             m_lCutDis = m_lCutDis+pDataShift->Distance;
-        }
+        }*/
         //_cwprintf(_T("%d,%d, %.3f\n"), VecBuf.at(i).x, VecBuf.at(i).y);
         //_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         cpMpLast = cpMpbuf;
         pDataShift++;
     }
 
-
+    LONG lDoCloseTime = 0;
+    LONG lspeed = 0;//驅動速度
+    //無設置距離，算速度
+    if(glueSet.StartDistance==0)
+    {
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelocity, lAcceleration, pDataM, (num>10) ? 10 : 1);
+        lWorkVelocity = lspeed;
+    }
     //==>>使用關機距離
-    LONG lWorkSpeed = 0, lDoCloseTime = 0;//驅動速度
     if(glueSet.CloseDistance!=0)
     {
-        lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
-        lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
-        LONG lspeed = 0, ltimeSum = 0;
+        //lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
         //傳入針頭線段總長度與關機距離長度
-        MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, pDataM, VecBuf.size());
-    }
-    else
-    {
-        lWorkSpeed = lWorkVelocity;
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelocity, lAcceleration, pDataM, num);
+        lDoCloseTime = lDoCloseTime-(DOUBLE)glueSet.CloseDistance/(DOUBLE)lWorkVelocity*1000000;
     }
 
-    PauseDoGlue();//暫停恢復後繼續出膠(m_bIsPause=0)
+
     if(!m_bIsStop)
     {
         if(glueSet.StartDistance!=0)
@@ -1101,6 +1103,10 @@ void CAction::W_CircleMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2,
             //啟動設置距離計時
             CAction::m_YtimeOutGlueSet = TRUE;
             MO_TimerSetIntter(lStartTime, 0);//計時到跳至執行序
+        }
+        else
+        {
+            PauseDoGlue();//暫停恢復後繼續出膠(m_bIsPause=0)
         }
         if(glueSet.CloseDistance!=0)
         {
@@ -1171,6 +1177,8 @@ void CAction::W_ArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
     int Fin_cnt = (int)floor(abs(rest_Ang) / degreeOverPulse);//最後個數
     DOUBLE absAngle = MO_ReadLogicPositionW();
     m_lCutDis = 0;//切點距離
+    LONG sumDistance = 0;
+    LONG closeTimingNum = 0;
 
     //==>>使用設置距離
     LONG lStartTime = 0;
@@ -1225,10 +1233,22 @@ void CAction::W_ArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
         pDataShift->EndPZ = VecBuf.at(i+1).z-VecBuf.at(i).z;
         pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2)+pow(pDataShift->EndPY, 2)+pow(pDataShift->EndPZ, 2));
 
-        if(i == 1)
+        if(glueSet.CloseDistance!=0)
         {
-            m_lCutDis = m_lCutDis + pDataShift->Distance;//切點距離
+            sumDistance += pDataShift->Distance;
+            if(sumDistance>glueSet.CloseDistance&&closeTimingNum==0)
+            {
+                closeTimingNum = i+1;
+                if(glueSet.StartDistance!=0)
+                {
+                    closeTimingNum++;
+                }
+            }
         }
+        //if(i == 1)
+        //{
+        //    m_lCutDis = m_lCutDis + pDataShift->Distance;//切點距離
+        //}
         //_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         // TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         //TRACE(_T(",%d,%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->EndPZ, pDataShift->AngleW);
@@ -1239,20 +1259,21 @@ void CAction::W_ArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
         pDataShift++;
     }
 
-    //==>>使用關機距離
-    LONG lWorkSpeed = 0;//驅動速度
     LONG lDoCloseTime = 0;
+    LONG lspeed = 0;//驅動速度
+    //無設置距離，算速度降速
+    if(glueSet.StartDistance==0)
+    {
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelocity, lAcceleration, pDataM, (num>20) ? 20 : 1);
+        lWorkVelocity = lspeed;
+    }
+    //==>>使用關機距離
     if(glueSet.CloseDistance!=0)
     {
-        lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
-        lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
-        LONG lspeed = 0, ltimeSum = 0;
+        //lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelocity, lAcceleration, lInitVelocity);
         //傳入針頭線段總長度與關機距離長度
-        MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, pDataM, VecBuf.size());
-    }
-    else
-    {
-        lWorkSpeed = lWorkVelocity;
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelocity, lAcceleration, pDataM, closeTimingNum);
+        _cwprintf(_T("時間%d, 第%d筆斷膠\n"), lDoCloseTime,closeTimingNum);
     }
 
     PauseDoGlue();//暫停恢復後繼續出膠(m_bIsPause=0)
@@ -1270,7 +1291,7 @@ void CAction::W_ArcMove(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG lX2, LO
             CAction::m_ZtimeOutGlueSet = FALSE;
             MO_TimerSetIntter(lDoCloseTime, 1);
         }
-        MO_DO4Curve(pDataM, num, lWorkSpeed, lAcceleration);//執行四軸插補
+        MO_DO4Curve(pDataM, num, lWorkVelocity, lAcceleration);//執行四軸插補
         PreventMoveError();//防止驅動錯誤
     }
     pDataShift = NULL;
@@ -1479,7 +1500,7 @@ void CAction::DecideLineSToCirP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
         memset(&glueSet, 0, sizeof(LINEGLUESET));
         glueSet.StartDistance = lStartDistance;
         glueSet.StartDelayTime = lStartDelayTime;
-        W_CircleMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy);
+        W_CirArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy,TRUE);
     }
     DecideLineMidMove(lX4, lY4, lZ4, dAng4, lMidDelayTime, lWorkVelociy, lAcceleration, lInitVelociy, 1);//移動至中間點
 #endif
@@ -1572,7 +1593,7 @@ void CAction::DecideLineSToArcP(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
         memset(&glueSet, 0, sizeof(LINEGLUESET));
         glueSet.StartDistance = lStartDistance;
         glueSet.StartDelayTime = lStartDelayTime;
-        W_ArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy);
+        W_CirArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy, FALSE);
 
         MO_Timer(0, 0, lMidDelayTime * 1000);
         MO_Timer(1, 0, lMidDelayTime * 1000);//線段點膠設定---(4)節點時間
@@ -1720,12 +1741,12 @@ void CAction::DecideLineSToCirEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LO
 
         if((lX1 >= lX4 - 5) && (lX1 <= lX4 + 5) && (lY1 >= lY4 - 5) && (lY1 <= lY4 + 5))   //表示結束點在起始點上
         {
-            W_CircleMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy);
+            W_CirArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy, TRUE);
             DecideLineEndMove(lCloseOffDelayTime, lCloseONDelayTime, lZBackDistance, bZDisType, lHighVelocity, lDistance, lHigh, lLowVelocity, lWorkVelociy, lAcceleration, lInitVelociy);
         }
         else
         {
-            W_CircleMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy);
+            W_CirArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy, TRUE);
             DecideLineEndMove(lX4, lY4, lZ4, dAng4, lCloseOffDelayTime, lCloseDistance, lCloseONDelayTime, lZBackDistance, bZDisType, lHighVelocity, lDistance, lHigh, lLowVelocity, iType, lWorkVelociy, lAcceleration, lInitVelociy, 1);
         }
     }
@@ -1851,7 +1872,7 @@ void CAction::DecideLineSToArcEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LO
         glueSet.CloseDistance = lCloseDistance;
         glueSet.CloseOffDelayTime = lCloseOffDelayTime;
         glueSet.CloseONDelayTime = lCloseONDelayTime;
-        W_ArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy);
+        W_CirArcMove(lX2, lY2, lZ2, dAng2, lX3, lY3, lZ3, dAng3, apoint_start, apoint_set, glueSet, lWorkVelociy, lAcceleration, lInitVelociy, FALSE);
 
         DecideLineEndMove(lCloseOffDelayTime, lCloseONDelayTime, lZBackDistance, bZDisType, lHighVelocity, lDistance, lHigh, lLowVelocity, lWorkVelociy, lAcceleration, lInitVelociy);
     }
@@ -1972,7 +1993,6 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
     int Fin_cnt = (int)floor(fabs(rest_Ang) /degreeOverPulse);//最後個數
     DOUBLE absAngle = MO_ReadLogicPositionW();
     cpMpLast = { MO_ReadLogicPosition(0),MO_ReadLogicPosition(1) };
-    LONG lWorkSpeed = 0;//驅動速度
     m_lCutDis = 0;//切點距離
 
     for(size_t i = 0; i<num; i++)
@@ -2004,10 +2024,11 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
         pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
         pDataShift->EndPZ = VecBuf.at(i+1).z - VecBuf.at(i).z;
         pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-        if(i<2)
+
+        /*if(i<2)
         {
             m_lCutDis = m_lCutDis + pDataShift->Distance;
-        }
+        }*/
         //_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         // TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         cpMpLast = cpMpbuf;
@@ -2018,10 +2039,14 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
     {
         if(lCloseDistance != 0)   //線段點膠設定---(5)關機距離
         {
-            lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
-            LONG lspeed = 0, ltimeSum = 0, lDoCloseTime = 0;
+            //lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
             //傳入針頭線段總長度與關機距離長度
-            MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, pDataM, num);
+
+            LONG lspeed = 0, lDoCloseTime = 0;
+            MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelociy, lAcceleration, pDataM, (num>10) ? 10 : 1);
+            lWorkVelociy = lspeed;
+            MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lspeed, lAcceleration, pDataM, num);
+            lDoCloseTime = lDoCloseTime-lCloseDistance/lWorkVelociy;
             /*======計時器到觸發中斷執行斷膠，使用z中斷執行================*/
             if(!m_bIsStop)
             {
@@ -2029,13 +2054,9 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
                 MO_TimerSetIntter(lDoCloseTime, 1);
             }
         }
-        else
-        {
-            lWorkSpeed = lWorkVelociy;
-        }
         if(!m_bIsStop)
         {
-            MO_DO4Curve(pDataM, num, lWorkSpeed, lWorkVelociy * 3);//執行四軸插補
+            MO_DO4Curve(pDataM, num, lWorkVelociy, lAcceleration);//執行四軸插補
             PreventMoveError();//防止驅動錯誤
         }
         pDataShift = NULL;
@@ -2073,7 +2094,7 @@ void CAction::DecideCirclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LON
     {
         if(!m_bIsStop)
         {
-            MO_DO4Curve(pDataM, num, lWorkVelociy, lWorkVelociy * 3);//執行四軸插補
+            MO_DO4Curve(pDataM, num, lWorkVelociy, lAcceleration);//執行四軸插補
             PreventMoveError();//防止驅動錯誤
         }
         pDataShift = NULL;
@@ -2189,24 +2210,32 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
     CPoint cpMpbuf(0, 0), cpMpLast(0, 0);
     int Fin_cnt = (int)floor(fabs(rest_Ang) /degreeOverPulse);//最後個數
     DOUBLE absAngle = MO_ReadLogicPositionW();
-    LONG lWorkSpeed = 0;//驅動速度
+    LONG sumDistance = 0;//累積距離
+    LONG closeTimingNum = 0;//關機時機點
     m_lCutDis = 0;//切點距離
     cpMpLast = { MO_ReadLogicPosition(0),MO_ReadLogicPosition(1) };
 
     //機械絕對座標=>機械相對座標
     for(size_t i = 0; i<num; i++)
     {
-        if(Fin_cnt != 0)
+        if(fabs(SumAng)>EPSILON) //旋轉切割角度
         {
-            //Get 絕對角度
-            absAngle = absAngle + ((SumAng > 0) ? num_Ang +degreeOverPulse : -num_Ang -degreeOverPulse);
-            pDataShift->AngleW = ((SumAng > 0) ? num_Ang +degreeOverPulse : -num_Ang -degreeOverPulse);
-            Fin_cnt--;
+            if(Fin_cnt!=0)
+            {
+                //Get 絕對角度
+                absAngle = absAngle+((SumAng>0) ? num_Ang+degreeOverPulse : -num_Ang-degreeOverPulse);
+                pDataShift->AngleW = ((SumAng>0) ? num_Ang+degreeOverPulse : -num_Ang-degreeOverPulse);
+                Fin_cnt--;
+            }
+            else
+            {
+                absAngle = absAngle+((SumAng>0) ? num_Ang : -num_Ang);
+                pDataShift->AngleW = ((SumAng>0) ? num_Ang : -num_Ang);
+            }
         }
         else
         {
-            absAngle = absAngle + ((SumAng > 0) ? num_Ang : -num_Ang);
-            pDataShift->AngleW = ((SumAng > 0) ? num_Ang : -num_Ang);
+            pDataShift->AngleW = 0.0;
         }
         //Get 機械絕對座標
         cpMpbuf = W_GetMachinePoint(VecBuf.at(i+1).x, VecBuf.at(i+1).y, absAngle, 1);
@@ -2216,10 +2245,11 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
         pDataShift->EndPY = cpMpbuf.y - cpMpLast.y;
         pDataShift->EndPZ = VecBuf.at(i+1).z-VecBuf.at(i).z;
         pDataShift->Distance = (LONG)sqrt(pow(pDataShift->EndPX, 2) + pow(pDataShift->EndPY, 2) + pow(pDataShift->EndPZ, 2));
-        if(i<2)
-        {
-            m_lCutDis = m_lCutDis + pDataShift->Distance;//切點距離
-        }
+
+        //if(i<2)
+        //{
+        //    m_lCutDis = m_lCutDis + pDataShift->Distance;//切點距離
+        //}
         //_cwprintf(_T("%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         // TRACE(_T(",%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->AngleW);
         //TRACE(_T(",%d,%d,%d,%.3f\n"), pDataShift->EndPX, pDataShift->EndPY, pDataShift->EndPZ, pDataShift->AngleW);
@@ -2231,10 +2261,13 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
     PauseDoGlue();//暫停恢復後繼續出膠(m_bIsPause=0)
     if(lCloseDistance != 0)   //線段點膠設定---(5)關機距離
     {
-        lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
-        LONG lspeed = 0, ltimeSum = 0, lDoCloseTime = 0;
+        //lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
         //傳入針頭線段總長度與關機距離長度
-        MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, pDataM, num);
+        LONG lspeed = 0, lDoCloseTime = 0;
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkVelociy, lAcceleration, pDataM, (num>20) ? 20 : 1);
+        lWorkVelociy = lspeed;
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lspeed, lAcceleration, pDataM, num);
+        lDoCloseTime = lDoCloseTime-lCloseDistance/lWorkVelociy;
         /*======計時器到觸發中斷執行斷膠，使用z中斷執行================*/
         if(!m_bIsStop)
         {
@@ -2242,14 +2275,10 @@ void CAction::DecideArclePToEnd(LONG lX1, LONG lY1, LONG lZ1, DOUBLE dAng1, LONG
             MO_TimerSetIntter(lDoCloseTime, 1);
         }
     }
-    else
-    {
-        lWorkSpeed = lWorkVelociy;
-    }
 
     if(!m_bIsStop)
     {
-        MO_DO4Curve(pDataM, num, lWorkSpeed, lAcceleration);//執行四軸插補
+        MO_DO4Curve(pDataM, num, lWorkVelociy, lAcceleration);//執行四軸插補
         PreventMoveError();//防止驅動錯誤
     }
     pDataShift = NULL;
@@ -7891,9 +7920,9 @@ void CAction::W_Line4DtoDo(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelo
     if(bIsUseLineSet == TRUE)  //如果有使用線段塗膠設定(關機距離)
     {
         lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
-        LONG lspeed = 0, ltimeSum = 0,lDoCloseTime = 0;
+        LONG lspeed = 0, lDoCloseTime = 0;
         //傳入針頭線段總長度與關機距離長度
-        MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, DATA_4Do, W_Buff.size() - 1);
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, DATA_4Do, W_Buff.size() - 1);
         /*======計時器到觸發中斷執行斷膠，使用z中斷執行================*/
         if(!m_bIsStop)
         {
@@ -7966,9 +7995,9 @@ void CAction::W_Line4DtoDo(LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelo
     if(glueSet.CloseDistance!=0)
     {
         lWorkSpeed = CalPreglueEnd(m_lCutDis, lWorkVelociy, lAcceleration, lInitVelociy);
-        LONG lspeed = 0, ltimeSum = 0;
+        LONG lspeed = 0;
         //傳入針頭線段總長度與關機距離長度
-        MO_CalFinishTimeOf4ContIP(ltimeSum, lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, DATA_4Do, W_Buff.size()-1);
+        MO_CalFinishTimeOf4ContIP(lDoCloseTime, lspeed, lWorkSpeed, lAcceleration, DATA_4Do, W_Buff.size()-2);
     }
     else
     {
@@ -8160,6 +8189,11 @@ void CAction::W_NeedleGoHoming(LONG Speed1, LONG Speed2,BOOL bStep)
     cpCirMidBuff[0].x = Speed1;
     cpCirMidBuff[0].y = Speed2;
     cpCirMidBuff[1].x = bStep;
+    if(MO_ReadStackCntCIP())
+    {
+        MO_AlarmCClean();
+        MO_Reset();
+    }
     AfxBeginThread(MoMoveThread, (LPVOID)this);
     /*************以下保留*******/
     //if (!bStep)

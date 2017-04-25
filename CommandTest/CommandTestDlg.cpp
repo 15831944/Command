@@ -204,8 +204,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTNPRINTCLINE, &CCommandTestDlg::OnBnClickedBtnprintcline)
 	
 	ON_WM_CLOSE()
-		ON_BN_CLICKED(IDC_BTNWRITECOMMAND, &CCommandTestDlg::OnBnClickedBtnwritecommand)
-		END_MESSAGE_MAP()
+	ON_BN_CLICKED(IDC_BTNWRITECOMMAND, &CCommandTestDlg::OnBnClickedBtnwritecommand)
+END_MESSAGE_MAP()
 
 // CCommandTestDlg 訊息處理常式
 BOOL CCommandTestDlg::OnInitDialog()
@@ -375,6 +375,11 @@ void CCommandTestDlg::OnBnClickedStop()
 {
 	a.Stop();
 	SetDlgItemText(IDC_PAUSE, L"Pause");
+	if (pTouchMoveThread)
+	{
+		CDialog *pCCDDlog = ((CCamera*)m_pCameraDlg)->m_pCCDDlalog;
+		((CCCD*)pCCDDlog)->m_TouchMoveThreadStop = TRUE;
+	}
 }
 /*清除陣列*/
 void CCommandTestDlg::OnBnClickedOk()
@@ -2308,27 +2313,27 @@ int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT mess
 {
 	if (m_pCameraDlg != NULL)
 	{
-		m_pCameraDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+		m_pCameraDlg->SetLayeredWindowAttributes(0, (255 * 10) / 100, LWA_ALPHA);
 	}
 	if (m_pDefaultDlg != NULL)
 	{
-		m_pDefaultDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+		m_pDefaultDlg->SetLayeredWindowAttributes(0, (255 * 10) / 100, LWA_ALPHA);
 	}
 	if (m_pLaserDlg != NULL)
 	{
-		m_pLaserDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+		m_pLaserDlg->SetLayeredWindowAttributes(0, (255 * 10) / 100, LWA_ALPHA);
 	}
 	if (m_pPositionModifyDlg != NULL)
 	{
-		m_pPositionModifyDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+		m_pPositionModifyDlg->SetLayeredWindowAttributes(0, (255 * 10) / 100, LWA_ALPHA);
 	}
 	if (m_pLaserAdjustDlg != NULL)
 	{
-		m_pLaserAdjustDlg->SetLayeredWindowAttributes(0, (255 * 70) / 100, LWA_ALPHA);
+		m_pLaserAdjustDlg->SetLayeredWindowAttributes(0, (255 * 10) / 100, LWA_ALPHA);
 	}
 	if (m_pLineContinuousDlg != NULL)
 	{
-		m_pLineContinuousDlg->SetLayeredWindowAttributes(0, (250 * 70) / 100, LWA_ALPHA);
+		m_pLineContinuousDlg->SetLayeredWindowAttributes(0, (250 * 10) / 100, LWA_ALPHA);
 	}
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
@@ -2409,6 +2414,5 @@ void CCommandTestDlg::OnBnClickedBtntest()
 	ListRefresh(NULL);  */
 	Counter();
 }
-
 
 

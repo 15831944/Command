@@ -31,6 +31,7 @@ CCamera::CCamera(CWnd* pParent /*=NULL*/)
     TipToCCDAdjust = FALSE;
     PixToPlusAdjust = FALSE;
     WJOGMode = FALSE;
+	m_pCCDDlalog = NULL;//CCD視窗指針
 }
 
 CCamera::~CCamera()
@@ -82,7 +83,7 @@ BEGIN_MESSAGE_MAP(CCamera, CDialogEx)
     ON_MESSAGE(WM_MY_MESSAGE(IDC_BTNWREGULATE, 1), OnBnLClickedBtnwregulate)
     ON_WM_SHOWWINDOW()
     ON_WM_MOUSEACTIVATE()
-    
+	ON_BN_CLICKED(IDC_BTNTOUCHMOVE, &CCamera::OnBnClickedBtntouchmove)
 END_MESSAGE_MAP()
 
 // CCamera 訊息處理常式
@@ -124,10 +125,26 @@ BOOL CCamera::OnInitDialog()
     SetDlgItemText(IDC_STATCX, StrBuff);
     StrBuff.Format(_T("TCY:%d"), ((CCommandTestDlg*)pMain)->a.m_Action.m_MachineOffSet.y);
     SetDlgItemText(IDC_STATCY, StrBuff);
+	/*初始化影像Dialog*/
+	GetDlgItem(IDC_PIC)->GetWindowRect(CCDrect);
+	ScreenToClient(CCDrect);
+	CCDrectOld = CCDrect;
+	//GetDlgItem(IDC_PIC)->MoveWindow(CCDrect.left, CCDrect.top, 1292, 964);
+	m_pCCDDlalog = new CCCD();
+	m_pCCDDlalog->Create(IDD_CCD, this);
+	m_pCCDDlalog->MoveWindow(CCDrect.left, CCDrect.top, CCDrect.Width(), CCDrect.Height());
+	m_pCCDDlalog->ShowWindow(SW_SHOW);
+	
+	_cwprintf(L"CCDrect:%d,%d\n", CCDrect.Width(), CCDrect.Height());
+	_cwprintf(L"CameraDlgrect:%d,%d\n", CameraDlgrect.Width(), CameraDlgrect.Height());
+	
 	/*影像開啟*/
 #ifdef VI
-	VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
-	VI_DrawBox(1, GetDlgItem(IDC_PIC), 150, 150);
+	//VI_DisplayAlloc(GetDlgItem(IDC_PIC), 1);
+	VI_DisplayAlloc(m_pCCDDlalog, 1);
+	VI_DrawBox(1, m_pCCDDlalog, 150, 150);
+	VI_DisplayFitWindow(m_pCCDDlalog, 1, CCDrect.Width(), CCDrect.Height(),0);//縮放畫面
+	VI_MousePosFuncEable();//啟用MIL滑鼠取值
 #endif
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX 屬性頁應傳回 FALSE
@@ -681,6 +698,24 @@ void CCamera::OnOK()
     ::SetFocus(NULL);
 	//CDialogEx::OnOK();
 }
+/*觸控式移動*/
+void CCamera::OnBnClickedBtntouchmove()
+{
+	CString StrBuff;
+	GetDlgItemText(IDC_BTNTOUCHMOVE, StrBuff);
+	if (StrBuff == L"新功能!\r觸控式移動\r停用")
+	{
+		VI_MousePosFuncDisable();
+		((CCCD*)m_pCCDDlalog)->m_TouchMoveSwitch = FALSE;
+		SetDlgItemText(IDC_BTNTOUCHMOVE, L"新功能!\r觸控式移動\r啟用");
+	}
+	else if (StrBuff == L"新功能!\r觸控式移動\r啟用")
+	{
+		VI_MousePosFuncEable();
+		((CCCD*)m_pCCDDlalog)->m_TouchMoveSwitch = TRUE;
+		SetDlgItemText(IDC_BTNTOUCHMOVE, L"新功能!\r觸控式移動\r停用");
+	}
+}
 /*銷毀視窗事件*/
 BOOL CCamera::DestroyWindow()
 {
@@ -704,13 +739,17 @@ BOOL CCamera::DestroyWindow()
 #endif
     }
 #endif
+	if (m_pCCDDlalog != NULL)
+	{
+		delete m_pCCDDlalog;//清除影像記憶體
+	}
     return CDialogEx::DestroyWindow();
 }
 /*顯示視窗時設定*/
 void CCamera::OnShowWindow(BOOL bShow, UINT nStatus)
 {
 	CDialogEx::OnShowWindow(bShow, nStatus);
-	SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);//設置視窗為可以透明化
+	SetWindowLong(this->m_hWnd, GWL_EXSTYLE, GetWindowLong(this->m_hWnd, GWL_EXSTYLE) | WS_EX_LAYERED );//設置視窗為可以透明化
 	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);//不透明
 }
 /*非活動轉活動事件*/
@@ -718,7 +757,13 @@ int CCamera::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
 {
 	//從非活動轉為活動改成不透明
 	this->SetLayeredWindowAttributes(0, (255 * 100) / 100, LWA_ALPHA);
+	
 	return CDialogEx::OnMouseActivate(pDesktopWnd, nHitTest, message);
 }
+
+
+
+
+
 
 

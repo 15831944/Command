@@ -162,6 +162,8 @@ extern "C" _declspec(dllexport) void VI_SetCameraToTipOffset(double OffsetX, dou
 //---------------------------------------------------------------------------------------------------
 //絕對座標位置修正
 extern "C" _declspec(dllexport) void VI_CorrectLocation(long &PointX, long &PointY, long RefX, long RefY, double OffSetX, double OffSetY, double Andgle, bool Mode);
+//絕對座標位置修正(4軸加入W旋轉計算)
+extern "C" _declspec(dllexport) void VI_CorrectLocation_W(long &PointX, long &PointY,double &WPos, long RefX, long RefY, double OffSetX, double OffSetY, double Andgle, bool Mode);
 //工件旋轉角度計算
 //兩對位點比對接收馬達位置計算向量夾角,回傳對位點1的offset及兩向量夾角
 //1=兩對位點皆有找到，0=只找到一點

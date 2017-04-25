@@ -194,6 +194,7 @@
     <ClInclude Include="Action.h" />
     <ClInclude Include="Block.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CCD.h" />
     <ClInclude Include="CheckResult.h" />
     <ClInclude Include="CInterpolationCircle.h" />
     <ClInclude Include="CommandTest.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="Action.cpp" />
     <ClCompile Include="Block.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CCD.cpp" />
     <ClCompile Include="CheckResult.cpp" />
     <ClCompile Include="CInterpolationCircle.cpp" />
     <ClCompile Include="CommandTest.cpp" />

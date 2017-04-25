@@ -105,6 +105,9 @@
     <ClInclude Include="XButton.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
+    <ClInclude Include="CCD.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandTest.cpp">
@@ -186,6 +189,9 @@
       <Filter>原始程式檔</Filter>
     </ClCompile>
     <ClCompile Include="XButton.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="CCD.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>

@@ -177,7 +177,6 @@ public:
     //Â÷¶}
     afx_msg void OnClose();
     virtual void OnCancel();
-	
 };
 
 

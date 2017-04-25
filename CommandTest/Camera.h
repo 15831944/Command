@@ -4,6 +4,7 @@
 #include "afxwin.h"
 #include "NumEdit.h"
 #include "XButton.h"
+#include "CCD.h"
 
 // CCamera 對話方塊
 
@@ -40,6 +41,8 @@ public: //變數
     CXButton m_SetTipToCcd;     
     CXButton m_SetPixToPuls;
     BOOL WJOGMode;
+	CDialog *m_pCCDDlalog;
+	CRect CCDrect, CCDrectOld, CameraDlgrect, Controlrect, Controlrect2;
 public:// 函數
     void MoveXYZW(int MoveX, int MoveY, int MoveZ, double MoveW);
 	virtual BOOL OnInitDialog();
@@ -65,5 +68,6 @@ public:// 函數
     afx_msg LRESULT OnBnLClickedBtnwregulate(WPARAM wParam, LPARAM lParam);
     afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
     afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
-  
+
+	afx_msg void OnBnClickedBtntouchmove();
 };
