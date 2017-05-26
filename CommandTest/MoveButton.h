@@ -12,6 +12,7 @@ public:
     int MoveX;
     int MoveY;
     int MoveZ;
+    DOUBLE MoveW;
     virtual ~CMoveButton();
 
 protected:
@@ -19,7 +20,7 @@ protected:
 public:
     afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
-    void MoveXYZ(int MoveX, int MoveY, int MoveZ);
+    void MoveXYZW(int MoveX, int MoveY, int MoveZ, double MoveW);
 };
 
 

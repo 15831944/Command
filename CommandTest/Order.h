@@ -1,11 +1,13 @@
 /*
 *檔案名稱:Order.h
-*檔案用途:3Axis
+*檔案用途:4Axis
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
 *更新日期:2017/04/07
 *作者名稱:Rong
+*使用mcc:2017/04/11
+*使用visio:2017/04/17
 */
 #pragma once
 #include <vector>
@@ -24,12 +26,13 @@ class COrder : public CWnd
 	DECLARE_DYNAMIC(COrder)
 private:
 	/************************************************************運動參數結構*******************************************************/
-	//座標結構(狀態、紀錄X、紀錄Y、紀錄Z)
+	//座標結構(狀態、紀錄X、紀錄Y、紀錄Z、記錄W)
 	struct CoordinateData {
 		BOOL Status;
 		LONG X;
 		LONG Y;
 		LONG Z;
+		DOUBLE W;
 	};
 	//速度結構(加速度、驅動速度、初速度)
 	struct Speed {
@@ -84,7 +87,7 @@ private:
 		BOOL CleanerSwitch;
 		LONG OutputPort;
 	};
-	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、循環是否復歸、是否為影像賦歸)
+	//回原點結構(回歸速度1、回歸速度2、軸數、偏移X、偏移Y、偏移Z、偏移W、循環是否復歸、是否為影像賦歸)
 	struct GoHome {
 		LONG Speed1;
 		LONG Speed2;
@@ -92,6 +95,7 @@ private:
 		LONG MoveX;
 		LONG MoveY;
 		LONG MoveZ;
+		DOUBLE MoveW;
 		BOOL PrecycleInitialize;
 		BOOL VisionGoHome;
 	};
@@ -125,7 +129,7 @@ private:
 		CDialog* pEMGDlg;
 	};
 	/************************************************************影像參數結構*******************************************************/
-	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
+	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y、Trigger陣列)
 	struct Vision {
 		BOOL FindMarkStatus;
 		CoordinateData Point;
@@ -134,6 +138,7 @@ private:
 		void* MilModel; 
 		DOUBLE OffsetX;
 		DOUBLE OffsetY;
+		std::vector<CoordinateData> Trigger;
 	};
 	//影像修正計算結構(對位點、對位點後偏移量X、對位點後偏移量Y、對位點後偏移角度)
 	struct VisionOffset {
@@ -165,10 +170,7 @@ private:
 	//影像擴大搜尋(調整狀態、擴大對位1開關、擴大對位2開關、擴大對位區間1、擴大對位區間2)
 	struct VisionTrigger {
 		UINT AdjustStatus;
-		BOOL Trigger1Switch;
-		BOOL Trigger2Switch;
-		std::vector<CoordinateData> Trigger1;
-		std::vector<CoordinateData> Trigger2;
+		int TriggerSwitch;
 	};
 	//影像搜尋錯誤結構(搜尋錯誤方式、尋問對話框指針、手動模式開關、暫停模式判斷)
 	struct VisionSerchError {
@@ -491,6 +493,7 @@ private:    //變數
 private:    //函式
 	/*執行續*/
 	static  UINT    HomeThread(LPVOID pParam);//原點賦歸程序
+	static  UINT    WHomeThread(LPVOID pParam);//原點賦歸程序
 	static  UINT    Thread(LPVOID pParam);//主程序
 	static  UINT    SubroutineThread(LPVOID pParam);//命令動作程序
 	static  UINT    RunLoopThread(LPVOID pParam);//運行迴圈程序
@@ -521,6 +524,7 @@ private:    //函式
 	static  CString ModelNumResolve(CString ModelNum, UINT Choose);//模版編號分解
 	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);//命令單位轉換
 	CString         GetCommandAddress();//獲取編碼過命令地址
+	BOOL            IsAbleCommmand(CString Command);//判斷是否為有效命令
 	/*程序變數處理區塊*/
 	void            ParameterDefult();//運動參數初始化
 	void            DecideInit();//程序初始化
@@ -668,6 +672,8 @@ public:     //運行類函式
 	BOOL    Continue();
 	//原點賦歸(參數:模式(FALSE 針頭 TRUE CCD))(回傳值:成功return  1 失敗 return 0 )
 	BOOL    Home(BOOL mode);
+	//W軸賦歸(回傳值:成功return  1 失敗 return 0 )
+	BOOL    WHome();
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
 	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式:目前尚未有功能)

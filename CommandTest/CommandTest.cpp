@@ -117,10 +117,10 @@ BOOL CCommandTestApp::PreTranslateMessage(MSG* pMsg)
 		}
 		else if (pMsg->wParam == VK_F3)
 		{
-			for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.size(); i++)
+			for (UINT i = 0; i < ((CCommandTestDlg*)theApp.m_pMainWnd)->a.CommandMemory.size(); i++)
 			{
 #ifdef PRINTF
-				_cwprintf(L"%s\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.mmCommandMemory.at(i));
+				_cwprintf(L"%s\n", ((CCommandTestDlg*)theApp.m_pMainWnd)->a.CommandMemory.at(i));
 #endif
 			}
 		}

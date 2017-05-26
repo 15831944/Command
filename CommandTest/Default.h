@@ -1,6 +1,6 @@
 #pragma once
 #include "afxcmn.h"
-
+#include "NumEdit.h"
 
 // CDefault ¹ï¸Ü¤è¶ô
 
@@ -24,7 +24,7 @@ protected:
 public:
 	CDialog* pQuestion;
 	CListCtrl m_ListDefault;
-	CEdit m_Edit;
+    CNumEdit m_Edit;
 	int m_OldListRow, m_OldListColumn;
 	virtual BOOL OnInitDialog();
 	void ParamShow();

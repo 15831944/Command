@@ -29,13 +29,14 @@ protected:
 	HICON m_hIcon;
 	CListCtrl m_CommandList;
 	CListCtrl m_ParamList;
-	CString StrBuff,StrCutout_Copy;
+    CString StrBuff, StrCutout_Copy, StrBuff1, StrBuff2;
 	BOOL Insert,Cutout;
 	UINT InsertNum;
 	LONG OffsetX, OffsetY;
 	BOOL GlueInformation;
 	BOOL EMGInformation;
-	CNumEdit NumEdit1, NumEdit2, NumEdit3, NumEdit4, NumEdit5, NumEdit6, NumEdit7, NumEdit8, NumEdit9;
+    CNumEdit NumEdit1, NumEdit2, NumEdit3, NumEdit4, NumEdit5, NumEdit6, NumEdit7, NumEdit8, NumEdit9, NumEdit10;
+    BOOL NoPushEsc;
 public:
 	COrder a;
 	CDialog* m_pCameraDlg;  
@@ -84,6 +85,7 @@ public:
 	afx_msg void OnBnClickedBtnprintcline();
     afx_msg void OnBnClickedBtntest();
     afx_msg void OnBnClickedBtncheck();
+	afx_msg void OnBnClickedBtnwritecommand();
 	//設置
 	afx_msg void OnBnClickedBtndefault();
 	afx_msg void OnBnClickedBtnvision();
@@ -172,9 +174,8 @@ public:
 	afx_msg void OnDestroy();
     //外部畫圖函式
     static void myDrawFunction(void* pParam, CPoint pt, int pencolor);
-    
-	afx_msg void OnBnClickedBtnloadcommand();
+    //離開
+    afx_msg void OnClose();
+    virtual void OnCancel();
 };
-
-
 

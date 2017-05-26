@@ -46,10 +46,10 @@ BOOL CDefault::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 	m_ListDefault.SetExtendedStyle(LVS_EX_GRIDLINES | LVS_EX_FULLROWSELECT);
-	m_ListDefault.InsertColumn(0, _T("名稱"), LVCFMT_CENTER, 100, -1);
+	m_ListDefault.InsertColumn(0, _T("名稱"), LVCFMT_CENTER, 120, -1);
 	m_ListDefault.InsertColumn(1, _T("參數值"), LVCFMT_LEFT, 150, -1);
 	CStringArray StrTable;
-	StrTable.Add(_T("原點復歸速度1")); StrTable.Add(_T("原點復歸速度2")); StrTable.Add(_T("原點復歸軸數")); StrTable.Add(_T("原點復歸X偏差")); StrTable.Add(_T("原點復歸Y偏差")); StrTable.Add(_T("原點復歸Z偏差")); StrTable.Add(_T("迴圈賦歸"));
+	StrTable.Add(_T("原點復歸速度1")); StrTable.Add(_T("原點復歸速度2")); StrTable.Add(_T("原點復歸軸數")); StrTable.Add(_T("原點復歸X偏差")); StrTable.Add(_T("原點復歸Y偏差")); StrTable.Add(_T("原點復歸Z偏差")); StrTable.Add(_T("原點復歸W偏差")); StrTable.Add(_T("迴圈賦歸"));
 	StrTable.Add(_T("點膠出膠時間")); StrTable.Add(_T("點膠停留時間"));
 	StrTable.Add(_T("點膠回程距離")); StrTable.Add(_T("點膠低回程速度")); StrTable.Add(_T("點膠高回程速度"));
 	StrTable.Add(_T("點膠加速度")); StrTable.Add(_T("點膠驅動速度"));
@@ -57,16 +57,16 @@ BOOL CDefault::OnInitDialog()
 	StrTable.Add(_T("線段返回類型")); StrTable.Add(_T("線段返回低速")); StrTable.Add(_T("線段返回高度")); StrTable.Add(_T("線段返回長度")); StrTable.Add(_T("線段返回高速"));
 	StrTable.Add(_T("線段加速度")); StrTable.Add(_T("線段驅動速度"));
 	StrTable.Add(_T("Z軸回升距離")); StrTable.Add(_T("Z軸回升型態"));
-	StrTable.Add(_T("停駐點X")); StrTable.Add(_T("停駐點Y")); StrTable.Add(_T("停駐點Z"));
+	StrTable.Add(_T("停駐點X")); StrTable.Add(_T("停駐點Y")); StrTable.Add(_T("停駐點Z")); StrTable.Add(_T("停駐點W"));
 	StrTable.Add(_T("排膠開關")); StrTable.Add(_T("排膠等待時間")); StrTable.Add(_T("排膠時間")); StrTable.Add(_T("排膠後停留時間"));
 	StrTable.Add(_T("影像尋找精度")); StrTable.Add(_T("影像尋找速度")); StrTable.Add(_T("影像比對分數"));
 	StrTable.Add(_T("影像尋找寬度")); StrTable.Add(_T("影像尋找高度")); StrTable.Add(_T("影像尋找起始角度")); StrTable.Add(_T("影像尋找結束角度")); StrTable.Add(_T("影像未搜尋到方法"));
 	StrTable.Add(_T("最大運行次數")); StrTable.Add(_T("循環次數"));
     StrTable.Add(_T("清潔開關")); StrTable.Add(_T("清潔I/O"));
-    StrTable.Add(_T("清潔點X")); StrTable.Add(_T("清潔點Y")); StrTable.Add(_T("清潔點Z"));
+    StrTable.Add(_T("清潔點X")); StrTable.Add(_T("清潔點Y")); StrTable.Add(_T("清潔點Z")); StrTable.Add(_T("清潔點W"));
     
 	
-	for (int i = 0; i < 51; i++) {
+	for (int i = 0; i < 54; i++) {
 		m_ListDefault.InsertItem(i, NULL);
 		m_ListDefault.SetItemText(i, 0, StrTable[i]);
 	}
@@ -74,117 +74,136 @@ BOOL CDefault::OnInitDialog()
 	return TRUE;  // return TRUE unless you set the focus to a control
 				  // EXCEPTION: OCX 屬性頁應傳回 FALSE
 }
+//參數顯示
 void CDefault::ParamShow()
 {
 	CWnd* pMain = AfxGetApp()->m_pMainWnd;
-	LONG ParamArray[51];
-	ParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1;
-	ParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2;
-	ParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis;
-	ParamArray[3] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveX;
-	ParamArray[4] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveY;
-	ParamArray[5] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveZ;
-	ParamArray[6] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.PrecycleInitialize;
-	ParamArray[7] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime;
-	ParamArray[8] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime;
-	ParamArray[9] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance;
-	ParamArray[10] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseLowSpeed;
-	ParamArray[11] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseHightSpeed;
-	ParamArray[12] = ((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.AccSpeed;
-	ParamArray[13] = ((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.EndSpeed;
-	ParamArray[14] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDelay;
-	ParamArray[15] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDistance;
-	ParamArray[16] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.NodeTime;
-	ParamArray[17] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.StayTime;
-	ParamArray[18] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDistance;
-	ParamArray[19] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDelay;
-	ParamArray[20] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Type;
-	ParamArray[21] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.LowSpeed;
-	ParamArray[22] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Height;
-	ParamArray[23] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Width;
-	ParamArray[24] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.HighSpeed;
-	ParamArray[25] = ((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.AccSpeed;
-	ParamArray[26] = ((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.EndSpeed;
-	ParamArray[27] = ((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackHeight;
-	ParamArray[28] = ((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackType;
-	ParamArray[29] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.X;
-	ParamArray[30] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Y;
-	ParamArray[31] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Z;
-	ParamArray[32] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueAuto;
-	ParamArray[33] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime;
-	ParamArray[34] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime;
-	ParamArray[35] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime;
-	ParamArray[36] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy;
-	ParamArray[37] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed;
-	ParamArray[38] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score;
-	ParamArray[39] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width;
-	ParamArray[40] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height;
-	ParamArray[41] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle;
-	ParamArray[42] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle;
-	ParamArray[43] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError;
-	ParamArray[44] = ((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber;
-	ParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
-    ParamArray[46] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch;
-    ParamArray[47] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort;
-    ParamArray[48] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X;
-    ParamArray[49] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y;
-    ParamArray[50] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z;
-	for (int i = 0; i < 51; i++) {
-		CString StrBuff;
-		StrBuff.Format(_T("%d"), ParamArray[i]);
-		m_ListDefault.SetItemText(i, 1, StrBuff);
+	LONG lParamArray[51];
+	lParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1;
+	lParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2;
+	lParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis;
+	lParamArray[3] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveX;
+	lParamArray[4] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveY;
+	lParamArray[5] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveZ;
+	lParamArray[6] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.PrecycleInitialize;
+	lParamArray[7] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime;
+	lParamArray[8] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime;
+	lParamArray[9] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance;
+	lParamArray[10] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseLowSpeed;
+	lParamArray[11] = ((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseHightSpeed;
+	lParamArray[12] = ((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.AccSpeed;
+	lParamArray[13] = ((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.EndSpeed;
+	lParamArray[14] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDelay;
+	lParamArray[15] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDistance;
+	lParamArray[16] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.NodeTime;
+	lParamArray[17] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.StayTime;
+	lParamArray[18] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDistance;
+	lParamArray[19] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDelay;
+	lParamArray[20] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Type;
+	lParamArray[21] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.LowSpeed;
+	lParamArray[22] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Height;
+	lParamArray[23] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Width;
+	lParamArray[24] = ((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.HighSpeed;
+	lParamArray[25] = ((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.AccSpeed;
+	lParamArray[26] = ((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.EndSpeed;
+	lParamArray[27] = ((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackHeight;
+	lParamArray[28] = ((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackType;
+	lParamArray[29] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.X;
+	lParamArray[30] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Y;
+	lParamArray[31] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Z;
+	lParamArray[32] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueAuto;
+	lParamArray[33] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime;
+	lParamArray[34] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime;
+	lParamArray[35] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime;
+	lParamArray[36] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy;
+	lParamArray[37] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed;
+	lParamArray[38] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score;
+	lParamArray[39] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width;
+	lParamArray[40] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height;
+	lParamArray[41] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle;
+	lParamArray[42] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle;
+	lParamArray[43] = ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError;
+	lParamArray[44] = ((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber;
+	lParamArray[45] = ((CCommandTestDlg*)pMain)->RunLoopNumber;
+    lParamArray[46] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch;
+    lParamArray[47] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort;
+    lParamArray[48] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X;
+    lParamArray[49] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y;
+    lParamArray[50] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z;
+    DOUBLE dParamArray[3];
+    dParamArray[0] = ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveW;
+    dParamArray[1] = ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.W;
+    dParamArray[2] = ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.W;
+    int d = 0;
+    int l = 0;
+	for (int i = 0; i < 54; i++) {
+        CString StrBuff;
+        if (i != 6 && i != 33 && i != 53)
+        {    
+            StrBuff.Format(_T("%d"), lParamArray[l++]);
+            m_ListDefault.SetItemText(i, 1, StrBuff);
+        }
+        else
+        {
+            StrBuff.Format(_T("%.3f"), dParamArray[d++]);
+            m_ListDefault.SetItemText(i, 1, StrBuff);
+        }
 	}
 }
+//參數修改
 void CDefault::ParamModify()
 {
-	CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    CWnd* pMain = AfxGetApp()->m_pMainWnd;
+    int i = 0;
 	//原點復歸參數
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1 = _ttol(m_ListDefault.GetItemText(0, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2 = _ttol(m_ListDefault.GetItemText(1, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis = _ttol(m_ListDefault.GetItemText(2, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveX = _ttol(m_ListDefault.GetItemText(3, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveY= _ttol(m_ListDefault.GetItemText(4, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveZ= _ttol(m_ListDefault.GetItemText(5, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GoHome.PrecycleInitialize = _ttol(m_ListDefault.GetItemText(6, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed1 = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.Speed2 = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.Axis = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveX = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveY= _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveZ= _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.GoHome.MoveW = _tstof(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GoHome.PrecycleInitialize = _ttol(m_ListDefault.GetItemText(i++, 1));
 	//運動參數
-	((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime = _ttol(m_ListDefault.GetItemText(7, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime = _ttol(m_ListDefault.GetItemText(8, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance = _ttol(m_ListDefault.GetItemText(9, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseLowSpeed = _ttol(m_ListDefault.GetItemText(10, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseHightSpeed = _ttol(m_ListDefault.GetItemText(11, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.AccSpeed = _ttol(m_ListDefault.GetItemText(12, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.EndSpeed = _ttol(m_ListDefault.GetItemText(13, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDelay = _ttol(m_ListDefault.GetItemText(14, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDistance = _ttol(m_ListDefault.GetItemText(15, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.NodeTime = _ttol(m_ListDefault.GetItemText(16, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.StayTime = _ttol(m_ListDefault.GetItemText(17, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDistance = _ttol(m_ListDefault.GetItemText(18, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDelay = _ttol(m_ListDefault.GetItemText(19, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Type = _ttol(m_ListDefault.GetItemText(20, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.LowSpeed = _ttol(m_ListDefault.GetItemText(21, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Height = _ttol(m_ListDefault.GetItemText(22, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Width = _ttol(m_ListDefault.GetItemText(23, 1));
-	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.HighSpeed = _ttol(m_ListDefault.GetItemText(24, 1));
-	((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.AccSpeed= _ttol(m_ListDefault.GetItemText(25, 1));
-	((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.EndSpeed = _ttol(m_ListDefault.GetItemText(26, 1));
-	((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackHeight = _ttol(m_ListDefault.GetItemText(27, 1));
-	((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackType= _ttol(m_ListDefault.GetItemText(28, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.X = _ttol(m_ListDefault.GetItemText(29, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Y = _ttol(m_ListDefault.GetItemText(30, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Z = _ttol(m_ListDefault.GetItemText(31, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueAuto = _ttol(m_ListDefault.GetItemText(32, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime = _ttol(m_ListDefault.GetItemText(33, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime = _ttol(m_ListDefault.GetItemText(34, 1));
-	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime = _ttol(m_ListDefault.GetItemText(35, 1)); 
+	((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueOpenTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseDotSet.GlueCloseTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseDistance = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseLowSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseDotEnd.RiseHightSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.AccSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DotSpeedSet.EndSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDelay = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.BeforeMoveDistance = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.NodeTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.StayTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDistance = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineSet.ShutdownDelay = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Type = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.LowSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Height = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.Width = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.DispenseLineEnd.HighSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.AccSpeed= _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.LineSpeedSet.EndSpeed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackHeight = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.ZSet.ZBackType= _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.X = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Y = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.Z = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.GlueData.ParkPositionData.W = _tstof(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueAuto = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueWaitTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueTime = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.Default.GlueData.GlueStayTime = _ttol(m_ListDefault.GetItemText(i++, 1));
 	//影像參數
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy = _ttol(m_ListDefault.GetItemText(36, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed = _ttol(m_ListDefault.GetItemText(37, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score = (BOOL)(_ttol(m_ListDefault.GetItemText(38, 1)));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width = _ttol(m_ListDefault.GetItemText(39, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height = _ttol(m_ListDefault.GetItemText(40, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle = _ttol(m_ListDefault.GetItemText(41, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle = _ttol(m_ListDefault.GetItemText(42, 1));
-	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError = _ttol(m_ListDefault.GetItemText(43, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Accuracy = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Speed = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Score = (BOOL)(_ttol(m_ListDefault.GetItemText(i++, 1)));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.width = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.height = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Startangle = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSet.Endangle = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.SearchError = _ttol(m_ListDefault.GetItemText(i++, 1));
 	//尋問對話框
 	if (((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion == NULL)
 	{
@@ -192,22 +211,30 @@ void CDefault::ParamModify()
         ((CCommandTestDlg*)pMain)->a.VisionDefault.VisionSerchError.pQuestion = pQuestion;
 	}
 	//最大運行次數
-	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(44, 1));
-	((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(45, 1));
+	((CCommandTestDlg*)pMain)->a.RunLoopData.MaxRunNumber = _ttol(m_ListDefault.GetItemText(i++, 1));
+	((CCommandTestDlg*)pMain)->RunLoopNumber = _ttol(m_ListDefault.GetItemText(i++, 1));
 
-    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch = _ttol(m_ListDefault.GetItemText(46, 1));
-    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort = _ttol(m_ListDefault.GetItemText(47, 1));
-    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X = _ttol(m_ListDefault.GetItemText(48, 1));
-    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y = _ttol(m_ListDefault.GetItemText(49, 1));
-    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z = _ttol(m_ListDefault.GetItemText(50, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerSwitch = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.OutputPort = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.X = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Y = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.Z = _ttol(m_ListDefault.GetItemText(i++, 1));
+    ((CCommandTestDlg*)pMain)->a.Default.CleanerData.CleanerPositionData.W = _tstof(m_ListDefault.GetItemText(i++, 1));
 }
 //#include "ExcelToList.h"
 //#include "ListToExcel.h"
 void CDefault::OnBnClickedButton2()
 {
-	for (int i = 0; i < 51; i++) {
-		m_ListDefault.SetItemText(i, 1, _T("0"));
-	}
+    for (int i = 0; i < 54; i++) {
+        if (i != 6 && i != 33 && i != 53)
+        {
+            m_ListDefault.SetItemText(i, 1, _T("0"));
+        }
+        else
+        {
+            m_ListDefault.SetItemText(i, 1, _T("0.000"));
+        }
+    }
 	ParamModify();
 	//ExportListToExcel(&m_ListDefault, L"LineContinuous");
     //ExportExcelToList(&m_ListDefault, L"LineContinuous");
@@ -314,6 +341,10 @@ void CDefault::DistroyEdit(CListCtrl *list, CEdit *distroyedit, int &Item, int &
 	distroyedit->GetWindowTextW(editdata);
 	if (editdata == _T(""))
 		editdata = _T("0");
+    if (editdata.Find(L".") == editdata.GetLength() - 1)//判斷最後一位是否為.
+    {
+        editdata = editdata.Left(editdata.GetLength() - 1);//刪除.
+    }
 	list->SetItemText(Item, SubItem, editdata); //type in 對應Item
 	distroyedit->DestroyWindow(); //銷毀
 	ParamModify();

@@ -194,7 +194,7 @@ void CPositionModify::PositionModifyMO()
                 ((CCommandTestDlg*)pMain)->a.PositionModifyNumber.at(i).at(j).at(k).LaserNumber = _ttol(m_Listposition.GetItemText(ListCount, 3));
                 ListCount++;
             }
-        }
+        } 
     }
 }
 //刷新列表
@@ -219,7 +219,7 @@ void CPositionModify::ListRefresh()
                 m_Listposition.SetItemText(ListCount, 3, StrBuff);
                 ListCount++;
             }
-        }
+        }      
     }
     int ListnCount = m_Listposition.GetItemCount();
     m_Listposition.EnsureVisible(ListnCount - 1, FALSE);//使List中一項可見(如滾動條向下滾)
@@ -242,8 +242,8 @@ void CPositionModify::OnDelete3()
 /*新增*/
 void CPositionModify::OnBnClickedBtnnew()
 {
-    /*((CCommandTestDlg*)pMain)->a.PositionModifyNumber.push_back({ L"",-1,-1 });
-    ListRefresh();*/
+    //((CCommandTestDlg*)pMain)->a.PositionModifyNumber.push_back({ L"",-1,-1 });
+    //ListRefresh();
 }
 /*清空*/
 void CPositionModify::OnBnClickedBtnclear()

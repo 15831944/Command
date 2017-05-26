@@ -1,6 +1,6 @@
 #pragma once
 #include "afxcmn.h"
-
+#include "NumEdit.h"
 
 // CLaserAdjust ¹ï¸Ü¤è¶ô
 
@@ -25,7 +25,7 @@ public:
     virtual BOOL OnInitDialog();
     CListCtrl m_ListLaserAdjust;
     int m_OldListRow, m_OldListColumn;
-    CEdit m_Edit;
+    CNumEdit m_Edit;
     CWnd* pMain;
     void ListRefresh();
     void LaserAdjustModify();

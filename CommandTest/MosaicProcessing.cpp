@@ -34,9 +34,7 @@ BEGIN_MESSAGE_MAP(CMosaicProcessing, CDialogEx)
     ON_WM_TIMER()
 END_MESSAGE_MAP()
 
-
 // CMosaicProcessing 訊息處理常式
-
 
 BOOL CMosaicProcessing::OnInitDialog()
 {
@@ -46,7 +44,7 @@ BOOL CMosaicProcessing::OnInitDialog()
     return TRUE;  // return TRUE unless you set the focus to a control
                   // EXCEPTION: OCX 屬性頁應傳回 FALSE
 }
-
+//Timer掃描重組狀態
 void CMosaicProcessing::OnTimer(UINT_PTR nIDEvent)
 {
     if (nIDEvent == 1) //做動態請稍候和ProgressBar
@@ -68,14 +66,12 @@ void CMosaicProcessing::OnTimer(UINT_PTR nIDEvent)
     }
     CDialogEx::OnTimer(nIDEvent);
 }
-
-
+//鎖住Esc鍵功能
 void CMosaicProcessing::OnCancel()
 {
     //CDialogEx::OnCancel();
 }
-
-
+//鎖住Enter鍵功能
 void CMosaicProcessing::OnOK()
 {
     //CDialogEx::OnOK();

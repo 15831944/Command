@@ -1,6 +1,6 @@
 #pragma once
 #include "afxcmn.h"
-
+#include "NumEdit.h"
 
 // CLineContinuous ¹ï¸Ü¤è¶ô
 
@@ -31,7 +31,7 @@ public:
     void LineCoutinuousModify();
     CListCtrl m_ListLCPoint;
     int m_OldListRow, m_OldListColumn;
-    CEdit m_Edit;
+    CNumEdit m_Edit;
     CWnd* pMain;
     afx_msg int OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message);
     afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
