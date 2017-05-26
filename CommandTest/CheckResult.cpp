@@ -14,7 +14,6 @@ IMPLEMENT_DYNAMIC(CCheckResult, CDialogEx)
 CCheckResult::CCheckResult(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG12, pParent)
 {
-    NoPushEsc = TRUE;
     m_pLoadlist = NULL;
     lEndthread = 0;
     pCCommandTestDlg = (CCommandTestDlg*)AfxGetApp()->m_pMainWnd;
@@ -22,11 +21,6 @@ CCheckResult::CCheckResult(CWnd* pParent /*=NULL*/)
 }
 CCheckResult::~CCheckResult()
 {
-    if (m_pPictureViewDlg != NULL)
-    {
-        delete (CDialog*)m_pPictureViewDlg;
-        m_pPictureViewDlg = NULL;
-    }
 }
 void CCheckResult::DoDataExchange(CDataExchange* pDX)
 {
@@ -83,11 +77,10 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"OK")
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(0, 255, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"NG")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 108, 0));//橘
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 108, 0));
             else if (((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).Result == L"Err")
-                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255,0,0));
+                ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
         }   
-        if (((CCheckResult*)pParam)->lEndthread == 0)
         str_position.Format(L"%d,%d", ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.X, ((CCheckResult*)pParam)->pCCommandTestDlg->a.CheckFinishRecord.at(ListCount).CheckData.Position.Y);
         if (((CCheckResult*)pParam)->lEndthread == 0)
             ((CCheckResult*)pParam)->m_ListCheck.SetItemText(ListCount, 3, str_position);
@@ -116,12 +109,10 @@ UINT CCheckResult::LoadListThread(LPVOID pParam)
             if (((CCheckResult*)pParam)->lEndthread == 0)
                 ((CCheckResult*)pParam)->m_ListCheck.SetItemColor(ListCount, RGB(255, 0, 0));
         }
-        if (((CCheckResult*)pParam)->lEndthread == 0)
         ListCount++;
         i++;
     }
-    return 0;//安全返回執行緒 
-    //ExitThread(CheckEndDlgcode);
+    ExitThread(CheckEndDlgcode);
 }
 //滑鼠左鍵兩下
 void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
@@ -170,36 +161,15 @@ void CCheckResult::OnNMDblclkList1(NMHDR *pNMHDR, LRESULT *pResult)
         }
         else if (m_ListCheck.GetItemText(pEditCtrl->iItem, 1) == L"DiameterCheck")
         {
-            if (m_pPictureViewDlg == NULL)
-            {
 #ifdef PRINTF
-                _cwprintf(L"%s\n", pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path +
-                    pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name);
+            _cwprintf(L"%s\n", pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path +
+                pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name);
 #endif
-                m_pPictureViewDlg = new CPictureViewDlg();
-                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
-                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
-                m_pPictureViewDlg->Create(IDD_DIALOG13, this);
-                m_pPictureViewDlg->ShowWindow(SW_SHOW);
-            }
-            else
-            {
-                //秀出圖片:方式二(使用MIL做好的功能)
-                if (::IsWindow(((CPictureViewDlg*)m_pPictureViewDlg)->m_hWnd))//判斷視窗是否有銷毀
-                {
-                    ((CPictureViewDlg*)m_pPictureViewDlg)->OnCancel();
-                }
-                if (m_pPictureViewDlg != NULL)
-                {
-                    delete (CDialog*)m_pPictureViewDlg;
-                    m_pPictureViewDlg = NULL;
-                }
-                m_pPictureViewDlg = new CPictureViewDlg();
-                ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
-                ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
-                m_pPictureViewDlg->Create(IDD_DIALOG13, this);
-                m_pPictureViewDlg->ShowWindow(SW_SHOW);
-            }
+            m_pPictureViewDlg = new CPictureViewDlg();
+            ((CPictureViewDlg*)m_pPictureViewDlg)->FilePath = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Path;
+            ((CPictureViewDlg*)m_pPictureViewDlg)->FileName = pCCommandTestDlg->a.CheckFinishRecord.at(pEditCtrl->iItem).ResultFile.Name;
+            m_pPictureViewDlg->Create(IDD_DIALOG13, this);
+            m_pPictureViewDlg->ShowWindow(SW_SHOW);
         }
     }
     *pResult = 0;
@@ -209,15 +179,13 @@ void CCheckResult::OnClose()
 {
     _cwprintf(L"OnClose\n");
     InterlockedIncrement(&lEndthread);
-    NoPushEsc = FALSE;
     CDialogEx::OnClose();
 }
 //取消視窗
 void CCheckResult::OnCancel()
 {
     _cwprintf(L"OnCancel\n");
-    if(!NoPushEsc)
-        CDialogEx::OnCancel();
+    CDialogEx::OnCancel();
 }
 //銷毀視窗
 BOOL CCheckResult::DestroyWindow()
@@ -231,8 +199,5 @@ void CCheckResult::OnDestroy()
     _cwprintf(L"OnDestroy\n");
     CDialogEx::OnDestroy();
 }
-//OK 和 Enter鍵
-void CCheckResult::OnOK()
-{
-    //CDialogEx::OnOK();
-}
+
+
