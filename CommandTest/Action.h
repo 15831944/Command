@@ -2,7 +2,7 @@
 *檔案名稱:Action(W軸用)
 *內容簡述:運動命令API，詳細參數請查看excel
 *＠author 作者名稱:R
-*＠data 更新日期:2017/04/18
+*＠data 更新日期:2017/04/28
 *@更新內容:nova軸卡使用在四軸點膠機上*/
 /****************************************************/
 //*
@@ -72,6 +72,10 @@ class CAction
         const int m_MaxRangeDeg90 = 302000;//針頭在90度的最大長度(210000+92000)
         const int m_CirRadDeg90 = 92000;//針頭在90度的半徑長度(92000)
         LONG    m_lCutDis;        //四軸線段切點距離
+		CPoint  m_IONeedleSensor; //針頭校正器的位置
+		LONG    m_IONeedleOffsetX;//針頭校正後offsetx
+		LONG    m_IONeedleOffsetY;//針頭校正後offsety
+		LONG    m_IONeedleOffsetZ;//針頭校正後offsetz
 #ifdef MOVE
         std::vector<DATA_4MOVE> W_m_ptVec;//W連續切點儲存vector
 #endif
@@ -311,6 +315,10 @@ class CAction
         /**********JOG模式********************************************/
         //單軸移動(X,Y,Z,W相對量移動/WType:0單軸,1同軸自轉/全部為0使用減速停止)
         void MCO_JogMove(LONG lX, LONG lY, LONG lZ, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy, DOUBLE dW = 0, BOOL WType = 0);
+
+		/**********針頭感測器*********************************************/
+		void IO_NeedleSensor(CPoint cpSenPoint, LONG lWorkVelociy, LONG lAcceleration, LONG lInitVelociy);//針頭感測器
+
     private:
 
         /**********************四軸轉換專用************************/

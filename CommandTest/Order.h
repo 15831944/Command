@@ -493,6 +493,7 @@ private:    //變數
 private:    //函式
 	/*執行續*/
 	static  UINT    HomeThread(LPVOID pParam);//原點賦歸程序
+	static  UINT    WHomeThread(LPVOID pParam);//原點賦歸程序
 	static  UINT    Thread(LPVOID pParam);//主程序
 	static  UINT    SubroutineThread(LPVOID pParam);//命令動作程序
 	static  UINT    RunLoopThread(LPVOID pParam);//運行迴圈程序
@@ -523,6 +524,7 @@ private:    //函式
 	static  CString ModelNumResolve(CString ModelNum, UINT Choose);//模版編號分解
 	CString         CommandUnitConversinon(CString Command, DOUBLE multiple, DOUBLE Timemultiple);//命令單位轉換
 	CString         GetCommandAddress();//獲取編碼過命令地址
+	BOOL            IsAbleCommmand(CString Command);//判斷是否為有效命令
 	/*程序變數處理區塊*/
 	void            ParameterDefult();//運動參數初始化
 	void            DecideInit();//程序初始化
@@ -560,9 +562,6 @@ private:    //函式
 	CRect           MosaicAreaJudge(AreaCheck &AreaCheck);//判斷重組區域是否為同一點
 	/*其他功能(Demo用)*/
 	static  void    SavePointData(LPVOID pParam);
-
-public:     //變數
-
 
 public:     //變數
 	//主運動物件
@@ -673,6 +672,8 @@ public:     //運行類函式
 	BOOL    Continue();
 	//原點賦歸(參數:模式(FALSE 針頭 TRUE CCD))(回傳值:成功return  1 失敗 return 0 )
 	BOOL    Home(BOOL mode);
+	//W軸賦歸(回傳值:成功return  1 失敗 return 0 )
+	BOOL    WHome();
 	//View命令解譯(參數:模式(FALSE 針頭 TRUE CCD))(成功return 1 失敗 return 0)
 	BOOL    View(BOOL mode);
 	//I/O偵測執行續開(參數:開關(TRUE 開啟 FALSE 關閉),模式:目前尚未有功能)

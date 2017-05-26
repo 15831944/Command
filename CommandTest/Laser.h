@@ -9,15 +9,12 @@
 
 #include "resource.h"       // 璶才腹
 #include "mcc.h"
-#include <string>
 
 #define KEYENCE_LKG85
+
 //#define SERIALPORT
-
-
 #ifdef SERIALPORT
-//#define OMRON_ZX2_LD100
-#define PANASONIC_HL_G105_S_J
+#define OMRON_ZX2_LD100
 #endif
 
 #ifndef LAS_DLL
@@ -72,7 +69,6 @@ LAS_DLL BOOL LAS_GetLaserData(LONG &lZ);
 LAS_DLL BOOL LAS_SetZero();
 LAS_DLL void LAS_GoBPoint(DATA_3MOVE &DATA_3ZERO_B);
 LAS_DLL DATA_3MOVE LAS_GoLAtoBPoint(DATA_3MOVE DATA_3ZERO_B);
-LAS_DLL void LAS_ReadCmd(int cmd, std::string &retString);
 
 HANDLE hComm;
 bool RS_Open(int iComPort, int iBaudRate);//秨币硄癟﹚
@@ -89,6 +85,5 @@ CString RS_SetSpan(CString csData);//把计砞﹚ - 玒计
 CString RS_SetOff(CString csData);//把计砞﹚-熬簿秖
 CString SubOutDate(CString csData, char *chBuffer1);
 CString SuboutCommand(CString csBuffer);
-
 #endif
 #pragma endregion

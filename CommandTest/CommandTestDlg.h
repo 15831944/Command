@@ -179,5 +179,3 @@ public:
     virtual void OnCancel();
 };
 
-
-

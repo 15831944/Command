@@ -453,7 +453,7 @@ void CCamera::OnBnClickedBtnwhome()
 {
     CWnd* pMain = AfxGetApp()->m_pMainWnd;
 #ifdef MOVE
-    ((CCommandTestDlg*)pMain)->a.m_Action.DecideGoHomeW(15000, 500);
+	((CCommandTestDlg*)pMain)->a.WHome();
 #endif
 }
 /*解除極限*/
@@ -703,6 +703,7 @@ void CCamera::OnBnClickedBtntouchmove()
 {
 	CString StrBuff;
 	GetDlgItemText(IDC_BTNTOUCHMOVE, StrBuff);
+#ifdef VI
 	if (StrBuff == L"新功能!\r觸控式移動\r停用")
 	{
 		VI_MousePosFuncDisable();
@@ -715,6 +716,7 @@ void CCamera::OnBnClickedBtntouchmove()
 		((CCCD*)m_pCCDDlalog)->m_TouchMoveSwitch = TRUE;
 		SetDlgItemText(IDC_BTNTOUCHMOVE, L"新功能!\r觸控式移動\r停用");
 	}
+#endif
 }
 /*銷毀視窗事件*/
 BOOL CCamera::DestroyWindow()

@@ -36,14 +36,14 @@ void CXListCtrl::OnNMCustomdraw(NMHDR *pNMHDR, LRESULT *pResult)
 	case CDDS_ITEMPREPAINT://如果畫ITEM之前要作顏色改變
 	{
 		COLORREF ItemColor;
-		if (MapItemColor.Lookup(nmcd.dwItemSpec, ItemColor))
-			// 根据在 SetItemColor(DWORD iItem, COLORREF color) 设置的
-			// ITEM号和COLORREF 在摸板中查找，然后进行颜色赋值。
-		{
-			//lplvdr->clrText = RGB(0,0,0);//ItemColor;
-			lplvdr->clrTextBk = ItemColor;
-			*pResult = CDRF_DODEFAULT;
-		}
+		//if (MapItemColor.Lookup(nmcd.dwItemSpec, ItemColor))
+		//	// 根据在 SetItemColor(DWORD iItem, COLORREF color) 设置的
+		//	// ITEM号和COLORREF 在摸板中查找，然后进行颜色赋值。
+		//{
+		//	//lplvdr->clrText = RGB(0,0,0);//ItemColor;
+		//	lplvdr->clrTextBk = ItemColor;
+		//	*pResult = CDRF_DODEFAULT;
+		//}
 	}
 	break;
 	}

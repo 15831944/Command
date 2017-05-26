@@ -19,6 +19,7 @@
 #include "TemplateSet.h"
 #include "CheckResult.h"
 #include "MosaicProcessing.h"
+#include "WMIGetDeviceInfo.h"
 
 #include <math.h>
 #include <valarray>
@@ -1449,13 +1450,13 @@ void CCommandTestDlg::OnBnClickedBtncommand8()
 	{
 #ifdef MOVE
 		//StrBuff.Format(_T("ArcPoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
-		StrBuff.Format(_T("ArcPoint,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
+		StrBuff.Format(_T("ArcPoint,%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z);
 #endif
 	}
 	else
 	{
 		GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
-		StrBuff.Format(_T("ArcPoint,%d,%d,%d,%.3f"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1));
+		StrBuff.Format(_T("ArcPoint,%d,%d,%d"), GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3));
 	}
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
@@ -1472,7 +1473,7 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 		if (ControlName == L"圓中點")
 		{
 			//StrBuff.Format(_T("CirclePoint,%d,%d,%d"), MO_ReadLogicPosition(0) + OffsetX, MO_ReadLogicPosition(1) + OffsetY, MO_ReadLogicPosition(2));
-			StrBuff.Format(_T("CirclePoint,%d,%d,%d,%.3f"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z, a.m_Action.MCO_ReadPosition(UseCoordinateMode).w);
+			StrBuff.Format(_T("CirclePoint,%d,%d,%d"), a.m_Action.MCO_ReadPosition(UseCoordinateMode).x + OffsetX, a.m_Action.MCO_ReadPosition(UseCoordinateMode).y + OffsetY, a.m_Action.MCO_ReadPosition(UseCoordinateMode).z);
 			SetDlgItemText(IDC_BTNCOMMAND9, _T("圓中點2"));
 		}
 		else
@@ -1490,8 +1491,8 @@ void CCommandTestDlg::OnBnClickedBtncommand9()
 	{
 		GetDlgItemText(IDC_EDITPARAM4, StrBuff1);
 		GetDlgItemText(IDC_EDITPARAM8, StrBuff2);
-		StrBuff.Format(_T("CirclePoint,%d,%d,%d,%.3f,%d,%d,%d,%.3f"),
-			GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3), _tstof(StrBuff1),
+		StrBuff.Format(_T("CirclePoint,%d,%d,%d,%d,%d,%d,%.3f"),
+			GetDlgItemInt(IDC_EDITPARAM1) + OffsetX, GetDlgItemInt(IDC_EDITPARAM2) + OffsetY, GetDlgItemInt(IDC_EDITPARAM3),
 			GetDlgItemInt(IDC_EDITPARAM5) + OffsetX, GetDlgItemInt(IDC_EDITPARAM6) + OffsetY, GetDlgItemInt(IDC_EDITPARAM7), _tstof(StrBuff2));
 		(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 		Insert = FALSE;
@@ -2074,7 +2075,13 @@ void CCommandTestDlg::SaveParameter()
 	CFileFind m_FileFind;
 	if (!m_FileFind.FindFile(path))
 	{
-		CreateDirectory(path, NULL);
+        _cwprintf(L"%s", path);
+        if (::CreateDirectory(path, NULL))
+        {
+            CString StrBuff;
+            StrBuff.Format(L"%d", GetLastError());
+            MessageBox(StrBuff);
+        }
 	}
 	CFile File;
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeCreate | CFile::modeWrite))
@@ -2104,7 +2111,13 @@ void CCommandTestDlg::LoadParameter()
 	CFileFind m_FileFind;
 	if (!m_FileFind.FindFile(path))
 	{
-		CreateDirectory(path, NULL);
+        _cwprintf(L"%s", path);
+        if (::CreateDirectory(path, NULL))
+        {
+            CString StrBuff;
+            StrBuff.Format(L"%d", GetLastError());
+            MessageBox(StrBuff);
+        }
 	}
 	CFile File;
 	if (File.Open(path + _T("\\Paramter.txt"), CFile::modeRead))
@@ -2146,7 +2159,13 @@ void CCommandTestDlg::SaveDefault()
 	CFileFind m_FileFind;
 	if (!m_FileFind.FindFile(path))
 	{
-		CreateDirectory(path, NULL);
+        _cwprintf(L"%s", path);
+        if (::CreateDirectory(path, NULL))
+        {
+            CString StrBuff;
+            StrBuff.Format(L"%d", GetLastError());
+            MessageBox(StrBuff);
+        }
 	}
 	CFile File;
 	if (File.Open(path + _T("\\Default.txt"), CFile::modeCreate | CFile::modeWrite))
@@ -2216,8 +2235,14 @@ void CCommandTestDlg::LoadDefault()
 	CString path = GetCurrentPath(_T("\\Param"));
 	CFileFind m_FileFind;
 	if (!m_FileFind.FindFile(path))
-	{
-		CreateDirectory(path, NULL);
+	{ 
+        _cwprintf(L"%s", path);
+        if (::CreateDirectory(path, NULL))
+        {
+            CString StrBuff;
+            StrBuff.Format(L"%d", GetLastError());
+            MessageBox(StrBuff);
+        }
 	}
 	CFile File;
 	if (File.Open(path + _T("\\Default.txt"), CFile::modeRead))
@@ -2306,7 +2331,6 @@ void CCommandTestDlg::LoadDefault()
 		a.AreaCheckParamterDefault.pMosaicDlg = new CMosaicProcessing();//設定重組中視窗
 	}
 }
-
 /*******************************************************************************************視窗處理**********************************************************/
 //非活動轉活動事件
 int CCommandTestDlg::OnMouseActivate(CWnd* pDesktopWnd, UINT nHitTest, UINT message)
@@ -2410,9 +2434,14 @@ void CCommandTestDlg::OnBnClickedBtntest()
 		a.CommandMemory.push_back(StrBuff);
 		i++;
 	}
-	   
+	  
 	ListRefresh(NULL);  */
-	Counter();
+	//Counter();
+
+	//CWMIGetDeviceInfo test;
+	//test.WMI_Initialization();
+	//_cwprintf(L"%s",test.WMI_GetHDInformation().DeviceNumber);
+	//test.WMI_Free();
+
+    
 }
-
-

@@ -108,6 +108,9 @@
     <ClInclude Include="CCD.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
+    <ClInclude Include="WMIGetDeviceInfo.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CommandTest.cpp">
@@ -192,6 +195,9 @@
       <Filter>原始程式檔</Filter>
     </ClCompile>
     <ClCompile Include="CCD.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="WMIGetDeviceInfo.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>
