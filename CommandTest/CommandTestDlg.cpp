@@ -336,7 +336,6 @@ void CCommandTestDlg::OnBnClickedStart()
 	a.AreaCheckParamterDefault.Result.Path = GetCurrentPath(_T("\\CheckResult\\")).GetBuffer();
 	/*設置畫圖函式*/
 	a.SetDrawFunction(myDrawFunction, this);
-    a.SetDrawMovingFunction(myDrawFunction2, this);
 	if (m_LoopRun)
 	{
 		/*循環運行*/
@@ -432,7 +431,6 @@ void CCommandTestDlg::OnBnClickedBtnview()
 	a.AreaCheckParamterDefault.Result.Path = GetCurrentPath(_T("\\CheckResult\\")).GetBuffer();
 	/*設置畫圖函式*/
 	a.SetDrawFunction(myDrawFunction, this);
-    a.SetDrawMovingFunction(myDrawFunction2, this);
 	/*運行*/
 	a.View(CcdMode);
 }
@@ -1335,19 +1333,6 @@ void CCommandTestDlg::myDrawFunction(void * pParam, CPoint pt, int pencolor)
 		StrBuff.Format(L"(%d,%d),%d", pt.x, pt.y, pencolor);
 		((CCommandTestDlg*)pParam)->MessageBox(StrBuff);
 	}
-}
-/*畫圖呼叫函式2*/
-void CCommandTestDlg::myDrawFunction2(void *pParam, BOOL Dot0_Line1)
-{
-    if (pParam)
-    {
-        CString StrBuff;
-        if (Dot0_Line1)
-            StrBuff.Format(L"目前畫圖模式:線");
-        else
-            StrBuff.Format(L"目前畫圖模式:點");
-        ((CCommandTestDlg*)pParam)->MessageBox(StrBuff);
-    }
 }
 /*******************************************************************************************命令**********************************************************/
 /*單點點膠*/
