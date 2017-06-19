@@ -36,41 +36,42 @@ void CXListCtrl::OnNMCustomdraw(NMHDR *pNMHDR, LRESULT *pResult)
 	case CDDS_ITEMPREPAINT://如果畫ITEM之前要作顏色改變
 	{
 		COLORREF ItemColor;
-		//if (MapItemColor.Lookup(nmcd.dwItemSpec, ItemColor))
-		//	// 根据在 SetItemColor(DWORD iItem, COLORREF color) 设置的
-		//	// ITEM号和COLORREF 在摸板中查找，然后进行颜色赋值。
-		//{
-		//	//lplvdr->clrText = RGB(0,0,0);//ItemColor;
-		//	lplvdr->clrTextBk = ItemColor;
-		//	*pResult = CDRF_DODEFAULT;
-		//}
+
+		if (MapItemColor.Lookup(nmcd.dwItemSpec, ItemColor))
+			// 根据在 SetItemColor(DWORD iItem, COLORREF color) 设置的
+			// ITEM号和COLORREF 在摸板中查找，然后进行颜色赋值。
+		{
+			//lplvdr->clrText = RGB(0,0,0);//ItemColor;
+			lplvdr->clrTextBk = ItemColor;
+			*pResult = CDRF_DODEFAULT;
+		}
 	}
 	break;
 	}
 }
 //設置一行顏色
-void CXListCtrl::SetItemColor(DWORD iItem, COLORREF color)
+void CXListCtrl::SetItemColor(DWORD64 iItem, COLORREF color)
 {
 	//m_iCurrentItem = iItem;
 	//m_CurrentColor = color;
 
 	MapItemColor.SetAt(iItem, color);//设置某行的颜色。
-	this->RedrawItems(iItem, iItem);//重新染色
+	this->RedrawItems((int)iItem, (int)iItem);//重新染色
 
 	//this->SetCheck(iItem,1);
 	this->SetFocus();//設置焦點
 	UpdateWindow();
 }
 //設置X行到X行顏色
-void CXListCtrl::SetAllItemColor(DWORD iItemBegin ,DWORD iItemEnd, COLORREF TextBkColor)
+void CXListCtrl::SetAllItemColor(DWORD64 iItemBegin , DWORD64 iItemEnd, COLORREF TextBkColor)
 {
 	//INT_PTR ncount = this->GetItemCount();
 	if (iItemBegin > 0 && iItemEnd > 0)
 	{
-		for (DWORD numItem = iItemBegin; numItem < iItemEnd; numItem++)
+		for (DWORD64 numItem = iItemBegin; numItem < iItemEnd; numItem++)
 		{
 			MapItemColor.SetAt(numItem, TextBkColor);
-			this->RedrawItems(numItem, numItem);
+			this->RedrawItems((int)numItem, (int)numItem);
 		}
 	}
 	return;

@@ -14,12 +14,12 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:  //自定義成員
-    CMap<DWORD, DWORD&, COLORREF, COLORREF&> MapItemColor;
+    CMap<DWORD64, DWORD64&, COLORREF, COLORREF&> MapItemColor;
 
 public:  //自定義涵式
     afx_msg void OnNMCustomdraw(NMHDR * pNMHDR, LRESULT * pResult);
-    void SetItemColor(DWORD iItem, COLORREF color);
-    void SetAllItemColor(DWORD iItemBegin, DWORD iItemEnd, COLORREF TextBkColor);
+    void SetItemColor(DWORD64 iItem, COLORREF color);
+    void SetAllItemColor(DWORD64 iItemBegin, DWORD64 iItemEnd, COLORREF TextBkColor);
 };
 
 

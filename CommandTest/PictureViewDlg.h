@@ -29,4 +29,5 @@ public:
     virtual void OnCancel();
     virtual void OnOK();
     virtual BOOL DestroyWindow();
+    BOOL FileExist(LPCWSTR FilePathName);
 };

@@ -174,6 +174,7 @@ public:
 	afx_msg void OnDestroy();
     //外部畫圖函式
     static void myDrawFunction(void* pParam, CPoint pt, int pencolor);
+    static void myDrawFunction2(void * pParam, BOOL Dot0_Line1);
     //離開
     afx_msg void OnClose();
     virtual void OnCancel();

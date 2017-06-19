@@ -1839,6 +1839,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
+            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 0);//呼叫啟動畫點函式
 			((COrder*)pParam)->ActionCount++;//動作計數++
 			ChooseVisionModify(pParam);//選擇影像Offset
 			ChooseLaserModify(pParam);//選擇雷射高度
@@ -1981,6 +1982,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
+            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
 			((COrder*)pParam)->ActionCount++;//動作計數++
 			ChooseVisionModify(pParam);//選擇影像Offset
 			ChooseLaserModify(pParam);//選擇雷射高度
@@ -2452,6 +2454,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
+            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
 			((COrder*)pParam)->ActionCount++;//動作計數++
 			ChooseVisionModify(pParam);//選擇影像Offset
 			ChooseLaserModify(pParam);//選擇雷射高度
@@ -3328,6 +3331,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
+            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
 			CString CommandBuff;
 			CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
 			ChooseVisionModify(pParam);//選擇影像Offset
@@ -9452,6 +9456,15 @@ BOOL COrder::SetDrawFunction(CDrawFunction Funtion, void * pObject)
 	if (CallFunction.pObject)
 		return 1;
 	return 0;
+}
+/*設置畫圖呼叫函式*/
+BOOL COrder::SetDrawMovingFunction(CDrawMovingFunction Funtion, void * pDrawMovingObject)
+{
+    CallFunction.CDrawMovingFunction = Funtion;
+    CallFunction.pDrawMovingObject = pDrawMovingObject;
+    if (CallFunction.pDrawMovingObject)
+        return 1;
+    return 0;
 }
 /*設置平台高度Z值*/
 BOOL COrder::SetTabelZ(int *TableZ)

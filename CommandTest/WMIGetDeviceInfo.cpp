@@ -221,8 +221,8 @@ BOOL CWMIGetDeviceInfo::WMI_Free()
 //HD序號編碼轉換
 void CWMIGetDeviceInfo::DoWithHDSerialNumber(TCHAR * SerialNumber, UINT uSize)
 {
-	UINT	iLen;
-	UINT	i;
+	size_t	iLen;
+    size_t	i;
 
 	iLen = _tcslen(SerialNumber);
 	if (iLen == 40)	// InterfaceType = "IDE"

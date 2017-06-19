@@ -34,7 +34,7 @@ void InitConsoleWindow()
 {
     AllocConsole();
     HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    int hCrt = _open_osfhandle((long)handle, _O_TEXT);
+    int hCrt = _open_osfhandle((__int64)handle, _O_TEXT);
     FILE * hf = _fdopen(hCrt, "w");
     *stdout = *hf;
 

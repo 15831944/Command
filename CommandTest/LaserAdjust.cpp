@@ -201,8 +201,8 @@ void CLaserAdjust::ListRefresh()
 {
 	CString StrBuff;
 	m_ListLaserAdjust.DeleteAllItems();
-	int nCount = ((CCommandTestDlg*)pMain)->a.LaserAdjust.size();
-	for (int i = 0; i < nCount; i++)
+	size_t nCount = ((CCommandTestDlg*)pMain)->a.LaserAdjust.size();
+	for (size_t i = 0; i < nCount; i++)
 	{
 		m_ListLaserAdjust.InsertItem(i, NULL);
 		(i > 8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
@@ -210,7 +210,7 @@ void CLaserAdjust::ListRefresh()
 		StrBuff.Format(L"%d", ((CCommandTestDlg*)pMain)->a.LaserAdjust.at(i).LaserMeasureHeight);
 		m_ListLaserAdjust.SetItemText(i, 1, StrBuff);
 	}
-	int ListnCount = m_ListLaserAdjust.GetItemCount();
+    size_t ListnCount = m_ListLaserAdjust.GetItemCount();
 	m_ListLaserAdjust.EnsureVisible(ListnCount - 1, FALSE);//使List中一項可見(如滾動條向下滾)
 }
 //顯示視窗時設定

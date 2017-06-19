@@ -446,9 +446,12 @@ private:
 	};
 	//外部函式呼叫結構
 	typedef void(*CDrawFunction) (void*,CPoint,int);
+    typedef void(*CDrawMovingFunction)(void*, BOOL);
 	struct CallFunction {
 		CDrawFunction CDrawFunction;
 		void* pObject;
+        CDrawMovingFunction CDrawMovingFunction;
+        void* pDrawMovingObject;
 	};
 	//控制執行緒同步事件結構
 	struct ThreadEvent {
@@ -689,6 +692,8 @@ public:     //運行類函式
 public:    //設定類函式
 	//設置畫圖呼叫函式(成功return 1失敗return 0)
 	BOOL    SetDrawFunction(CDrawFunction Funtion, void* pObject);
+    //設置畫圖呼叫函式(成功return 1失敗return 0)
+    BOOL    SetDrawMovingFunction(CDrawMovingFunction Funtion, void* pDrawMovingObject);
 	//設置平台高度Z值(參數:回傳馬達Z值)(成功return 1 失敗 return 0)
 	BOOL    SetTabelZ(int* TableZ);
 	

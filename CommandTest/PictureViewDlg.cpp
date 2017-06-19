@@ -33,6 +33,10 @@ BOOL CPictureViewDlg::OnInitDialog()
 {
     CDialogEx::OnInitDialog();
     CRect rcClient, rcWindow;
+    if (!FileExist(FilePath + FileName + _T(".bmp")))
+    {
+        return FALSE;
+    }
     CImage image;
     image.Load(FilePath + FileName + _T(".bmp"));
     HBITMAP hBmp = image.Detach();
@@ -81,4 +85,19 @@ void CPictureViewDlg::OnOK()
 BOOL CPictureViewDlg::DestroyWindow()
 {
     return CDialogEx::DestroyWindow();
+}
+/*判斷檔案是否存在
+*FilePathName:檔案路徑名稱
+*/
+BOOL CPictureViewDlg::FileExist(LPCWSTR FilePathName)
+{
+    HANDLE hFile;
+    WIN32_FIND_DATA FindData;
+    hFile = FindFirstFile(FilePathName, &FindData);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+    return TRUE;
 }
