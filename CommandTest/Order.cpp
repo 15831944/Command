@@ -939,7 +939,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				}
 				else
 				{
-					UINT LoopAddressNumSize = ((COrder*)pParam)->RepeatData.LoopAddressNum.size();
+					UINT LoopAddressNumSize = (UINT)((COrder*)pParam)->RepeatData.LoopAddressNum.size();
 					for (UINT i = 0; i < LoopAddressNumSize; i++)
 					{
 						if (((COrder*)pParam)->RepeatData.LoopAddressNum.at(i) == ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)))
@@ -1055,7 +1055,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			}
 			else//有StepRepeatX時
 			{
-				UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();//獲取目前有幾個StepRepeat
+				UINT StepRepeatNumSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatNum.size();//獲取目前有幾個StepRepeat
 #ifdef PRINTF
 				_cwprintf(L"SubroutineThread()::目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
 #endif 
@@ -1434,7 +1434,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			}
 			else//有StepRepeatY時
 			{
-				UINT StepRepeatNumSize = ((COrder*)pParam)->RepeatData.StepRepeatNum.size();
+				UINT StepRepeatNumSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatNum.size();
 #ifdef PRINTF
 				_cwprintf(L"SubroutineThread()::目前StepRepeatNumSize:%d\n", StepRepeatNumSize);
 #endif 
@@ -6339,10 +6339,10 @@ void COrder::GetHashAddress(CString CommandAddress, UINT &D1, UINT &D2)
 	if (RepeatData.StepRepeatNum.size())
 	{
 		D2 = 1;
-		for (UINT i = RepeatData.StepRepeatNum.size(); i > 0; i--)
+		for (UINT i = (UINT)RepeatData.StepRepeatNum.size(); i > 0; i--)
 		{
 			UINT TotalY = 1;
-			for (UINT j = RepeatData.StepRepeatNum.size(); j > i; j--)
+			for (UINT j = (UINT)RepeatData.StepRepeatNum.size(); j > i; j--)
 			{
 				TotalY = TotalY * RepeatData.StepRepeatTotalX.at(j - 1) * RepeatData.StepRepeatTotalY.at(j - 1);
 			}
@@ -7424,7 +7424,7 @@ BOOL COrder::SearchDirectory(CString FilePathName)
 BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
 {
 	UINT CurrentRunCount = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) + 1;
-	UINT MaxRunNum = ((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1;
+	UINT MaxRunNum = (UINT)((COrder*)pParam)->Command.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)).size() - 1;
 	CString Command;
 	for (UINT i = CurrentRunCount; i < MaxRunNum; i++)
 	{
@@ -7519,8 +7519,8 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
 {
 	CString BlockBuff;
 	BOOL DeleteStepRepeat = FALSE;//用來判斷是否有刪除StepRepeat
-	int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
-	for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
+	UINT StepRepeatBlockSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
+	for (UINT i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
 	{
 #ifdef PRINTF
 		_cwprintf(_T("BlockProcessStartX()::%d-%d.StepRepeatX 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
@@ -7711,8 +7711,8 @@ void COrder::BlockProcessStartX(CString Command, LPVOID pParam, BOOL RepeatStatu
 BOOL COrder::BlockProcessExecuteX(CString Command, LPVOID pParam, int NowCount)
 {
 	CString BlockBuff;
-	int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
-	for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
+	UINT BlockSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
+	for (UINT i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
 	{
 #ifdef PRINTF
 		_cwprintf(L"BlockProcessExecuteX()::第%d:%d-%d.StepRepeatX 檢查阻斷\n", NowCount,((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
@@ -7905,8 +7905,8 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
 {
 	CString BlockBuff;
 	BOOL DeleteStepRepeat = FALSE;
-	int StepRepeatBlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
-	for (int i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
+	UINT StepRepeatBlockSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatBlockData.back().BlockPosition.size();
+	for (UINT i = 0; i < StepRepeatBlockSize; i++)//搜尋第一項阻斷陣列 是否有1-1
 	{
 #ifdef PRINTF
 		_cwprintf(_T("BlockProcessStartY()::%d-%d.StepRepeatY 檢查阻斷\n"), ((COrder*)pParam)->RepeatData.StepRepeatCountX.back(), ((COrder*)pParam)->RepeatData.StepRepeatCountY.back());
@@ -8102,8 +8102,8 @@ void COrder::BlockProcessStartY(CString Command, LPVOID pParam, BOOL RepeatStatu
 BOOL COrder::BlockProcessExecuteY(CString Command, LPVOID pParam, int NowCount)
 {
 	CString BlockBuff;
-	int BlockSize = ((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
-	for (int i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
+	UINT BlockSize = (UINT)((COrder*)pParam)->RepeatData.StepRepeatBlockData.at(NowCount).BlockPosition.size();
+	for (UINT i = 0; i < BlockSize; i++)//搜尋最後一項阻斷陣列 是否有1-1
 	{
 #ifdef PRINTF
 		_cwprintf(L"BlockProcessExecuteY()::第%d:%d-%d.StepRepeatY 檢查阻斷\n", NowCount, ((COrder*)pParam)->RepeatData.StepRepeatCountX.at(NowCount), ((COrder*)pParam)->RepeatData.StepRepeatCountY.at(NowCount));
@@ -8455,7 +8455,7 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
 		if (TempFileName.size() > 0)
 		{
 			//配置模板數量
-			TemplateCheck.OKModelCount = TempFileName.size();
+			TemplateCheck.OKModelCount = (LONG)TempFileName.size();
 			//分配模板記憶體
 			TemplateCheck.OKModel = new void*[TempFileName.size()];
 			for (UINT i = 0; i < TempFileName.size(); i++)
@@ -8498,7 +8498,7 @@ void COrder::ModelLoad(BOOL Choose, LPVOID pParam, CString ModelNum , TemplateCh
 		if (TempFileName.size() > 0)
 		{
 			//配置模板數量
-			TemplateCheck.NGModelCount = TempFileName.size();
+			TemplateCheck.NGModelCount = (LONG)TempFileName.size();
 			//分配模板記憶體
 			TemplateCheck.NGModel = new void*[TempFileName.size()];
 			for (UINT i = 0; i < TempFileName.size(); i++)

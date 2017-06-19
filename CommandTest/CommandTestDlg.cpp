@@ -546,14 +546,14 @@ void CCommandTestDlg::OnTimer(UINT_PTR nIDEvent)
 void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 	CString StrBuff;
 	m_CommandList.DeleteAllItems();
-	UINT nCount = a.CommandMemory.size();
+	UINT nCount = (UINT)a.CommandMemory.size();
 	if (!ScrollBarRefresh)
 	{
 		for (UINT i = 0; i < nCount; i++) {
-			m_CommandList.InsertItem(i, NULL);
+			m_CommandList.InsertItem((int)i, NULL);
 			(i>8) ? StrBuff.Format(_T("0%d"), i + 1) : StrBuff.Format(_T("00%d"), i + 1);
-			m_CommandList.SetItemText(i, 0, StrBuff);
-			m_CommandList.SetItemText(i, 1, a.CommandMemory.at(i));
+			m_CommandList.SetItemText((int)i, 0, StrBuff);
+			m_CommandList.SetItemText((int)i, 1, a.CommandMemory.at(i));
 		}
 		if (nCount > InsertNum)
 		{
@@ -561,7 +561,7 @@ void CCommandTestDlg::ListRefresh(BOOL ScrollBarRefresh) {
 		}
 		else
 		{
-			m_CommandList.EnsureVisible(nCount, FALSE);//使List中一項可見(如滾動條向下滾)
+			m_CommandList.EnsureVisible((int)nCount, FALSE);//使List中一項可見(如滾動條向下滾)
 		}
 		InsertNum = nCount;
 	}
