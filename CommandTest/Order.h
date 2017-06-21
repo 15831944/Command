@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/04/07
+*更新日期:2017/06/21
 *作者名稱:Rong
 */
 #pragma once
@@ -134,6 +134,7 @@ private:
 		void* MilModel; 
 		DOUBLE OffsetX;
 		DOUBLE OffsetY;
+        std::vector<CoordinateData> Trigger;
 	};
 	//影像修正計算結構(對位點、對位點後偏移量X、對位點後偏移量Y、對位點後偏移角度)
 	struct VisionOffset {
@@ -164,11 +165,8 @@ private:
 	};
 	//影像擴大搜尋(調整狀態、擴大對位1開關、擴大對位2開關、擴大對位區間1、擴大對位區間2)
 	struct VisionTrigger {
-		UINT AdjustStatus;
-		BOOL Trigger1Switch;
-		BOOL Trigger2Switch;
-		std::vector<CoordinateData> Trigger1;
-		std::vector<CoordinateData> Trigger2;
+        UINT AdjustStatus;
+        int TriggerSwitch;
 	};
 	//影像搜尋錯誤結構(搜尋錯誤方式、尋問對話框指針、手動模式開關、暫停模式判斷)
 	struct VisionSerchError {
