@@ -2677,8 +2677,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 										//判斷線段是否在區域內
 										if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
 										{ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-										{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-											((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                            ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+										/*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+											((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
 										{
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y });//起始點
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
