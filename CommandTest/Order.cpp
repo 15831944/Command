@@ -880,7 +880,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				//將堆疊計數減1
 				((COrder*)pParam)->Program.SubroutinCount--;
 			}
-			else//用在模式三進入模式二結束子程序
+			else//用在模式二進入模式三結束子程序
 			{
 				((COrder*)pParam)->ModelControl.Mode = 3;
 				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
@@ -926,7 +926,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	}
 	else if (CommandResolve(Command, 0) == L"Loop")
 	{
-		if (((COrder*)pParam)->ModelControl.Mode == 3)//建表模式
+		if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
 			if (_ttol(CommandResolve(Command, 2)))
 			{
@@ -2891,12 +2891,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								for (UINT i = 0; i < ((COrder*)pParam)->IntervalAreaCheck.size(); i++)//判斷目前使用的區間 加入線段陣列
 								{
 									if (((COrder*)pParam)->IntervalAreaCheck.at(i).Address == ((COrder*)pParam)->CurrentCheckAddress)
-									{
+									{                                     
 										//判斷線段是否在區域內
 										if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
 										{ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
-										{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
-											((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }))//線段在區域內
+                                            ((COrder*)pParam)->MosaicAreaJudge(((COrder*)pParam)->IntervalAreaCheck.at(i))
+										/*{ ((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.Start.y,
+											((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.x,((COrder*)pParam)->IntervalAreaCheck.at(i).Image.End.y }*/))//線段在區域內
 										{
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y });//起始點
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//中間點
@@ -4852,7 +4853,7 @@ UINT COrder::IODetection(LPVOID pParam)
 	g_pIODetectionThread = NULL;
 	return 0;
 }
-/*區間檢測點掃描執行續*/
+/*區間檢測點掃描執行緒*/
 UINT COrder::CheckCoordinateScan(LPVOID pParam)
 {
 	//判斷是否有模板、直徑的區間檢測點
@@ -4903,7 +4904,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 	::SetEvent(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread);
 	return 0;
 }
-/*檢測點執行執行續*/
+/*檢測點執行執行緒*/
 UINT COrder::CheckAction(LPVOID pParam)
 {
 	if (((COrder*)pParam)->CheckModel == 1)//即時檢測動作
@@ -6158,7 +6159,7 @@ void COrder::ChooseLaserModify(LPVOID pParam){
 		}
 	}
 }
-/*紀錄修正表*/
+/*紀錄修正表*//**************************************/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
 	UINT D1 = 0, D2 = 0;
