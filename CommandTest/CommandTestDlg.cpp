@@ -206,7 +206,8 @@ BEGIN_MESSAGE_MAP(CCommandTestDlg, CDialogEx)
 	
 	ON_WM_CLOSE()
 	ON_BN_CLICKED(IDC_BTNWRITECOMMAND, &CCommandTestDlg::OnBnClickedBtnwritecommand)
-END_MESSAGE_MAP()
+        ON_BN_CLICKED(IDC_BTNCOMMAND54, &CCommandTestDlg::OnBnClickedBtncommand54)
+        END_MESSAGE_MAP()
 
 // CCommandTestDlg 訊息處理常式
 BOOL CCommandTestDlg::OnInitDialog()
@@ -2042,6 +2043,14 @@ void CCommandTestDlg::OnBnClickedBtncommand53()
 		ListRefresh(NULL);
 	}
 }
+/*End結束*/
+void CCommandTestDlg::OnBnClickedBtncommand54()
+{
+    StrBuff.Format(_T("End"));
+    (Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
+    Insert = FALSE;
+    ListRefresh(NULL);
+}
 /*******************************************************************************************私有函數**********************************************************/
 /*指令分解*/
 CString CCommandTestDlg::CommandResolve(CString Command, UINT Choose)
@@ -2460,3 +2469,6 @@ void CCommandTestDlg::OnBnClickedBtntest()
 
     
 }
+
+
+

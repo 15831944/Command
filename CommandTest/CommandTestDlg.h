@@ -178,5 +178,6 @@ public:
     //Â÷¶}
     afx_msg void OnClose();
     virtual void OnCancel();
+    afx_msg void OnBnClickedBtncommand54();
 };
 

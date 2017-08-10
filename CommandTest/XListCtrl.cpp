@@ -50,7 +50,7 @@ void CXListCtrl::OnNMCustomdraw(NMHDR *pNMHDR, LRESULT *pResult)
 	}
 }
 //設置一行顏色
-void CXListCtrl::SetItemColor(DWORD64 iItem, COLORREF color)
+void CXListCtrl::SetItemColor(DWORD iItem, COLORREF color)
 {
 	//m_iCurrentItem = iItem;
 	//m_CurrentColor = color;
@@ -63,12 +63,12 @@ void CXListCtrl::SetItemColor(DWORD64 iItem, COLORREF color)
 	UpdateWindow();
 }
 //設置X行到X行顏色
-void CXListCtrl::SetAllItemColor(DWORD64 iItemBegin , DWORD64 iItemEnd, COLORREF TextBkColor)
+void CXListCtrl::SetAllItemColor(DWORD iItemBegin , DWORD iItemEnd, COLORREF TextBkColor)
 {
 	//INT_PTR ncount = this->GetItemCount();
 	if (iItemBegin > 0 && iItemEnd > 0)
 	{
-		for (DWORD64 numItem = iItemBegin; numItem < iItemEnd; numItem++)
+		for (DWORD numItem = iItemBegin; numItem < iItemEnd; numItem++)
 		{
 			MapItemColor.SetAt(numItem, TextBkColor);
 			this->RedrawItems((int)numItem, (int)numItem);
