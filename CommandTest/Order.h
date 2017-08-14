@@ -133,14 +133,14 @@ private:
     struct VisionSwitch {
         BOOL FindMark;
         BOOL FiducialMark;
-        BOOL FindMarkAdjust;
-        BOOL FiducialMarkAdjust;
+        BOOL FindMarkFinish;
+        BOOL FiducialMarkFinish;
     };
-	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y、Trigger陣列)
+	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離(2017/08/14拔除)、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y、Trigger陣列)
 	struct Vision {
 		BOOL FindMarkStatus;
 		CoordinateData Point;
-		LONG FocusDistance;
+		//LONG FocusDistance;//2017/08/14已拔除
 		UINT LoadModelNum;
 		void* MilModel; 
 		DOUBLE OffsetX;
@@ -639,6 +639,7 @@ public:     //變數
 	std::vector<LaserAdjust> LaserAdjust;
 	//影像、雷射資料計數
 	int             VisionCount;//用來計數第幾次的影像對位
+    int             VisionCountTemp;//用來暫存計數第幾次的影像對位
 	int             LaserCount;//用來計數第幾次的雷射測高
 	//檢測資料                                                     
 	CheckSwitch     CheckSwitch;
