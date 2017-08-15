@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/06/21
+*更新日期:2017/08/15
 *作者名稱:Rong
 */
 #pragma once
@@ -141,7 +141,7 @@ private:
 		void* MilModel; 
 		DOUBLE OffsetX;
 		DOUBLE OffsetY;
-        std::vector<CoordinateData> Trigger;
+		std::vector<CoordinateData> Trigger;
 	};
 	//影像修正計算結構(對位點、對位點後偏移量X、對位點後偏移量Y、對位點後偏移角度)
 	struct VisionOffset {
@@ -172,8 +172,8 @@ private:
 	};
 	//影像擴大搜尋(調整狀態、擴大對位1開關、擴大對位2開關、擴大對位區間1、擴大對位區間2)
 	struct VisionTrigger {
-        UINT AdjustStatus;
-        int TriggerSwitch;
+		UINT AdjustStatus;
+		int TriggerSwitch;
 	};
 	//影像搜尋錯誤結構(搜尋錯誤方式、尋問對話框指針、手動模式開關、暫停模式判斷)
 	struct VisionSerchError {
@@ -320,7 +320,7 @@ private:
 		File LineTrainSave;
 		File Result;
 		CDialog* pMosaicDlg;
-	};	
+	};
 	/************************************************************程序參數結構*******************************************************/
 	/*Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序模式堆疊、子程序影像修正判斷堆疊、子程序命令預處理、子程序模組跳換開關) 
 	*標籤計數:用來計算進入標籤時命令是否全部尋找完畢
@@ -343,7 +343,7 @@ private:
 		std::vector<UINT> SubroutineModel;
 		std::vector<BOOL> SubroutineVisioModifyJudge;
 		CString SubroutineCommandPretreatment;
-		BOOL SubroutineModelControlSwitch;
+		//BOOL SubroutineModelControlSwitch;//舊版2017/08/15修改
 	};
 	/*運行結構(副程式名稱、運行計數、控制主副程序、主副程序堆疊計數、動作狀態)	
 	*運行計數(目前做到第幾個指令 0:主程序 1-X:副程序)
@@ -380,12 +380,12 @@ private:
 		//UINT CommandTotalCount;
 		//UINT CurrentRunCommandCount;
 	};
-    //區間資料結構(類別、起始地址、結束地址)
-    struct IntervalData {
-        CString Type;
-        UINT BeginAddress;
-        UINT EndAddress;
-    };
+	//StepRepeat區間資料結構(類別、起始地址、結束地址)
+	struct IntervalData {
+		CString Type;
+		UINT BeginAddress;
+		UINT EndAddress;
+	};
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
 		int BlockNumber;
@@ -501,7 +501,7 @@ private:    //變數
 	Speed           MoveSpeedSet,LMPSpeedSet,LMCSpeedSet,VMSpeedSet;
 	/*(暫存)判斷影像是否修正(Subroutine使用)*/
 	BOOL            VisioModifyJudge;
-	
+
 private:    //函式
 	/*執行續*/
 	static  UINT    HomeThread(LPVOID pParam);//原點賦歸程序
