@@ -1670,7 +1670,7 @@ void CCommandTestDlg::OnBnClickedBtncommand35()
 /*查找標記調整*/
 void CCommandTestDlg::OnBnClickedBtncommand36()
 {
-	StrBuff.Format(_T("FindMarkAdjust"));
+	StrBuff.Format(_T("FindMarkAdjust,%d"), GetDlgItemInt(IDC_EDITPARAM1));
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);
@@ -1678,7 +1678,7 @@ void CCommandTestDlg::OnBnClickedBtncommand36()
 /*基準標記調整*/
 void CCommandTestDlg::OnBnClickedBtncommand37()
 {
-	StrBuff.Format(_T("FiducialMarkAdjust"));
+	StrBuff.Format(_T("FiducialMarkAdjust,%d"), GetDlgItemInt(IDC_EDITPARAM1));
 	(Insert) ? a.CommandMemory.emplace(a.CommandMemory.begin() + InsertNum, StrBuff) : a.CommandMemory.push_back(StrBuff);
 	Insert = FALSE;
 	ListRefresh(NULL);

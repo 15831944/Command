@@ -125,11 +125,18 @@ private:
 		CDialog* pEMGDlg;
 	};
 	/************************************************************影像參數結構*******************************************************/
+    //影像模式轉換開關(FindMark、FiducialMark1、FiducialMark2、FindMarkAdjust、FiducialMarkAdjust)
+    struct VisionSwitch {
+        BOOL FindMark;
+        BOOL FiducialMark;
+        BOOL FindMarkFinish;
+        BOOL FiducialMarkFinish;
+    };
 	//影像對位點結構(標記查找狀態(TRUE = 找到 FALSE = 未找到)、對位點、對焦距離、LoadModel編號、存放Model指針、對位後偏移量X、對位後偏移量Y)
 	struct Vision {
 		BOOL FindMarkStatus;
 		CoordinateData Point;
-		LONG FocusDistance;
+		//LONG FocusDistance;//2017/08/14已拔除
 		UINT LoadModelNum;
 		void* MilModel; 
 		DOUBLE OffsetX;
@@ -313,22 +320,8 @@ private:
 		File LineTrainSave;
 		File Result;
 		CDialog* pMosaicDlg;
-	};
-	/************************************************************模組參數結構*******************************************************/
-	//控管模組結構(模式選擇、模式轉換地址、影像模組跳過、雷射和檢測模組跳過)
-	struct ModelControl{
-		UINT Mode;
-		int  ModeChangeAddress;
-		BOOL VisionModeJump;
-		BOOL LaserAndCheckModeJump;
-	};
+	};	
 	/************************************************************程序參數結構*******************************************************/
-	//區間資料結構(類別、起始地址、結束地址)
-	struct IntervalData {
-		CString Type;
-		UINT BeginAddress;
-		UINT EndAddress;
-	};
 	/*Label&Subroutine控管結構(標籤計數、標籤名稱、子程序計數、子程序狀態、子程序地址堆疊、子程序座標堆疊、子程序模式堆疊、子程序影像修正判斷堆疊、子程序命令預處理、子程序模組跳換開關) 
 	*標籤計數:用來計算進入標籤時命令是否全部尋找完畢
 	*標籤名稱:用來記錄跳要的標名稱
@@ -387,6 +380,12 @@ private:
 		//UINT CommandTotalCount;
 		//UINT CurrentRunCommandCount;
 	};
+    //區間資料結構(類別、起始地址、結束地址)
+    struct IntervalData {
+        CString Type;
+        UINT BeginAddress;
+        UINT EndAddress;
+    };
 	//阻斷控管結構(阻斷數量、阻斷陣列)
 	struct StepRepeatBlockData {
 		int BlockNumber;
@@ -454,6 +453,22 @@ private:
 		HANDLE CheckCoordinateScanThread;
 		HANDLE MosaicDlgThread;
 	};
+    /************************************************************模組參數結構*******************************************************/
+    //控管模組結構(模式選擇、影像模式轉換地址、雷射模式轉換地址、影像模組跳過、雷射和檢測模組跳過)
+    struct ModelControl {
+        UINT Mode;
+        int  VisionModeChangeAddress;
+        int  LaserModeChangeAddress;
+        BOOL VisionModeJump;
+        BOOL LaserAndCheckModeJump;
+    };
+    //模式轉換暫存結構(StepRepeat相關結構,Subroutine相關結構,呼叫Subroutine時相關狀態結構)
+    struct ModelConversionData {
+        RepeatData RepeatDataRecord;
+        Program ProgramRecord;
+        std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
+        std::vector<UINT> ActionStatus;
+    };
 private:    //變數
 	ThreadEvent     ThreadEvent;
 	//HANDLE          OutThreadEvent;//測試OpenEvent用
@@ -468,13 +483,14 @@ private:    //變數
 	std::vector<CString> CommandSwap;
 	std::vector<std::vector<CString>> Command;
 	/*程序*/
-	RepeatData      RepeatDataRecord;
+	//RepeatData      RepeatDataRecord;//舊版2017/08/14修改
 	RepeatData      RepeatData;
 	Program         Program;
 	RunData         RunData;
 	LoadCommandData LoadCommandData;
 	/*模組控管*/
 	ModelControl    ModelControl;
+    ModelConversionData ModelConversionData;//轉換模組時暫存資料
 	/*狀態*/
 	std::vector<CoordinateData> ArcData, CircleData1, CircleData2, StartData, OffsetData;
 	/*IO*/
@@ -593,6 +609,7 @@ public:     //變數
 	VisionFile      VisionFile;
 	VisionSerchError VisionSerchError;
 	//影像資料
+    VisionSwitch    VisionSwitch;
 	Vision          FindMark, FiducialMark1, FiducialMark2;
 	VisionOffset    VisionOffset;
 	VisionTrigger   VisionTrigger;
@@ -613,6 +630,7 @@ public:     //變數
 	std::vector<LaserAdjust> LaserAdjust;
 	//影像、雷射資料計數
 	int             VisionCount;//用來計數第幾次的影像對位
+    int             VisionCountTemp;//用來暫存計數第幾次的影像對位
 	int             LaserCount;//用來計數第幾次的雷射測高
 	//檢測資料                                                     
 	CheckSwitch     CheckSwitch;
