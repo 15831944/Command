@@ -4,7 +4,7 @@
 *檔案擁有功能:Move、Laser、Vision、Check
 *適用軸卡:Nova
 *適用雷射:松下
-*更新日期:2017/04/07
+*更新日期:2017/08/15
 *作者名稱:Rong
 */
 #include "stdafx.h"
@@ -103,13 +103,13 @@ BOOL COrder::Run()
 			QueryPerformanceCounter(&startTime); //取得開機到現在經過幾個CPU Cycle
 			/*****可以不用在檢查ㄧ次命令*****/
 			int Test = 0;
-//			if (CheckCommandRule(Test))//檢查命令表
-//			{
-//#ifdef PRINTF
-//				_cwprintf(L"Run()::錯誤代碼:%d,命令地址為:%d\n", CheckCommandRule(Test), Test);
-//#endif
-//				return FALSE;
-//			}
+			if (CheckCommandRule(Test))//檢查命令表
+			{
+#ifdef PRINTF
+				_cwprintf(L"Run()::錯誤代碼:%d,命令地址為:%d\n", CheckCommandRule(Test), Test);
+#endif
+				return FALSE;
+			}
 			//刪除檢測結果檔案
 			//FileDelete(AreaCheckParamterDefault.Result.Path);
 			int pos = AreaCheckParamterDefault.Result.Path.ReverseFind('\\');
@@ -810,7 +810,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		//新增影像修正狀態
 		((COrder*)pParam)->Program.SubroutineVisioModifyJudge.push_back(((COrder*)pParam)->VisioModifyJudge);
 		//堆疊計數加1
-		((COrder*)pParam)->Program.SubroutinCount++; 
+		((COrder*)pParam)->Program.SubroutinCount++;
 #ifdef PRINTF
 		_cwprintf(L"SubroutineThread()::呼叫子程序:數量(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
 #endif
@@ -821,45 +821,45 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		if (!((COrder*)pParam)->Program.SubroutineStack.empty())
 		{
 #ifdef PRINTF
-            _cwprintf(L"SubroutineThread()::結束子程序:數量(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
+			_cwprintf(L"SubroutineThread()::結束子程序:數量(%d)地址(%d)\n", ((COrder*)pParam)->Program.SubroutinCount, ((COrder*)pParam)->Program.SubroutineStack.back());
 #endif
-            //TODO::可選擇是否在影像模式不移動回CallSuboutine位置
-            //將機器手臂移動至呼叫時位置
+			//TODO::可選擇是否在影像模式不移動回CallSuboutine位置
+			//將機器手臂移動至呼叫時位置
 #ifdef MOVE
-            if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下才做回歸動作
-            {
-                ((COrder*)pParam)->m_Action.DecideVirtualPoint(
-                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
-                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
-                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
-                    ((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
-                    ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
-            }
+			if (((COrder*)pParam)->ModelControl.Mode == 3)//在運動模式下才做回歸動作
+			{
+				((COrder*)pParam)->m_Action.DecideVirtualPoint(
+					((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).X,
+					((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+					((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+					((COrder*)pParam)->Program.SubroutinePointStack.at(((COrder*)pParam)->Program.SubroutinCount).W,
+					((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+			}
 #endif
-            //將程序地址設為呼叫子程序時地址
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
-            //判斷CallSubroutine中動作是否完全
-            LineGotoActionJudge(pParam);
-            //釋放紀錄程序位置堆疊
-            ((COrder*)pParam)->Program.SubroutineStack.pop_back();
-            //釋放紀錄手臂位置堆疊
-            ((COrder*)pParam)->Program.SubroutinePointStack.pop_back();
-            //釋放記錄呼叫時模式堆疊
-            ((COrder*)pParam)->Program.SubroutineModel.pop_back();
-            //釋放offset堆疊
-            ((COrder*)pParam)->OffsetData.pop_back();
-            //釋放狀態堆疊
-            ((COrder*)pParam)->ArcData.pop_back();
-            ((COrder*)pParam)->CircleData1.pop_back();
-            ((COrder*)pParam)->CircleData2.pop_back();
-            ((COrder*)pParam)->StartData.pop_back();
-            ((COrder*)pParam)->RunData.ActionStatus.pop_back();
-            //釋放影像修正狀態
-            ((COrder*)pParam)->Program.SubroutineVisioModifyJudge.pop_back();
-            //將堆疊計數減1
-            ((COrder*)pParam)->Program.SubroutinCount--;
+			//將程序地址設為呼叫子程序時地址
+			((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->Program.SubroutineStack.back();
+			//判斷CallSubroutine中動作是否完全
+			LineGotoActionJudge(pParam);
+			//釋放紀錄程序位置堆疊
+			((COrder*)pParam)->Program.SubroutineStack.pop_back();
+			//釋放紀錄手臂位置堆疊
+			((COrder*)pParam)->Program.SubroutinePointStack.pop_back();
+			//釋放記錄呼叫時模式堆疊
+			((COrder*)pParam)->Program.SubroutineModel.pop_back();
+			//釋放offset堆疊
+			((COrder*)pParam)->OffsetData.pop_back();
+			//釋放狀態堆疊
+			((COrder*)pParam)->ArcData.pop_back();
+			((COrder*)pParam)->CircleData1.pop_back();
+			((COrder*)pParam)->CircleData2.pop_back();
+			((COrder*)pParam)->StartData.pop_back();
+			((COrder*)pParam)->RunData.ActionStatus.pop_back();
+			//釋放影像修正狀態
+			((COrder*)pParam)->Program.SubroutineVisioModifyJudge.pop_back();
+			//將堆疊計數減1
+			((COrder*)pParam)->Program.SubroutinCount--;
 
-            /*舊版2017/08/03以前*/
+			/*舊版2017/08/03以前*/
 //			if (((COrder*)pParam)->Program.SubroutineModel.back() == ((COrder*)pParam)->ModelControl.Mode)//判斷跳出模式是否等於目前模式
 //			{
 //#ifdef PRINTF
@@ -1789,13 +1789,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 	{
 		if (((COrder*)pParam)->ModelControl.Mode == 0)
 		{
-            ((COrder*)pParam)->LoadCommandData.FirstRun = FALSE;
-            ((COrder*)pParam)->ModelControl.Mode = 3;
+			((COrder*)pParam)->LoadCommandData.FirstRun = FALSE;
+			((COrder*)pParam)->ModelControl.Mode = 3;
 #ifdef PRINTF
-            _cwprintf(L"SubroutineThread()::End模式轉換(0->3)\n\n下一個模式即將開始...\n");
+			_cwprintf(L"SubroutineThread()::End模式轉換(0->3)\n\n下一個模式即將開始...\n");
 #endif
-            /*舊版2017/08/14以前*/
-            /*((COrder*)pParam)->LoadCommandData.FirstRun = FALSE;
+			/*舊版2017/08/14以前*/
+			/*((COrder*)pParam)->LoadCommandData.FirstRun = FALSE;
 			if (!((COrder*)pParam)->ModelControl.VisionModeJump)
 			{
 				((COrder*)pParam)->ModelControl.Mode = 1;
@@ -1830,7 +1830,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
             _cwprintf(L"SubroutineThread()::FindMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-            /*舊版2017/08/14以前*/
+			/*舊版2017/08/14以前*/
 //			((COrder*)pParam)->ModelControl.Mode = 3;
 //			//在模式轉換後必須將雷射狀態初始化
 //			((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
@@ -1859,7 +1859,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
             _cwprintf(L"SubroutineThread()::End模式轉換(2->3)地址跳至:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-            /*舊版2017/08/03以前*/
+			/*舊版2017/08/03以前*/
 //			if (((COrder*)pParam)->Program.SubroutineStack.empty())//沒有Subroutine時才能轉換模式
 //			{
 //				((COrder*)pParam)->ModelControl.Mode = 3;
@@ -1926,7 +1926,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
-            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 0);//呼叫啟動畫點函式
+			(*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 0);//呼叫啟動畫點函式
 			((COrder*)pParam)->ActionCount++;//動作計數++
 			ChooseVisionModify(pParam);//選擇影像Offset
 			ChooseLaserModify(pParam);//選擇雷射高度
@@ -2516,7 +2516,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						((COrder*)pParam)->m_Action.LA_Line3DtoDo(abs(((COrder*)pParam)->FinalWorkCoordinateData.Z + 10000),
 							((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);					
 #endif
-                        ((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
+						((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
 					}
 				}
 				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 2;//狀態變為線段中
@@ -2541,7 +2541,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
-            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
+			(*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
 			((COrder*)pParam)->ActionCount++;//動作計數++
 			ChooseVisionModify(pParam);//選擇影像Offset
 			ChooseLaserModify(pParam);//選擇雷射高度
@@ -2978,7 +2978,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 								for (UINT i = 0; i < ((COrder*)pParam)->IntervalAreaCheck.size(); i++)//判斷目前使用的區間 加入線段陣列
 								{
 									if (((COrder*)pParam)->IntervalAreaCheck.at(i).Address == ((COrder*)pParam)->CurrentCheckAddress)
-									{                                     
+									{
 										//判斷線段是否在區域內
 										if (((COrder*)pParam)->LineAreaJudge({ ((COrder*)pParam)->AreaCheckChangTemp.X,((COrder*)pParam)->AreaCheckChangTemp.Y },
 										{ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y },
@@ -3023,7 +3023,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
 							((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);						
 #endif                 
-                        ((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
+						((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
 					}
 					else//Demo用
 					{
@@ -3038,7 +3038,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, ((COrder*)pParam)->DispenseLineEnd.HighSpeed, ((COrder*)pParam)->DispenseLineEnd.Width, ((COrder*)pParam)->DispenseLineEnd.Height, ((COrder*)pParam)->DispenseLineEnd.LowSpeed,
 							((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);					
 #endif
-                        ((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
+						((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
 					}
 				}
 			}
@@ -3076,7 +3076,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
 			//((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
-            ((COrder*)pParam)->FinalWorkCoordinateData.W = 0.0;
+			((COrder*)pParam)->FinalWorkCoordinateData.W = 0.0;
 			VisionModify(pParam);//影像修正
 
 			((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
@@ -3121,25 +3121,25 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = TRUE;
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-			
-            VisionModify(pParam);//影像修正
+
+			VisionModify(pParam);//影像修正
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
-            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-            //((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
-            ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W = 0.0;
-            
-            //圓第二點
+			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+			//((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W = _tstof(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+			((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W = 0.0;
+
+			//圓第二點
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 4)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-            ((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
+			((COrder*)pParam)->FinalWorkCoordinateData.W = _tstof(CommandResolve(Command, 7)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).W;
 
-            VisionModify(pParam);//影像修正
+			VisionModify(pParam);//影像修正
 			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).X = ((COrder*)pParam)->FinalWorkCoordinateData.X;
 			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Y = ((COrder*)pParam)->FinalWorkCoordinateData.Y;
-            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-            ((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W = ((COrder*)pParam)->FinalWorkCoordinateData.W;
-			
+			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).Z = _ttol(CommandResolve(Command, 6)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+			((COrder*)pParam)->CircleData2.at(((COrder*)pParam)->Program.SubroutinCount).W = ((COrder*)pParam)->FinalWorkCoordinateData.W;
+
 #ifdef PRINTF
 			_cwprintf(L"SubroutineThread()::%s(First:%d,%d,%d,%.3f\tSecond:%d,%d,%d,%.3f)\n", CommandResolve(Command, 0),
 				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).X, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Y, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Z, ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).W,
@@ -3419,7 +3419,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
 		{
-            (*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
+			(*((COrder*)pParam)->CallFunction.CDrawMovingFunction)(((COrder*)pParam)->CallFunction.pDrawMovingObject, 1);//呼叫啟動畫點函式
 			CString CommandBuff;
 			CommandBuff.Format(_T("FillArea,%d,%d,%d"), _ttol(CommandResolve(Command, 4)), _ttol(CommandResolve(Command, 5)), _ttol(CommandResolve(Command, 6)));
 			ChooseVisionModify(pParam);//選擇影像Offset
@@ -3764,341 +3764,359 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
 		{
 		}
-        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
-        {
-            //((COrder*)pParam)->m_Action.m_bIsDispend = _ttol(CommandResolve(Command, 1));
-        }
-    }
-    else if (CommandResolve(Command, 0) == L"DispenserSwitchSet")
-    {
-        //目前尚未用到
-        if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
-        {
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
-        {
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
-        {
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
-        {
-            //((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
-        }
-    }
-    /************************************************************影像***************************************************************/
+		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+		{
+			//((COrder*)pParam)->m_Action.m_bIsDispend = _ttol(CommandResolve(Command, 1));
+		}
+	}
+	else if (CommandResolve(Command, 0) == L"DispenserSwitchSet")
+	{
+		//目前尚未用到
+		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
+		{
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 1)//影像模式
+		{
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 2)//雷射模式
+		{
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 3)//運動模式
+		{
+			//((COrder*)pParam)->m_Action.g_iNumberGluePort = _ttol(CommandResolve(Command, 1));
+		}
+	}
+	/************************************************************影像***************************************************************/
     else if (CommandResolve(Command, 0) == L"FindMark")
     {
-        if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
-        {
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 3)//當模式1、3執行動作
-        {
-            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
-            //判斷是否轉換模式
-            if (!((COrder*)pParam)->VisionSwitch.FindMark && !((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 5)))
-            {
-                if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == -1)//尚未有影像模式跳轉地址
-                {
-                    /*記錄所有狀態*/
-                    ((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
-                    ((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
-                    ((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
-                    ((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
-                    ((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
-                    ((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
-                    ((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
-                    ((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
-                    //將模式轉換為影像模式
-                    ((COrder*)pParam)->ModelControl.Mode = 1;
-                    //紀錄模式轉換地址
-                    ((COrder*)pParam)->ModelControl.VisionModeChangeAddress = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));
+		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
+		{
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 3)//當模式1、3執行動作
+		{
+			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+			//判斷是否轉換模式
+			if (!((COrder*)pParam)->VisionSwitch.FindMark && !((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 5)))
+			{
+				if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == -1)//尚未有影像模式跳轉地址
+				{
+					/*記錄所有狀態*/
+					((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
+					((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
+					((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
+					((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
+					((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
+					((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
+					((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
+					((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
+					//將模式轉換為影像模式
+					((COrder*)pParam)->ModelControl.Mode = 1;
+					//紀錄模式轉換地址
+					((COrder*)pParam)->ModelControl.VisionModeChangeAddress = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::模式轉換紀錄地址:%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+					_cwprintf(L"SubroutineThread()::模式轉換紀錄地址:%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                }
-                else
-                {
+				}
+				else
+				{
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t影像執行過紀錄地址:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+					_cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t影像執行過紀錄地址:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                    if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == CurrentRunCommandNum)
-                    {
-                        ((COrder*)pParam)->ModelControl.VisionModeChangeAddress = -1;//初始化影像模式跳轉地址
+					if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == CurrentRunCommandNum)
+					{
+						((COrder*)pParam)->ModelControl.VisionModeChangeAddress = -1;//初始化影像模式跳轉地址
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+						_cwprintf(L"SubroutineThread()::%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                    }
-                    else
-                    {
+					}
+					else
+					{
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::影像出現錯誤!\n");
+						_cwprintf(L"SubroutineThread()::影像出現錯誤!\n");
 #endif 
-                    }
-                }
-            }
-            //判斷影像FindMark開，影像模式中，正要關閉FindMark
-            if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->ModelControl.Mode == 1 && !_ttol(CommandResolve(Command, 5)))
-            {
-                //將模式轉換為運動模式
-                ((COrder*)pParam)->ModelControl.Mode = 3;
-                //跳至影像模式轉換地址
-                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.VisionModeChangeAddress - 1;
-                ((COrder*)pParam)->VisionSwitch = { 0,0,0,0 };
-                /*恢復所有狀態*/
-                ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
-                ((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
-                ((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
-                ((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
-                ((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
-                ((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
-                ((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
-                ((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
+					}
+				}
+			}
+			//判斷影像FindMark開，影像模式中，正要關閉FindMark
+			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->ModelControl.Mode == 1 && !_ttol(CommandResolve(Command, 5)))
+			{
+				//將模式轉換為運動模式
+				((COrder*)pParam)->ModelControl.Mode = 3;
+				//跳至影像模式轉換地址
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.VisionModeChangeAddress - 1;
+				((COrder*)pParam)->VisionSwitch = { 0,0,0,0 };
+				/*恢復所有狀態*/
+				((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
+				((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
+				((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
+				((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
+				((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
+				((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
+				((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
+				((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
+				/*清除FindMark對位資料*/
+#ifdef VI
+				//影像釋放記憶體
+				if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+				}
+				//影	像記憶體初始化
+				*(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+				//清除對位Offset資料
+				((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+#endif
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::FindMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+				_cwprintf(L"SubroutineThread()::FindMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-            }
-            //紀錄對位點和開關
-            ((COrder*)pParam)->VisionSwitch.FindMark = _ttol(CommandResolve(Command, 5));
-            if (((COrder*)pParam)->VisionSwitch.FindMark)
-            {
+			}
+			//紀錄對位點和開關
+			((COrder*)pParam)->VisionSwitch.FindMark = _ttol(CommandResolve(Command, 5));
+			if (((COrder*)pParam)->VisionSwitch.FindMark)
+			{
+				if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress != -1)
+				{
 #ifdef VI
-                //TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
-                //清空Trigger
-                ((COrder*)pParam)->FindMark.Trigger.clear();
-                //紀錄影像對位位置
-                ((COrder*)pParam)->FindMark.Point.Status = TRUE;
-                ((COrder*)pParam)->FindMark.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                ((COrder*)pParam)->FindMark.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                ((COrder*)pParam)->FindMark.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                ((COrder*)pParam)->FindMark.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                //((COrder*)pParam)->FindMark.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
-                if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
-                {
-                    /*每次要載入時必須先清除Model*/
-                    //影像釋放記憶體
-                    if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
-                    {
-                        VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
-                    }
-                    //影像記憶體初始化
-                    *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+					//TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
+					//清空Trigger
+					((COrder*)pParam)->FindMark.Trigger.clear();
+					//紀錄影像對位位置
+					((COrder*)pParam)->FindMark.Point.Status = TRUE;
+					((COrder*)pParam)->FindMark.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+					((COrder*)pParam)->FindMark.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+					((COrder*)pParam)->FindMark.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+					((COrder*)pParam)->FindMark.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+					//((COrder*)pParam)->FindMark.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
+					if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
+					{
+						/*每次要載入時必須先清除Model*/
+						//影像釋放記憶體
+						if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+						{
+							VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+						}
+						//影像記憶體初始化
+						*(int*)((COrder*)pParam)->FindMark.MilModel = 0;
 
-                    if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum)))//判斷檔案是否存在
-                    {
-                        //載入影像Model
-                        VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
-                        ((COrder*)pParam)->VisionTrigger.TriggerSwitch = 1;
-                    }
-                    else
-                    {
-                        AfxMessageBox(_T("沒有此編號的檔案!"));
-                    }
-                }
-                else
-                {
-                    AfxMessageBox(_T("沒有此編號的檔案!"));
-                }
+						if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum)))//判斷檔案是否存在
+						{
+							//載入影像Model
+							VI_LoadModel(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FindMark.LoadModelNum));
+							((COrder*)pParam)->VisionTrigger.TriggerSwitch = 1;
+						}
+						else
+						{
+							AfxMessageBox(_T("沒有此編號的檔案!"));
+						}
+					}
+					else
+					{
+						AfxMessageBox(_T("沒有此編號的檔案!"));
+					}
 #endif
-            }
-            //判斷是否模式轉換
-            if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
-            {
-                ((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
-                //清除FiducialMark對位資料
-                //初始標記載入狀態
-                ((COrder*)pParam)->FiducialMark1.Point.Status = FALSE;
-                ((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
-                //影像釋放記憶體
-                if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
-                {
-                    VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
-                }
-                if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
-                {
-                    VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
-                }
-                //影像記憶體初始化
-                *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
-                *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
-                //清除對位Offset資料
-                ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
-
-                //紀錄影像Offset的修正表計數
-                if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                {
-                    ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                }        
-                //將影像Offset的修正表計數設為0(代表不修正)
-                ((COrder*)pParam)->VisionCount = 0;       
-            }
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
-        {
-            ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
-        }
-    }
-    else if (CommandResolve(Command, 0) == L"FindMarkAdjust")
-    {
-        if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
-        {
-        }
-        else if (((COrder*)pParam)->ModelControl.Mode == 1)//當模式1執行動作
-        {
-            if (_ttol(CommandResolve(Command, 1)))//調節開
-            {
-                //判斷是否對位完成
-                if (!((COrder*)pParam)->VisionSwitch.FindMarkFinish)//尚未對位
-                {
+				}
+			}
+			//判斷是否模式轉換
+			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
+			{
+				((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
+				//清除FiducialMark對位資料
 #ifdef VI
-                    if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
-                    {
-                        if (!((COrder*)pParam)->VisionSerchError.Manuallymode)//手動模式未開啟時
-                        {
-                            //移動至查找點
+				//初始標記載入狀態
+				((COrder*)pParam)->FiducialMark1.Point.Status = FALSE;
+				((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+				//影像釋放記憶體
+				if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+				}
+				if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+				}
+				//影像記憶體初始化
+				*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+				*(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+				//清除對位Offset資料
+				((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+#endif
+				//紀錄影像Offset的修正表計數
+				if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+				{
+					((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+				}
+				//將影像Offset的修正表計數設為0(代表不修正)
+				((COrder*)pParam)->VisionCount = 0;
+			}
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 2)
+		{
+			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
+		}
+	}
+	else if (CommandResolve(Command, 0) == L"FindMarkAdjust")
+	{
+		if (((COrder*)pParam)->ModelControl.Mode == 0)//建表模式
+		{
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 1)//當模式1執行動作
+		{
+			if (((COrder*)pParam)->VisionSwitch.FindMark)
+			{
+				if (_ttol(CommandResolve(Command, 1)))//調節開
+				{
+					//判斷是否對位完成
+					if (!((COrder*)pParam)->VisionSwitch.FindMarkFinish)//尚未對位
+					{
+#ifdef VI
+						if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+						{
+							if (!((COrder*)pParam)->VisionSerchError.Manuallymode)//手動模式未開啟時
+							{
+								//移動至查找點
 #ifdef MOVE
-                            ((COrder*)pParam)->m_Action.DoCCDMove(
-                                ((COrder*)pParam)->FindMark.Point.X,
-                                ((COrder*)pParam)->FindMark.Point.Y,
-                                ((COrder*)pParam)->FindMark.Point.Z,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+								((COrder*)pParam)->m_Action.DoCCDMove(
+									((COrder*)pParam)->FindMark.Point.X,
+									((COrder*)pParam)->FindMark.Point.Y,
+									((COrder*)pParam)->FindMark.Point.Z,
+									((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif  
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::移動至查找標記\r\n");
+								_cwprintf(L"SubroutineThread()::移動至查找標記\r\n");
 #endif
-                        }
-                        if (!((COrder*)pParam)->m_Action.m_bIsStop)
-                        {
-                            //設定影像參數
-                            VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 0);//設定不找旋轉過標記
-                            VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-                            if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
-                            {
-                                if (!VI_FindMark(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
-                                {
-                                    //沒有找到
+							}
+							if (!((COrder*)pParam)->m_Action.m_bIsStop)
+							{
+								//設定影像參數
+								VI_SetPatternMatch(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, 0, 0);//設定不找旋轉過標記
+								VI_SetSearchRange(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+								if (!((COrder*)pParam)->VisionSerchError.Manuallymode)
+								{
+									if (!VI_FindMark(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+									{
+										//沒有找到
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::未找到\r\n");
+										_cwprintf(L"SubroutineThread()::未找到\r\n");
 #endif
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
-                                    //找到抬升
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
+										//找到抬升
 #ifdef MOVE
-                                    //對位完畢不出膠回升
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+										//對位完畢不出膠回升
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    ((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
+										((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::FindMark找到\r\n");
+										_cwprintf(L"SubroutineThread()::FindMark找到\r\n");
 #endif
-                                }
-                            }
-                            else//手動模式時
-                            {
+									}
+								}
+								else//手動模式時
+								{
 #if defined VI &&  defined MOVE
-                                if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
-                                {
-                                    //沒有找到
+									if (!VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+									{
+										//沒有找到
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式未找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式未找到\r\n");
 #endif
-                                    //清除手動狀態
-                                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
-                                    //找到抬升
+										//清除手動狀態
+										((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 1;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
+										//找到抬升
 #ifdef MOVE
-                                    //對位完畢不出膠回升
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+										//對位完畢不出膠回升
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    //清除手動狀態
-                                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                                    ((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
+										//清除手動狀態
+										((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+										((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式找到\r\n");
 #endif			
-                                }
+									}
 #endif
-                            }
-                        }
-                        /*找到後處理*/
-                        if (((COrder*)pParam)->FindMark.FindMarkStatus)
-                        {
+								}
+							}
+							/*找到後處理*/
+							if (((COrder*)pParam)->FindMark.FindMarkStatus)
+							{
+								//紀錄對位點
+								((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
+								((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FindMark.Point.X;
+								((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
 
-                            //紀錄對位點
-                            ((COrder*)pParam)->VisionOffset.Contraposition.Status = TRUE;
-                            ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FindMark.Point.X;
-                            ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FindMark.Point.Y;
-
-                            //初始標記為未尋找
-                            ((COrder*)pParam)->FindMark.FindMarkStatus = FALSE;
+								//初始標記為未尋找
+								((COrder*)pParam)->FindMark.FindMarkStatus = FALSE;
 
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::FindMark找到Offset計算完成\n");
+								_cwprintf(L"SubroutineThread()::FindMark找到Offset計算完成\n");
 #endif
-                            //事先恢復VisionCount的值
-                            ((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+								//事先恢復VisionCount的值
+								((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
 
-                            //紀錄影像Offset至影像修正表 
-                            ((COrder*)pParam)->VisionCount++;
-                            ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+								//紀錄影像Offset至影像修正表 
+								((COrder*)pParam)->VisionCount++;
+								((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
 
-                            //影像釋放記憶體
-                            if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
-                            {
-                                VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
-                            }
-                            //影像記憶體初始化
-                            *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
-                            //清除對位Offset資料
-                            ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+								//影像釋放記憶體
+								if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+								{
+									VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+								}
+								//影像記憶體初始化
+								*(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+								//清除對位Offset資料
+								((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
 
-                            //紀錄對位完成
-                            ((COrder*)pParam)->VisionSwitch.FindMarkFinish = TRUE;
-                            //更新暫存的影像Offset的修正表計數
-                            if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                            {
-                                ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
-                    }
+								//紀錄對位完成
+								((COrder*)pParam)->VisionSwitch.FindMarkFinish = TRUE;
+								//更新暫存的影像Offset的修正表計數
+								if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+								{
+									((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+								}
+							}
+						}
+						else
+						{
+							AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
+						}
 #endif
-                }
-                else//對位完成
-                {
-                    //將紀錄影像Offset的修正表計數復原
-                    ((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
-                }
-            }
-            else//調節關
-            {
-                //判斷是否對位完成
-                if (((COrder*)pParam)->VisionSwitch.FindMarkFinish)//對位完成
-                {
-                    //紀錄影像Offset的修正表計數
-                    if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                    {
-                        ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                    }
-                    //將影像Offset的修正表計數設為0(代表不修正)
-                    ((COrder*)pParam)->VisionCount = 0;
-                }
-            }
-        }
+					}
+					else//對位完成
+					{
+						//將紀錄影像Offset的修正表計數復原
+						((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+					}
+				}
+				else//調節關
+				{
+					//判斷是否對位完成
+					if (((COrder*)pParam)->VisionSwitch.FindMarkFinish)//對位完成
+					{
+						//紀錄影像Offset的修正表計數
+						if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+						{
+							((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+						}
+						//將影像Offset的修正表計數設為0(代表不修正)
+						((COrder*)pParam)->VisionCount = 0;
+					}
+				}
+			}
+		}
 	}
 	else if (CommandResolve(Command, 0) == L"FiducialMark")
 	{
@@ -4107,219 +4125,242 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 1 || ((COrder*)pParam)->ModelControl.Mode == 3) //當模式1、3執行動作
 		{
-
 			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
-            //判斷是否轉換模式
-            if (!((COrder*)pParam)->VisionSwitch.FindMark && !((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 5)))
-            {
-                if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == -1)//尚未有影像模式跳轉地址
-                {
-                    /*記錄所有狀態*/
-                    ((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
-                    ((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
-                    ((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
-                    ((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
-                    ((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
-                    ((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
-                    ((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
-                    ((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
-                    //將模式轉換為影像模式
-                    ((COrder*)pParam)->ModelControl.Mode = 1;
-                    //紀錄模式轉換地址
-                    ((COrder*)pParam)->ModelControl.VisionModeChangeAddress = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));
+			//判斷是否轉換模式
+			if (!((COrder*)pParam)->VisionSwitch.FindMark && !((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 5)))
+			{
+				if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == -1)//尚未有影像模式跳轉地址
+				{
+					/*記錄所有狀態*/
+					((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
+					((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
+					((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
+					((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
+					((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
+					((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
+					((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
+					((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
+					//將模式轉換為影像模式
+					((COrder*)pParam)->ModelControl.Mode = 1;
+					//紀錄模式轉換地址
+					((COrder*)pParam)->ModelControl.VisionModeChangeAddress = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::模式轉換紀錄地址:%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+					_cwprintf(L"SubroutineThread()::模式轉換紀錄地址:%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                }
-                else
-                {
+				}
+				else
+				{
 #ifdef PRINTF
-                    _cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t影像執行過紀錄地址:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+					_cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t影像執行過紀錄地址:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                    if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == CurrentRunCommandNum)
-                    {
-                        ((COrder*)pParam)->ModelControl.VisionModeChangeAddress = -1;//初始化影像模式跳轉地址
+					if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress == CurrentRunCommandNum)
+					{
+						((COrder*)pParam)->ModelControl.VisionModeChangeAddress = -1;//初始化影像模式跳轉地址
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
+						_cwprintf(L"SubroutineThread()::%d\n", ((COrder*)pParam)->ModelControl.VisionModeChangeAddress);
 #endif
-                    }
-                    else
-                    {
+					}
+					else
+					{
 #ifdef PRINTF
-                        _cwprintf(L"SubroutineThread()::影像出現錯誤!\n");
+						_cwprintf(L"SubroutineThread()::影像出現錯誤!\n");
 #endif 
-                    }
-                }
-            }
-            //判斷影像FindMark開，影像模式中，正要關閉FindMark
-            if (((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1 && !_ttol(CommandResolve(Command, 5)))
-            {
-                //將模式轉換為運動模式
-                ((COrder*)pParam)->ModelControl.Mode = 3;
-                //跳至影像模式轉換地址
-                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.VisionModeChangeAddress - 1;
-                ((COrder*)pParam)->VisionSwitch = { 0,0,0,0 };
-                /*恢復所有狀態*/
-                ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
-                ((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
-                ((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
-                ((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
-                ((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
-                ((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
-                ((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
-                ((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
-#ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::FiducialMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
-#endif
-            }
-            //紀錄對位點和開關
-            ((COrder*)pParam)->VisionSwitch.FiducialMark = _ttol(CommandResolve(Command, 5));
-            if (((COrder*)pParam)->VisionSwitch.FiducialMark)
-            {
+					}
+				}
+			}
+			//判斷影像FindMark開，影像模式中，正要關閉FindMark
+			if (((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1 && !_ttol(CommandResolve(Command, 5)))
+			{
+				//將模式轉換為運動模式
+				((COrder*)pParam)->ModelControl.Mode = 3;
+				//跳至影像模式轉換地址
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.VisionModeChangeAddress - 1;
+				((COrder*)pParam)->VisionSwitch = { 0,0,0,0 };
+				/*恢復所有狀態*/
+				((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
+				((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
+				((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
+				((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
+				((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
+				((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
+				((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
+				((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
+				/*清除FiducialMark對位資料*/
 #ifdef VI
-                //if (!((COrder*)pParam)->FindMark.Point.Status)//防止混用設計
-                if (!((COrder*)pParam)->FiducialMark1.Point.Status)
-                {
-                    //TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
-                    //清空Trigger
-                    ((COrder*)pParam)->FiducialMark1.Trigger.clear();
-                    //紀錄影像對位位置
-                    ((COrder*)pParam)->FiducialMark1.Point.Status = TRUE;
-                    ((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                    ((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                    ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                    ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                    //((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
-                    if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
-                    {
-                        /*每次載入時必須清除Model*/
-                        //影像釋放記憶體
-                        if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
-                        {
-                            VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
-                        }
-                        //影像記憶體初始化
-                        *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
-                        if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
-                        {
-                            //載入影像Model
-                            VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
-                            ((COrder*)pParam)->VisionTrigger.TriggerSwitch = 2;
-                        }
-                        else
-                        {
-                            AfxMessageBox(_T("沒有此編號的檔案!"));
-                        }
-                    }
-                    else
-                    {
-                        AfxMessageBox(_T("沒有此編號的檔案!"));
-                    }
-                }
-                else
-                {
-                    if (!((COrder*)pParam)->FiducialMark2.Point.Status)
-                    {
-                        //清空Trigger
-                        ((COrder*)pParam)->FiducialMark2.Trigger.clear();
-                        //紀錄影像對位位置
-                        ((COrder*)pParam)->FiducialMark2.Point.Status = TRUE;
-                        ((COrder*)pParam)->FiducialMark2.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                        ((COrder*)pParam)->FiducialMark2.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                        ((COrder*)pParam)->FiducialMark2.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                        ((COrder*)pParam)->FiducialMark2.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                        //((COrder*)pParam)->FiducialMark2.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
-                        if (((COrder*)pParam)->FiducialMark2.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark2.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
-                        {
-                            /*每次載入時必須清除Model*/
-                            //影像釋放記憶體
-                            if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
-                            {
-                                VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
-                            }
-                            //影像記憶體初始化
-                            *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
-                            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum)))//判斷檔案是否存在
-                            {
-                                //載入影像Model
-                                VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum));
-                                ((COrder*)pParam)->VisionTrigger.TriggerSwitch = 3;
-                            }
-                            else
-                            {
-                                AfxMessageBox(_T("沒有此編號的檔案!"));
-                            }
-                        }
-                        else
-                        {
-                            AfxMessageBox(_T("沒有此編號的檔案!"));
-                        }
-                    }
-                    else
-                    {
-                        //清空Trigger
-                        ((COrder*)pParam)->FiducialMark1.Trigger.clear();
-                        //紀錄影像對位位置
-                        ((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
-                        ((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
-                        ((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
-                        ((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-                        ((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
-                        //((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
-                        if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
-                        {
-                            /*每次載入時必須清除Model*/
-                            //影像釋放記憶體
-                            if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
-                            {
-                                VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
-                            }
-                            //影像記憶體初始化
-                            *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
-                            if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
-                            {
-                                //載入影像Model
-                                VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
-                                ((COrder*)pParam)->VisionTrigger.TriggerSwitch = 2;
-                            }
-                            else
-                            {
-                                AfxMessageBox(_T("沒有此編號的檔案!"));
-                            }
-                        }
-                        else
-                        {
-                            AfxMessageBox(_T("沒有此編號的檔案!"));
-                        }
-                    }
-                }
+				//初始標記載入狀態
+				((COrder*)pParam)->FiducialMark1.Point.Status = FALSE;
+				((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+				//影像釋放記憶體
+				if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+				}
+				if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+				}
+				//影像記憶體初始化
+				*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+				*(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+				//清除對位Offset資料
+				((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
 #endif
-            }
-            //判斷是否模式轉換
-            if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
-            {
-                ((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
-                //清除FindMark對位資料
-                //影像釋放記憶體
-                if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
-                {
-                    VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
-                }
-                //影像記憶體初始化
-                *(int*)((COrder*)pParam)->FindMark.MilModel = 0;
-                //清除對位Offset資料
-                ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
-
-                //紀錄影像Offset的修正表計數
-                if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                {
-                    ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                }
-                //將影像Offset的修正表計數設為0(代表不修正)
-                ((COrder*)pParam)->VisionCount = 0;
-            }
-		} 
-		else if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
+#ifdef PRINTF
+				_cwprintf(L"SubroutineThread()::FiducialMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+#endif
+			}
+			//紀錄對位點和開關
+			((COrder*)pParam)->VisionSwitch.FiducialMark = _ttol(CommandResolve(Command, 5));
+			if (((COrder*)pParam)->VisionSwitch.FiducialMark)
+			{
+				if (((COrder*)pParam)->ModelControl.VisionModeChangeAddress != -1)
+				{
+#ifdef VI
+					//if (!((COrder*)pParam)->FindMark.Point.Status)//防止混用設計
+					if (!((COrder*)pParam)->FiducialMark1.Point.Status)
+					{
+						//TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
+						//清空Trigger
+						((COrder*)pParam)->FiducialMark1.Trigger.clear();
+						//紀錄影像對位位置
+						((COrder*)pParam)->FiducialMark1.Point.Status = TRUE;
+						((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+						((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+						((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+						((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+						//((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
+						if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+						{
+							/*每次載入時必須清除Model*/
+							//影像釋放記憶體
+							if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+							{
+								VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+							}
+							//影像記憶體初始化
+							*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+							if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
+							{
+								//載入影像Model
+								VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
+								((COrder*)pParam)->VisionTrigger.TriggerSwitch = 2;
+							}
+							else
+							{
+								AfxMessageBox(_T("沒有此編號的檔案!"));
+							}
+						}
+						else
+						{
+							AfxMessageBox(_T("沒有此編號的檔案!"));
+						}
+					}
+					else
+					{
+						if (!((COrder*)pParam)->FiducialMark2.Point.Status)
+						{
+							//清空Trigger
+							((COrder*)pParam)->FiducialMark2.Trigger.clear();
+							//紀錄影像對位位置
+							((COrder*)pParam)->FiducialMark2.Point.Status = TRUE;
+							((COrder*)pParam)->FiducialMark2.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+							((COrder*)pParam)->FiducialMark2.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+							((COrder*)pParam)->FiducialMark2.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+							((COrder*)pParam)->FiducialMark2.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+							//((COrder*)pParam)->FiducialMark2.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
+							if (((COrder*)pParam)->FiducialMark2.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark2.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+							{
+								/*每次載入時必須清除Model*/
+								//影像釋放記憶體
+								if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+								{
+									VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+								}
+								//影像記憶體初始化
+								*(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+								if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum)))//判斷檔案是否存在
+								{
+									//載入影像Model
+									VI_LoadModel(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark2.LoadModelNum));
+									((COrder*)pParam)->VisionTrigger.TriggerSwitch = 3;
+								}
+								else
+								{
+									AfxMessageBox(_T("沒有此編號的檔案!"));
+								}
+							}
+							else
+							{
+								AfxMessageBox(_T("沒有此編號的檔案!"));
+							}
+						}
+						else
+						{
+							//清空Trigger
+							((COrder*)pParam)->FiducialMark1.Trigger.clear();
+							//紀錄影像對位位置
+							((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+							((COrder*)pParam)->FiducialMark1.Point.X = _ttol(CommandResolve(Command, 1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
+							((COrder*)pParam)->FiducialMark1.Point.Y = _ttol(CommandResolve(Command, 2)) - ((COrder*)pParam)->VisionSet.AdjustOffsetY + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
+							((COrder*)pParam)->FiducialMark1.Point.Z = _ttol(CommandResolve(Command, 3));// +((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
+							((COrder*)pParam)->FiducialMark1.LoadModelNum = _ttol(CommandResolve(Command, 4)) - 1; //編號從1開始
+							//((COrder*)pParam)->FiducialMark1.FocusDistance = _ttol(CommandResolve(Command, 5));//2017/08/14拔除
+							if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
+							{
+								/*每次載入時必須清除Model*/
+								//影像釋放記憶體
+								if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+								{
+									VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+								}
+								//影像記憶體初始化
+								*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+								if (FileExist(((COrder*)pParam)->VisionFile.ModelPath + ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum)))//判斷檔案是否存在
+								{
+									//載入影像Model
+									VI_LoadModel(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionFile.ModelPath, ((COrder*)pParam)->VisionFile.AllModelName.at(((COrder*)pParam)->FiducialMark1.LoadModelNum));
+									((COrder*)pParam)->VisionTrigger.TriggerSwitch = 2;
+								}
+								else
+								{
+									AfxMessageBox(_T("沒有此編號的檔案!"));
+								}
+							}
+							else
+							{
+								AfxMessageBox(_T("沒有此編號的檔案!"));
+							}
+						}
+					}
+#endif
+				}
+			}
+			//判斷是否模式轉換
+			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
+			{
+				((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
+				//清除FindMark對位資料
+#ifdef VI
+				//影像釋放記憶體
+				if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
+				{
+					VI_ModelFree(((COrder*)pParam)->FindMark.MilModel);
+				}
+				//影像記憶體初始化
+				*(int*)((COrder*)pParam)->FindMark.MilModel = 0;
+				//清除對位Offset資料
+				((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+#endif
+				//紀錄影像Offset的修正表計數
+				if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+				{
+					((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+				}
+				//將影像Offset的修正表計數設為0(代表不修正)
+				((COrder*)pParam)->VisionCount = 0;
+			}
+		}
+		else if (((COrder*)pParam)->ModelControl.Mode == 2)
 		{
 			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
 		}
@@ -4331,273 +4372,294 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 1) //當模式1執行動作
 		{
-            if (_ttol(CommandResolve(Command, 1)))//調節開
-            {
-                //判斷是否對位完成
-                if (!((COrder*)pParam)->VisionSwitch.FiducialMarkFinish)//尚未對位
-                {
+			if (((COrder*)pParam)->VisionSwitch.FiducialMark)
+			{
+				if (_ttol(CommandResolve(Command, 1)))//調節開
+				{
+					//判斷是否對位完成
+					if (!((COrder*)pParam)->VisionSwitch.FiducialMarkFinish)//尚未對位
+					{
 #ifdef VI
-                    if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0 && *(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
-                    {
-                        //第一點處理
-                        if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
-                        {
-                            //移動至第一點
+						if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0 && *(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+						{
+							//第一點處理
+							if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
+							{
+								//移動至第一點
 #ifdef MOVE
-                            ((COrder*)pParam)->m_Action.DoCCDMove(
-                                ((COrder*)pParam)->FiducialMark1.Point.X,
-                                ((COrder*)pParam)->FiducialMark1.Point.Y,
-                                ((COrder*)pParam)->FiducialMark1.Point.Z,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+								((COrder*)pParam)->m_Action.DoCCDMove(
+									((COrder*)pParam)->FiducialMark1.Point.X,
+									((COrder*)pParam)->FiducialMark1.Point.Y,
+									((COrder*)pParam)->FiducialMark1.Point.Z,
+									((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::移動至第一點\r\n");
+								_cwprintf(L"SubroutineThread()::移動至第一點\r\n");
 #endif
-                        }
-                        if (!((COrder*)pParam)->m_Action.m_bIsStop)
-                        {
-                            VI_SetPatternMatch(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
-                            VI_SetSearchRange(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-                            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
-                            {
-                                if (!VI_FindMark(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
-                                {
+							}
+							if (!((COrder*)pParam)->m_Action.m_bIsStop)
+							{
+								VI_SetPatternMatch(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
+								VI_SetSearchRange(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+								if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動未找到
+								{
+									if (!VI_FindMark(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+									{
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::第一點未找到\r\n");
+										_cwprintf(L"SubroutineThread()::第一點未找到\r\n");
 #endif
-                                    //沒有找到
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
+										//沒有找到
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::第一點找到\r\n");
+										_cwprintf(L"SubroutineThread()::第一點找到\r\n");
 #endif
-                                    //找到抬升
+										//找到抬升
 #ifdef MOVE
-                                    //對位完畢不出膠回升
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+									    //對位完畢不出膠回升
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
-                                }
-                            }
-                            else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//手動未找到
-                            {
+										((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+									}
+								}
+								else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark1.FindMarkStatus)//手動未找到
+								{
 #if defined VI &&  defined MOVE
-                                if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
-                                {
+									if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+									{
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式第一點未找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式第一點未找到\r\n");
 #endif
-                                    //沒有找到
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
-                                    //找到清除手動狀態、將對位點依設置已經有Offset
-                                    //找到抬升
+										//沒有找到
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 2;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
+										//找到清除手動狀態、將對位點依設置已經有Offset
+										//找到抬升
 #ifdef MOVE
-                                    //對位完畢不出膠回升
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+									    //對位完畢不出膠回升
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+										((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+										((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式第一點找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式第一點找到\r\n");
 #endif
-                                }
+									}
 #endif
-                            }
-                        }
-                        //第二點處理
-                        if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
-                        {
-                            //移動至第二點
+								}
+							}
+							//第二點處理
+							if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
+							{
+								//移動至第二點
 #ifdef MOVE
-                            ((COrder*)pParam)->m_Action.DoCCDMove(
-                                ((COrder*)pParam)->FiducialMark2.Point.X,
-                                ((COrder*)pParam)->FiducialMark2.Point.Y,
-                                ((COrder*)pParam)->FiducialMark2.Point.Z,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+								((COrder*)pParam)->m_Action.DoCCDMove(
+									((COrder*)pParam)->FiducialMark2.Point.X,
+									((COrder*)pParam)->FiducialMark2.Point.Y,
+									((COrder*)pParam)->FiducialMark2.Point.Z,
+									((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::第一點找到移動至第二點\r\n");
+								_cwprintf(L"SubroutineThread()::第一點找到移動至第二點\r\n");
 #endif
-                        }
-                        if (!((COrder*)pParam)->m_Action.m_bIsStop)
-                        {
-                            VI_SetPatternMatch(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
-                            VI_SetSearchRange(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
-                            if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
-                            {
-                                if (!VI_FindMark(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
-                                {
+							}
+							if (!((COrder*)pParam)->m_Action.m_bIsStop)
+							{
+								VI_SetPatternMatch(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.Accuracy, ((COrder*)pParam)->VisionSet.Speed, ((COrder*)pParam)->VisionSet.Score, ((COrder*)pParam)->VisionSet.Startangle, ((COrder*)pParam)->VisionSet.Endangle);
+								VI_SetSearchRange(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->VisionSet.width, ((COrder*)pParam)->VisionSet.height);
+								if (!((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//非手動且第二點未尋找到但第一點找到
+								{
+									if (!VI_FindMark(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+									{
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::第一點找到移動至第二點未找到\r\n");
+										_cwprintf(L"SubroutineThread()::第一點找到移動至第二點未找到\r\n");
 #endif
-                                    //沒有找到
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
-                                    //找到抬升
+										//沒有找到
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
+										//找到抬升
 #ifdef MOVE
-                                    //對位完畢不出膠回升
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+									    //對位完畢不出膠回升
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+										((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::第一點找到移動至第二點找到\r\n");
+										_cwprintf(L"SubroutineThread()::第一點找到移動至第二點找到\r\n");
 #endif
-                                }
-                            }
-                            else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//如果手動模式開啟 且對位點2未找到但對位點1找到
-                            {
+									}
+								}
+								else if (((COrder*)pParam)->VisionSerchError.Manuallymode && !((COrder*)pParam)->FiducialMark2.FindMarkStatus && ((COrder*)pParam)->FiducialMark1.FindMarkStatus)//如果手動模式開啟 且對位點2未找到但對位點1找到
+								{
 #if defined VI &&  defined MOVE
-                                if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
-                                {
-                                    //沒有找到
+									if (!VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->m_Action.MCO_ReadPosition().x, ((COrder*)pParam)->m_Action.MCO_ReadPosition().y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+									{
+										//沒有找到
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式第一點找到第二點未找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式第一點找到第二點未找到\r\n");
 #endif
-                                    //找到清除手動狀態、將對位點依設置已經有Offset
-                                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                                    ((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
-                                    ((COrder*)pParam)->VisionFindMarkError(pParam);
-                                }
-                                else
-                                {
-                                    //找到抬升
+										//找到清除手動狀態、將對位點依設置已經有Offset
+										((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+										((COrder*)pParam)->VisionTrigger.AdjustStatus = 3;
+										((COrder*)pParam)->VisionFindMarkError(pParam);
+									}
+									else
+									{
+										//找到抬升
 #ifdef MOVE
-                                    ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                        ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                        ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+										((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+											((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+											((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                                    //找到清除手動狀態、將對位點依設置已經有Offset
-                                    ((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
-                                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+										//找到清除手動狀態、將對位點依設置已經有Offset
+										((COrder*)pParam)->VisionSerchError.Manuallymode = FALSE;
+										((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
 #ifdef PRINTF
-                                    _cwprintf(L"SubroutineThread()::手動模式第一點找到第二點找到\r\n");
+										_cwprintf(L"SubroutineThread()::手動模式第一點找到第二點找到\r\n");
 #endif
-                                }
+									}
 #endif
-                            }
-                        }
-                        /*都找到後處理*/
-                        if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
-                        {
+								}
+							}
+							/*都找到後處理*/
+							if (((COrder*)pParam)->FiducialMark1.FindMarkStatus && ((COrder*)pParam)->FiducialMark2.FindMarkStatus) //兩個都找到
+							{
 #ifdef LOG
-                            //LARGE_INTEGER   StartTime, EndTime, Fre;
-                            //QueryPerformanceFrequency(&Fre); //取得CPU頻率
-                            //QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
+								//LARGE_INTEGER   StartTime, EndTime, Fre;
+								//QueryPerformanceFrequency(&Fre); //取得CPU頻率
+								//QueryPerformanceCounter(&StartTime); //取得開機到現在經過幾個CPU Cycle
 #endif
-                            //算出偏移角度
-                            ((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
-                                ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y,
-                                ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y,
-                                ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY,
-                                ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY);
+							    //算出偏移角度
+								((COrder*)pParam)->VisionOffset.Angle = VI_AngleCount(
+									((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y,
+									((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y,
+									((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY,
+									((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY);
 
-                            //寫入資料
-                            ((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FiducialMark1.Point.X;
-                            ((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FiducialMark1.Point.Y;
-                            ((COrder*)pParam)->VisionOffset.OffsetX = ((COrder*)pParam)->FiducialMark1.OffsetX;
-                            ((COrder*)pParam)->VisionOffset.OffsetY = ((COrder*)pParam)->FiducialMark1.OffsetY;
+								//寫入資料
+								((COrder*)pParam)->VisionOffset.Contraposition.X = ((COrder*)pParam)->FiducialMark1.Point.X;
+								((COrder*)pParam)->VisionOffset.Contraposition.Y = ((COrder*)pParam)->FiducialMark1.Point.Y;
+								((COrder*)pParam)->VisionOffset.OffsetX = ((COrder*)pParam)->FiducialMark1.OffsetX;
+								((COrder*)pParam)->VisionOffset.OffsetY = ((COrder*)pParam)->FiducialMark1.OffsetY;
 
-                            //初始標記為未尋找
-                            ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
-                            ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
+								//初始標記為未尋找
+								((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
+								((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
 #ifdef PRINTF
-                            _cwprintf(L"SubroutineThread()::第一點找到第二點找到Offset計算完成\n");
+								_cwprintf(L"SubroutineThread()::第一點找到第二點找到Offset計算完成\n");
 #endif
-                            //事先恢復VisionCount的值
-                            ((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+								//事先恢復VisionCount的值
+								((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
 
-                            //紀錄影像Offset至影像修正表 
-                            ((COrder*)pParam)->VisionCount++;
-                            ((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
+								//紀錄影像Offset至影像修正表 
+								((COrder*)pParam)->VisionCount++;
+								((COrder*)pParam)->VisionAdjust.push_back({ ((COrder*)pParam)->VisionOffset });
 
-                            //影像釋放記憶體
-                            if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
-                            {
-                                VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
-                            }
-                            if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
-                            {
-                                VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
-                            }
-                            //影像記憶體初始化
-                            *(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
-                            *(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
-                            //清除對位Offset資料
-                            ((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+								//影像釋放記憶體
+								if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+								{
+									VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+								}
+								if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+								{
+									VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+								}
+								//影像記憶體初始化
+								*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+								*(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+								//清除對位Offset資料
+								((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
 
-                            //紀錄對位完成
-                            ((COrder*)pParam)->VisionSwitch.FiducialMarkFinish = TRUE;
-                            //更新暫存的影像Offset的修正表計數
-                            if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                            {
-                                ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                            }
+								//紀錄對位完成
+								((COrder*)pParam)->VisionSwitch.FiducialMarkFinish = TRUE;
+								//更新暫存的影像Offset的修正表計數
+								if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+								{
+									((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+								}
 #ifdef LOG
-                            //QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
-                            //CString Temp;
-                            //Temp.Format(L"CCD at RunTime:%.6f\n", ((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
-                            //InitFileLog(Temp);
+								//QueryPerformanceCounter(&EndTime); //取得開機到程式執行完成經過幾個CPU Cycle
+								//CString Temp;
+								//Temp.Format(L"CCD at RunTime:%.6f\n", ((((double)EndTime.QuadPart - (double)StartTime.QuadPart)) / Fre.QuadPart));
+								//InitFileLog(Temp);
 #endif
-                        }
+							}
 
-                        /*判斷暫停模式是否開啟*/
-                        if (((COrder*)pParam)->VisionSerchError.Pausemode)
-                        {
-                            if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
-                            {
-                                ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
-                            }
-                            else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
-                            {
-                                ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
-                            }
-                            ((COrder*)pParam)->VisionSerchError.Pausemode = FALSE;
-                        }
-                    }
-                    else
-                    {
-                        AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
-                        /*對位不成功 也必須清除資料*/
-                        //... 下星期一補
-                    }
+							/*判斷暫停模式是否開啟*/
+							if (((COrder*)pParam)->VisionSerchError.Pausemode)
+							{
+								if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
+								{
+									((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+								}
+								else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+								{
+									((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+								}
+								((COrder*)pParam)->VisionSerchError.Pausemode = FALSE;
+							}
+						}
+						else
+						{
+							AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
+							/*對位不成功 也必須清除資料*/
+							((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
+							//清除FiducialMark對位資料
+							//初始標記載入狀態
+							((COrder*)pParam)->FiducialMark1.Point.Status = FALSE;
+							((COrder*)pParam)->FiducialMark2.Point.Status = FALSE;
+							//影像釋放記憶體
+							if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
+							{
+								VI_ModelFree(((COrder*)pParam)->FiducialMark1.MilModel);
+							}
+							if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
+							{
+								VI_ModelFree(((COrder*)pParam)->FiducialMark2.MilModel);
+							}
+							//影像記憶體初始化
+							*(int*)((COrder*)pParam)->FiducialMark1.MilModel = 0;
+							*(int*)((COrder*)pParam)->FiducialMark2.MilModel = 0;
+							//清除對位Offset資料
+							((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
+						}
 #endif
-                }
-                else//對位完成
-                {
-                    //將紀錄影像Offset的修正表計數復原
-                    ((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
-                }
-            }
-            else
-            {
-                //判斷是否對位完成
-                if (((COrder*)pParam)->VisionSwitch.FiducialMarkFinish)//對位完成
-                {
-                    //紀錄影像Offset的修正表計數
-                    if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
-                    {
-                        ((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
-                    }
-                    //將影像Offset的修正表計數設為0(代表不修正)
-                    ((COrder*)pParam)->VisionCount = 0;
-                }
-            }
+					}
+					else//對位完成
+					{
+						//將紀錄影像Offset的修正表計數復原
+						((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+					}
+				}
+				else
+				{
+					//判斷是否對位完成
+					if (((COrder*)pParam)->VisionSwitch.FiducialMarkFinish)//對位完成
+					{
+						//紀錄影像Offset的修正表計數
+						if (((COrder*)pParam)->VisionCount)//確保VisionCountTemp變數暫存的永遠是往上的計數
+						{
+							((COrder*)pParam)->VisionCountTemp = ((COrder*)pParam)->VisionCount;
+						}
+						//將影像Offset的修正表計數設為0(代表不修正)
+						((COrder*)pParam)->VisionCount = 0;
+					}
+				}
+			}
 		}
 	}
 	else if (CommandResolve(Command, 0) == L"FindFiducialAngle")
@@ -4616,7 +4678,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		else if (((COrder*)pParam)->ModelControl.Mode == 1)
 		{
 			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
-											   //TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
+			//TODO::影像加入點時Z軸沒有加入CallSubroutine相對量修正
 			if (((COrder*)pParam)->VisionTrigger.TriggerSwitch == 1)//FindMark 加入 Trigger
 			{
 				((COrder*)pParam)->FindMark.Trigger.push_back({ 0,_ttol(CommandResolve(Command,1)) - ((COrder*)pParam)->VisionSet.AdjustOffsetX + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
@@ -4640,7 +4702,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		if (((COrder*)pParam)->ModelControl.Mode == 2 || ((COrder*)pParam)->ModelControl.Mode == 3)
 		{
 			ModifyPointOffSet(pParam, Command);//CallSubroutin相對位修正
-		}   
+		}
 	}
 	/************************************************************雷射****************************************************************/
 	else if (CommandResolve(Command, 0) == L"LaserHeight") {
@@ -4654,28 +4716,28 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			{
 				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)//尚未有雷射模式跳轉地址
 				{
-                    /*舊版2017/08/03以前*/
-                    ////判斷現在是否有StepRepeat
+					/*舊版2017/08/03以前*/
+					////判斷現在是否有StepRepeat
 					//if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
 					//{
 					//	((COrder*)pParam)->RepeatDataRecord = ((COrder*)pParam)->RepeatData;//保留StepRepeat執行參數
 					//}
 
-                    /*記錄所有狀態*/
-                    ((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
-                    ((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
-                    ((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
-                    ((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
-                    ((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
-                    ((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
-                    ((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
-                    ((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
+					/*記錄所有狀態*/
+					((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
+					((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
+					((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
+					((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
+					((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
+					((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
+					((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
+					((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
 
-                    //將運動狀態清除，為了雷射掃描模式三
-                    ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+					//將運動狀態清除，為了雷射掃描模式三
+					((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 
 					//將模式轉換為雷射模式
 					((COrder*)pParam)->ModelControl.Mode = 2;
@@ -4708,24 +4770,24 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			//判斷雷射高度開，雷射模式中，正要關閉雷射高度
 			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->ModelControl.Mode == 2 && !_ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
 			{
-                //將模式轉換為運動模式
-                ((COrder*)pParam)->ModelControl.Mode = 3;
-                //跳至雷射模式轉換地址
-                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.LaserModeChangeAddress - 1;
-                ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };          
-                /*恢復所有狀態*/
-                ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
-                ((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
-                ((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
-                ((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
-                ((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
-                ((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
-                ((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
-                ((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
+				//將模式轉換為運動模式
+				((COrder*)pParam)->ModelControl.Mode = 3;
+				//跳至雷射模式轉換地址
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.LaserModeChangeAddress - 1;
+				((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
+				/*恢復所有狀態*/
+				((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
+				((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
+				((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
+				((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
+				((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
+				((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
+				((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
+				((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+				_cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-                /*舊版2017/08/03以前*/
+				/*舊版2017/08/03以前*/
 //				//判斷是否有Subroutine存在
 //				if (!((COrder*)pParam)->Program.SubroutineStack.size())//不存在
 //				{
@@ -4756,19 +4818,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->LaserData.LaserHeightPoint.X = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 				((COrder*)pParam)->LaserData.LaserHeightPoint.Y = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			}
-            //判斷是否轉換掃描模式
+			//判斷是否轉換掃描模式
 			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 2)//兩種掃描模式都存在取消一種
 			{
 				((COrder*)pParam)->LaserSwitch.LaserDetect = FALSE;
-                //判斷雷射掃描模式三是否有位掃描的線段
-                LineGotoActionJudge(pParam);//判斷動作狀態
-                //將運動狀態清除，為了雷射掃描模式三
-                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;			
+				//判斷雷射掃描模式三是否有位掃描的線段
+				LineGotoActionJudge(pParam);//判斷動作狀態
+				//將運動狀態清除，為了雷射掃描模式三
+				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 			}
-		}  
+		}
 	}
 	else if (CommandResolve(Command, 0) == L"LaserPointAdjust")
 	{
@@ -4783,17 +4845,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		else if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
 		{
 			((COrder*)pParam)->LaserSwitch.LaserPointAdjust = _ttol(CommandResolve(Command, 1));
-            //判斷是否轉換掃描模式
+			//判斷是否轉換掃描模式
 			if (((COrder*)pParam)->LaserSwitch.LaserAdjust && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust)//兩個掃描模式都成立取消一個
 			{
 				((COrder*)pParam)->LaserSwitch.LaserAdjust = FALSE;
-                //判斷雷射掃描模式三是否有位掃描的線段
-                LineGotoActionJudge(pParam);//判斷動作狀態
-                //將運動狀態清除，為了雷射掃描模式三
-                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				//判斷雷射掃描模式三是否有位掃描的線段
+				LineGotoActionJudge(pParam);//判斷動作狀態
+				//將運動狀態清除，為了雷射掃描模式三
+				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 			}
 			//雷射掃描模式一、模式四
 			if (((COrder*)pParam)->LaserSwitch.LaserPointAdjust && ((COrder*)pParam)->LaserSwitch.LaserHeight)//雷射模式一掃描
@@ -4816,8 +4878,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					((COrder*)pParam)->LMPSpeedSet.EndSpeed, ((COrder*)pParam)->LMPSpeedSet.AccSpeed, ((COrder*)pParam)->LMPSpeedSet.InitSpeed);
 #endif
 #ifndef MOVE
-                //沒有雷射的時候方便Debug使用
-                ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 10;
+				//沒有雷射的時候方便Debug使用
+				((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 10;
 #endif
 				//紀錄測量高度至雷射修正表
 				((COrder*)pParam)->LaserCount++;
@@ -4856,8 +4918,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					);
 #endif
 #ifndef MOVE
-                //沒有雷射的時候方便Debug使用
-                ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 100;
+				//沒有雷射的時候方便Debug使用
+				((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 100;
 #endif
 				//紀錄測量高度至雷射修正表
 				((COrder*)pParam)->LaserCount++;
@@ -4906,36 +4968,35 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			CString CommandBuff;
 			CommandBuff.Format(_T("LaserDetect,%d,%d,%d"), _ttol(CommandResolve(Command, 2)), _ttol(CommandResolve(Command, 3)), ((COrder*)pParam)->m_Action.m_HeightLaserZero);
 			ModifyPointOffSet(pParam, CommandBuff);//CallSubroutin相對位修正
-            //判斷是否轉換成雷射模式
+			//判斷是否轉換成雷射模式
 			if (!((COrder*)pParam)->LaserSwitch.LaserHeight && !((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
 			{
 				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)//判斷是否有模式轉換地址
 				{
-                    /*舊版2017/8/3前*/
+					/*舊版2017/8/3前*/
 					////判斷現在是否有StepRepeat
 					//if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
 					//{
 					//	((COrder*)pParam)->RepeatDataRecord = ((COrder*)pParam)->RepeatData;//保留StepRepeat執行參數
 					//}
+
+					//記錄所有狀態
+					((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
+					((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
+					((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
+					((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
+					((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
+					((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
+					((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
+					((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
+
+					//將運動狀態清除，為了雷射掃描模式三
+					((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+
 					//將模式轉換為雷射模式
-
-                    //記錄所有狀態
-                    ((COrder*)pParam)->ModelConversionData.RepeatDataRecord = ((COrder*)pParam)->RepeatData;
-                    ((COrder*)pParam)->ModelConversionData.ProgramRecord = ((COrder*)pParam)->Program;
-                    ((COrder*)pParam)->ModelConversionData.ArcData = ((COrder*)pParam)->ArcData;
-                    ((COrder*)pParam)->ModelConversionData.CircleData1 = ((COrder*)pParam)->CircleData1;
-                    ((COrder*)pParam)->ModelConversionData.CircleData2 = ((COrder*)pParam)->CircleData2;
-                    ((COrder*)pParam)->ModelConversionData.StartData = ((COrder*)pParam)->StartData;
-                    ((COrder*)pParam)->ModelConversionData.OffsetData = ((COrder*)pParam)->OffsetData;
-                    ((COrder*)pParam)->ModelConversionData.ActionStatus = ((COrder*)pParam)->RunData.ActionStatus;
-
-                    //將運動狀態清除，為了雷射掃描模式三
-                    ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                    ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
-
-                    //將模式轉換為雷射模式
 					((COrder*)pParam)->ModelControl.Mode = 2;
 					//紀錄模式轉換地址
 					((COrder*)pParam)->ModelControl.LaserModeChangeAddress = ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount));
@@ -4963,36 +5024,36 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					}
 				}
 			}
-            //判斷雷射檢測開，雷射模式中，正要關閉雷射檢測
+			//判斷雷射檢測開，雷射模式中，正要關閉雷射檢測
 			if (((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 2 && !_ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
 			{
-                //判斷雷射掃描模式三是否有位掃描的線段
-                LineGotoActionJudge(pParam);//判斷動作狀態
-                //將模式轉換為運動模式
-                ((COrder*)pParam)->ModelControl.Mode = 3;
-                //跳至雷射模式轉換地址
-                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.LaserModeChangeAddress - 1;
-                ((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
-                /*恢復所有狀態*/
-                ((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
-                ((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
-                ((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
-                ((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
-                ((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
-                ((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
-                ((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
-                ((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
+				//判斷雷射掃描模式三是否有位掃描的線段
+				LineGotoActionJudge(pParam);//判斷動作狀態
+				//將模式轉換為運動模式
+				((COrder*)pParam)->ModelControl.Mode = 3;
+				//跳至雷射模式轉換地址
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.LaserModeChangeAddress - 1;
+				((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
+				/*恢復所有狀態*/
+				((COrder*)pParam)->RepeatData = ((COrder*)pParam)->ModelConversionData.RepeatDataRecord;
+				((COrder*)pParam)->Program = ((COrder*)pParam)->ModelConversionData.ProgramRecord;
+				((COrder*)pParam)->ArcData = ((COrder*)pParam)->ModelConversionData.ArcData;
+				((COrder*)pParam)->CircleData1 = ((COrder*)pParam)->ModelConversionData.CircleData1;
+				((COrder*)pParam)->CircleData2 = ((COrder*)pParam)->ModelConversionData.CircleData2;
+				((COrder*)pParam)->StartData = ((COrder*)pParam)->ModelConversionData.StartData;
+				((COrder*)pParam)->OffsetData = ((COrder*)pParam)->ModelConversionData.OffsetData;
+				((COrder*)pParam)->RunData.ActionStatus = ((COrder*)pParam)->ModelConversionData.ActionStatus;
 #ifdef PRINTF
-                _cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
+				_cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-                /*舊版2017/08/03以前*/
+				/*舊版2017/08/03以前*/
 //				if (!((COrder*)pParam)->Program.SubroutineStack.size())
 //				{
 //					//將模式轉換為運動模式
 //					((COrder*)pParam)->ModelControl.Mode = 3;
 //					//紀錄模式轉換地址
 //					((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
-//                    //判斷StepRepeat是否有強行跳轉/***********************沒有公用*/
+//					//判斷StepRepeat是否有強行跳轉/*沒作用*/
 //					//StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 //					((COrder*)pParam)->RepeatData = ((COrder*)pParam)->RepeatDataRecord;//恢復StepRepeat參數
 //					((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
@@ -5021,13 +5082,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 2)//兩種掃描模式都存在取消一種
 			{
 				((COrder*)pParam)->LaserSwitch.LaserHeight = FALSE;
-                //判斷雷射掃描模式三是否有位掃描的線段
-                LineGotoActionJudge(pParam);//判斷動作狀態
-                //將運動狀態清除，為了雷射掃描模式三
-                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;		
+				//判斷雷射掃描模式三是否有位掃描的線段
+				LineGotoActionJudge(pParam);//判斷動作狀態
+				//將運動狀態清除，為了雷射掃描模式三
+				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 			}
 		}
 	}
@@ -5036,17 +5097,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 		if (((COrder*)pParam)->ModelControl.Mode == 2)//在雷射模式下動作
 		{
 			((COrder*)pParam)->LaserSwitch.LaserAdjust = _ttol(CommandResolve(Command, 1));
-            //判斷是否轉換掃描方式
+			//判斷是否轉換掃描方式
 			if (((COrder*)pParam)->LaserSwitch.LaserAdjust && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust)//兩個掃描模式都成立取消一個
 			{
 				((COrder*)pParam)->LaserSwitch.LaserPointAdjust = FALSE;
-                //判斷雷射掃描模式三是否有位掃描的線段
-                LineGotoActionJudge(pParam);//判斷動作狀態
-                //將運動狀態清除，為了雷射掃描模式三
-                ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-                ((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				//判斷雷射掃描模式三是否有位掃描的線段
+				LineGotoActionJudge(pParam);//判斷動作狀態
+				//將運動狀態清除，為了雷射掃描模式三
+				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
 			}
 		}
 	} 
@@ -5991,170 +6052,170 @@ void COrder::VisionModify(LPVOID pParam)
 /*影像未找到處理方法*/
 void COrder::VisionFindMarkError(LPVOID pParam)
 {
-    if (!((COrder*)pParam)->m_Action.m_bIsStop)
-    {
-        switch (((COrder*)pParam)->VisionSerchError.SearchError)
-        {
-        case 1://略過或Trigger
+	if (!((COrder*)pParam)->m_Action.m_bIsStop)
+	{
+		switch (((COrder*)pParam)->VisionSerchError.SearchError)
+		{
+		case 1://略過或Trigger
 #ifdef VI
-        //沒找到抬升
+		//沒找到抬升
 #ifdef MOVE
-        //對位完畢不出膠回升
-            ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+		//對位完畢不出膠回升
+			((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+				((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-            if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
-            {
-                if (((COrder*)pParam)->FindMark.Trigger.size())//有Trigger時
-                {
-                    for (UINT i = 0; i < ((COrder*)pParam)->FindMark.Trigger.size(); i++)
-                    {
+			if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
+			{
+				if (((COrder*)pParam)->FindMark.Trigger.size())//有Trigger時
+				{
+					for (UINT i = 0; i < ((COrder*)pParam)->FindMark.Trigger.size(); i++)
+					{
 #ifdef MOVE
-                        ((COrder*)pParam)->m_Action.DoCCDMove(
-                            ((COrder*)pParam)->FindMark.Trigger.at(i).X,
-                            ((COrder*)pParam)->FindMark.Trigger.at(i).Y,
-                            ((COrder*)pParam)->FindMark.Trigger.at(i).Z,
-                            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+						((COrder*)pParam)->m_Action.DoCCDMove(
+							((COrder*)pParam)->FindMark.Trigger.at(i).X,
+							((COrder*)pParam)->FindMark.Trigger.at(i).Y,
+							((COrder*)pParam)->FindMark.Trigger.at(i).Z,
+							((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
-                        if (VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->FindMark.Trigger.at(i).X, ((COrder*)pParam)->FindMark.Trigger.at(i).Y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
-                        {
+						if (VI_CameraTrigger(((COrder*)pParam)->FindMark.MilModel, ((COrder*)pParam)->FindMark.Point.X, ((COrder*)pParam)->FindMark.Point.Y, ((COrder*)pParam)->FindMark.Trigger.at(i).X, ((COrder*)pParam)->FindMark.Trigger.at(i).Y, ((COrder*)pParam)->VisionOffset.OffsetX, ((COrder*)pParam)->VisionOffset.OffsetY))
+						{
 #ifdef MOVE
-                            //對位完畢不出膠回升
-                            ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+							//對位完畢不出膠回升
+							((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+								((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                            break;
-                        }
-                    }
-                }
-                ((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
-            }
-            else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
-            {
-                if (((COrder*)pParam)->FiducialMark1.Trigger.size())//有Trigger時
-                {
-                    for (UINT i = 0; i < ((COrder*)pParam)->FiducialMark1.Trigger.size(); i++)
-                    {
+							break;
+						}
+					}
+				}
+				((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
+			}
+			else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2)
+			{
+				if (((COrder*)pParam)->FiducialMark1.Trigger.size())//有Trigger時
+				{
+					for (UINT i = 0; i < ((COrder*)pParam)->FiducialMark1.Trigger.size(); i++)
+					{
 #ifdef MOVE
-                        ((COrder*)pParam)->m_Action.DoCCDMove(
-                            ((COrder*)pParam)->FiducialMark1.Trigger.at(i).X,
-                            ((COrder*)pParam)->FiducialMark1.Trigger.at(i).Y,
-                            ((COrder*)pParam)->FiducialMark1.Trigger.at(i).Z,
-                            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+						((COrder*)pParam)->m_Action.DoCCDMove(
+							((COrder*)pParam)->FiducialMark1.Trigger.at(i).X,
+							((COrder*)pParam)->FiducialMark1.Trigger.at(i).Y,
+							((COrder*)pParam)->FiducialMark1.Trigger.at(i).Z,
+							((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
-                        if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->FiducialMark1.Trigger.at(i).X, ((COrder*)pParam)->FiducialMark1.Trigger.at(i).Y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
-                        {
+						if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark1.MilModel, ((COrder*)pParam)->FiducialMark1.Point.X, ((COrder*)pParam)->FiducialMark1.Point.Y, ((COrder*)pParam)->FiducialMark1.Trigger.at(i).X, ((COrder*)pParam)->FiducialMark1.Trigger.at(i).Y, ((COrder*)pParam)->FiducialMark1.OffsetX, ((COrder*)pParam)->FiducialMark1.OffsetY))
+						{
 #ifdef MOVE
-                            //對位完畢不出膠回升
-                            ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+							//對位完畢不出膠回升
+							((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+								((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                            break;
-                        }
-                    }
-                }
-                ((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
-            }
-            else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
-            {
-                if (((COrder*)pParam)->FiducialMark2.Trigger.size())//有Trigger時
-                {
-                    for (UINT i = 0; i < ((COrder*)pParam)->FiducialMark2.Trigger.size(); i++)
-                    {
+							break;
+						}
+					}
+				}
+				((COrder*)pParam)->FiducialMark1.FindMarkStatus = TRUE;
+			}
+			else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+			{
+				if (((COrder*)pParam)->FiducialMark2.Trigger.size())//有Trigger時
+				{
+					for (UINT i = 0; i < ((COrder*)pParam)->FiducialMark2.Trigger.size(); i++)
+					{
 #ifdef MOVE
-                        ((COrder*)pParam)->m_Action.DecideVirtualPoint(
-                            ((COrder*)pParam)->FiducialMark2.Trigger.at(i).X,
-                            ((COrder*)pParam)->FiducialMark2.Trigger.at(i).Y,
-                            ((COrder*)pParam)->FiducialMark2.Trigger.at(i).Z,
-                            0,
-                            ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
+						((COrder*)pParam)->m_Action.DecideVirtualPoint(
+							((COrder*)pParam)->FiducialMark2.Trigger.at(i).X,
+							((COrder*)pParam)->FiducialMark2.Trigger.at(i).Y,
+							((COrder*)pParam)->FiducialMark2.Trigger.at(i).Z,
+							0,
+							((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed);
 #endif
-                        if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->FiducialMark2.Trigger.at(i).X, ((COrder*)pParam)->FiducialMark2.Trigger.at(i).Y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
-                        {
+						if (VI_CameraTrigger(((COrder*)pParam)->FiducialMark2.MilModel, ((COrder*)pParam)->FiducialMark2.Point.X, ((COrder*)pParam)->FiducialMark2.Point.Y, ((COrder*)pParam)->FiducialMark2.Trigger.at(i).X, ((COrder*)pParam)->FiducialMark2.Trigger.at(i).Y, ((COrder*)pParam)->FiducialMark2.OffsetX, ((COrder*)pParam)->FiducialMark2.OffsetY))
+						{
 #ifdef MOVE
-                            //對位完畢不出膠回升
-                            ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+							//對位完畢不出膠回升
+							((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+								((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+								((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-                            break;
-                        }
-                    }
-                }
-                ((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
-            }
-            ((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
+							break;
+						}
+					}
+				}
+				((COrder*)pParam)->FiducialMark2.FindMarkStatus = TRUE;
+			}
+			((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
 #ifdef PRINTF
-            _cwprintf(L"VisionFindMarkError()::Tirrger運行完畢\n");
+			_cwprintf(L"VisionFindMarkError()::Tirrger運行完畢\n");
 #endif
-            break;
+			break;
 #endif  
-        case 2://停止
-            ((COrder*)pParam)->Stop();
-            break;
-        case 3://暫停
-            //未找到抬升
+		case 2://停止
+			((COrder*)pParam)->Stop();
+			break;
+		case 3://暫停
+		//未找到抬升
 #ifdef MOVE
-        //對位完畢不出膠回升
-            ((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
-                ((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
-                ((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
+		//對位完畢不出膠回升
+			((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
+				((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
+				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
 #endif
-            ((COrder*)pParam)->Pause();
-            if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
-            {
-                ((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
-            }
-            else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2 || ((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
-            {
-                ((COrder*)pParam)->VisionSerchError.Pausemode = TRUE;
-                ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//重複一次命令
-            }
-            break;
-        case 4://跳出選擇對話窗
-            if (((COrder*)pParam)->VisionSerchError.pQuestion != NULL)
-            {
-                switch (((COrder*)pParam)->VisionSerchError.pQuestion->DoModal())
-                {
-                case 0://略過或Trigger
-                    ((COrder*)pParam)->VisionSerchError.SearchError = 1;
-                    VisionFindMarkError(pParam);
-                    break;
-                case 1://停止
-                    ((COrder*)pParam)->Stop();
-                    break;
-                case 2://重新尋找
-                    ((COrder*)pParam)->FindMark.FindMarkStatus = FALSE;
-                    ((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
-                    ((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
-                    ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
-                    break;
-                case 3://手動
-                    ((COrder*)pParam)->VisionSerchError.SearchError = 5;
-                    VisionFindMarkError(pParam);
-                    break;
-                case 4:
-                    break;
-                default:
-                    break;
-                }
-            }
-            break;
-        case 5://手動模式
-            ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//讓Adjust命令在執行一次
-            ((COrder*)pParam)->Pause();
-            ((COrder*)pParam)->VisionSerchError.Manuallymode = TRUE;
-            ((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
-            break;
-        case 6:
-            break;
-        default:
-            break;
-        }
-    }
+			((COrder*)pParam)->Pause();
+			if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 1)
+			{
+				((COrder*)pParam)->FindMark.FindMarkStatus = TRUE;
+			}
+			else if (((COrder*)pParam)->VisionTrigger.AdjustStatus == 2 || ((COrder*)pParam)->VisionTrigger.AdjustStatus == 3)
+			{
+				((COrder*)pParam)->VisionSerchError.Pausemode = TRUE;
+				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//重複一次命令
+			}
+			break;
+		case 4://跳出選擇對話窗
+			if (((COrder*)pParam)->VisionSerchError.pQuestion != NULL)
+			{
+				switch (((COrder*)pParam)->VisionSerchError.pQuestion->DoModal())
+				{
+				case 0://略過或Trigger
+					((COrder*)pParam)->VisionSerchError.SearchError = 1;
+					VisionFindMarkError(pParam);
+					break;
+				case 1://停止
+					((COrder*)pParam)->Stop();
+					break;
+				case 2://重新尋找
+					((COrder*)pParam)->FindMark.FindMarkStatus = FALSE;
+					((COrder*)pParam)->FiducialMark1.FindMarkStatus = FALSE;
+					((COrder*)pParam)->FiducialMark2.FindMarkStatus = FALSE;
+					((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
+					break;
+				case 3://手動
+					((COrder*)pParam)->VisionSerchError.SearchError = 5;
+					VisionFindMarkError(pParam);
+					break;
+				case 4:
+					break;
+				default:
+					break;
+				}
+			}
+			break;
+		case 5://手動模式
+			((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//讓Adjust命令在執行一次
+			((COrder*)pParam)->Pause();
+			((COrder*)pParam)->VisionSerchError.Manuallymode = TRUE;
+			((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
+			break;
+		case 6:
+			break;
+		default:
+			break;
+		}
+	}
 }
 /*雷射修正*/
 void COrder::LaserModify(LPVOID pParam) 
@@ -6228,7 +6289,7 @@ void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 			//紀錄測量高度至雷射修正表
 #endif
 #ifndef LA
-            ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 1000;
+			((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserCount + 1000;
 #endif
 			Command = CommandBuff;//還原原有的命令
 			((COrder*)pParam)->LaserCount++;
@@ -6610,11 +6671,11 @@ void COrder::ChooseLaserModify(LPVOID pParam){
 			{
 				((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber = 0;
 			}
-            ((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber).LaserMeasureHeight;
+			((COrder*)pParam)->LaserData.LaserMeasureHeight = ((COrder*)pParam)->LaserAdjust.at(((COrder*)pParam)->PositionModifyNumber.at(D1).at(D2).at(i).LaserNumber).LaserMeasureHeight;
 		}
 	}
 }
-/*紀錄修正表*//**************************************/
+/*紀錄修正表*/
 void COrder::RecordCorrectionTable(LPVOID pParam) {
 	CString StrBuff = ((COrder*)pParam)->GetCommandAddress();//獲取命令地址
 	UINT D1 = 0, D2 = 0;
@@ -7546,6 +7607,7 @@ void COrder::DecideInit()
 	LaserSwitch.LaserSkip = FALSE;
 	//修正計數初始化
 	VisionCount = 0;
+	VisionCountTemp = 0;
 	LaserCount = 0;
 	//修正表、影像表、雷射表存值初始化
 	//TODO::DEMO所以加入
@@ -7670,7 +7732,6 @@ void COrder::DecideClear()
 	ClearCheckData(TRUE,TRUE);//清除檢測資料 
 	IntervalCheckCoordinate.clear();//清除直徑、模板檢測點陣列
 	IntervalAreaCheck.clear();//清除區域檢測資料
-
 #ifdef PRINTF
 		_cwprintf(L"DecideClear()::Clear()\n");
 #endif
@@ -7730,8 +7791,9 @@ void COrder::DecideBeginModel(BOOL ViewMode)
 	ModelControl.LaserModeChangeAddress = -1;
     ModelControl.VisionModeChangeAddress = -1;
 	ModelControl.LaserAndCheckModeJump = ViewMode;
-    //ModelControl.VisionModeJump = TRUE;
-	//模式初始化判斷
+	/*舊版2017/08/14以前*/
+	//ModelControl.VisionModeJump = TRUE;
+	////模式初始化判斷
 	//for (UINT i = 1; i < Command.at(0).size(); i++) //不考慮副程式
 	//{
 	//	if (CommandResolve(Command.at(0).at(i), 0) == L"FindMarkAdjust" ||
@@ -7931,7 +7993,7 @@ BOOL  COrder::SubroutinePretreatmentFind(LPVOID pParam)
 void COrder::StepRepeatJumpforciblyJudge(LPVOID pParam, UINT Address)
 {
 	//判斷是否有StepRepeat時且跳出區間
-    if (((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時不做此種判斷
+	if (((COrder*)pParam)->Program.SubroutineStack.empty())//有CallSubroutine時不做此種判斷
 	{
 		if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())//判斷是否有StepRepeat
 		{
