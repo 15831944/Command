@@ -5023,7 +5023,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			{
 				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)//判斷是否有模式轉換地址
 				{
-					/*舊版2017/8/3以前*/
+					/*舊版2017/8/3前*/
 					////判斷現在是否有StepRepeat
 					//if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
 					//{
@@ -10041,11 +10041,11 @@ BOOL COrder::SetDrawFunction(CDrawFunction Funtion, void * pObject)
 /*設置畫圖呼叫函式*/
 BOOL COrder::SetDrawMovingFunction(CDrawMovingFunction Funtion, void * pDrawMovingObject)
 {
-	CallFunction.CDrawMovingFunction = Funtion;
-	CallFunction.pDrawMovingObject = pDrawMovingObject;
-	if (CallFunction.pDrawMovingObject)
-		return 1;
-	return 0;
+    CallFunction.CDrawMovingFunction = Funtion;
+    CallFunction.pDrawMovingObject = pDrawMovingObject;
+    if (CallFunction.pDrawMovingObject)
+        return 1;
+    return 0;
 }
 /*設置平台高度Z值*/
 BOOL COrder::SetTabelZ(int *TableZ)
