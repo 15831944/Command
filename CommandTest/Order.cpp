@@ -3658,6 +3658,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
 					{
 						/*每次要載入時必須先清除Model*/
+						//清除對位完成開關
+						((COrder*)pParam)->VisionSwitch.FindMarkFinish = FALSE;
 						//影像釋放記憶體
 						if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
 						{
@@ -3682,10 +3684,13 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						AfxMessageBox(_T("沒有此編號的檔案!"));
 					}
 #endif
+#ifdef PRINTF
+					_cwprintf(L"SubroutineThread()::FindMark影像對位資料新增成功\n");
+#endif
 				}
 			}
 			//判斷是否模式轉換
-			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
+			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark)//兩種模式都存在取消一種
 			{
 				((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
 				//清除FiducialMark對位資料
@@ -3715,6 +3720,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				}
 				//將影像Offset的修正表計數設為0(代表不修正)
 				((COrder*)pParam)->VisionCount = 0;
+#ifdef PRINTF
+				_cwprintf(L"SubroutineThread()::FiducialMark影像對位方式轉換成FindMark\n");
+#endif
 			}
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 2)
@@ -3862,11 +3870,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							AfxMessageBox(_T("FindMarkAdjust need one FindMark"));
 						}
 #endif
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FindMarkAdjsust影像對位成功\n");
+#endif
 					}
 					else//對位完成
 					{
 						//將紀錄影像Offset的修正表計數復原
 						((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FindMarkAdjsust影像對位已經完成，然後將Adjust開啟\n");
+#endif
 					}
 				}
 				else//調節關
@@ -3881,6 +3895,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						}
 						//將影像Offset的修正表計數設為0(代表不修正)
 						((COrder*)pParam)->VisionCount = 0;
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FindMarkAdjsust影像對位已經完成，然後將Adjust關閉\n");
+#endif
+					}
+					else
+					{
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FindMarkAdjsust影像對位未完成，Adjust關閉\n");
+#endif
 					}
 				}
 			}
@@ -3936,7 +3959,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					}
 				}
 			}
-			//判斷影像FindMark開，影像模式中，正要關閉FindMark
+			//判斷影像FidcialMark開，影像模式中，正要關閉FidcialMark
 			if (((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1 && !_ttol(CommandResolve(Command, 5)))
 			{
 				//將模式轉換為運動模式
@@ -4000,6 +4023,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
 						{
 							/*每次載入時必須清除Model*/
+							//清除對位完成開關
+							((COrder*)pParam)->VisionSwitch.FiducialMarkFinish = FALSE;
 							//影像釋放記憶體
 							if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
 							{
@@ -4039,6 +4064,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							if (((COrder*)pParam)->FiducialMark2.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark2.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
 							{
 								/*每次載入時必須清除Model*/
+								//清除對位完成開關
+								((COrder*)pParam)->VisionSwitch.FiducialMarkFinish = FALSE;
 								//影像釋放記憶體
 								if (*(int*)((COrder*)pParam)->FiducialMark2.MilModel != 0)
 								{
@@ -4076,6 +4103,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							if (((COrder*)pParam)->FiducialMark1.LoadModelNum >= 0 && ((COrder*)pParam)->FiducialMark1.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())//判斷編號是否大於檔案標號最大值
 							{
 								/*每次載入時必須清除Model*/
+								//清除對位完成開關
+								((COrder*)pParam)->VisionSwitch.FiducialMarkFinish = FALSE;
 								//影像釋放記憶體
 								if (*(int*)((COrder*)pParam)->FiducialMark1.MilModel != 0)
 								{
@@ -4101,12 +4130,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						}
 					}
 #endif
+#ifdef PRINTF
+					_cwprintf(L"SubroutineThread()::FiducialMark影像對位資料新增成功\n");
+#endif
 				}
 			}
 			//判斷是否模式轉換
-			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark && ((COrder*)pParam)->ModelControl.Mode == 1)//兩種模式都存在取消一種
+			if (((COrder*)pParam)->VisionSwitch.FindMark && ((COrder*)pParam)->VisionSwitch.FiducialMark)//兩種模式都存在取消一種
 			{
-				((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
+				((COrder*)pParam)->VisionSwitch.FindMark = FALSE;
 				//清除FindMark對位資料
 #ifdef VI
 				//影像釋放記憶體
@@ -4126,6 +4158,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				}
 				//將影像Offset的修正表計數設為0(代表不修正)
 				((COrder*)pParam)->VisionCount = 0;
+#ifdef PRINTF
+				_cwprintf(L"SubroutineThread()::FindMark影像對位方式轉換成FiducialMark\n");
+#endif
 			}
 		}
 		else if (((COrder*)pParam)->ModelControl.Mode == 2)
@@ -4385,7 +4420,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						{
 							AfxMessageBox(_T("FiducialMarkAdjust need two FiducialMark"));
 							/*對位不成功 也必須清除資料*/
-							((COrder*)pParam)->VisionSwitch.FiducialMark = FALSE;
 							//清除FiducialMark對位資料
 							//初始標記載入狀態
 							((COrder*)pParam)->FiducialMark1.Point.Status = FALSE;
@@ -4406,11 +4440,17 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							((COrder*)pParam)->VisionOffset = { { 0,0,0,0 },0,0,0 };
 						}
 #endif
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FiducialMarkAdjsust影像對位成功\n");
+#endif
 					}
 					else//對位完成
 					{
 						//將紀錄影像Offset的修正表計數復原
 						((COrder*)pParam)->VisionCount = ((COrder*)pParam)->VisionCountTemp;
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FiducialMarkAdjsust影像對位已經完成，然後將Adjust開啟\n");
+#endif
 					}
 				}
 				else
@@ -4425,6 +4465,15 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 						}
 						//將影像Offset的修正表計數設為0(代表不修正)
 						((COrder*)pParam)->VisionCount = 0;
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FiducialMarkAdjsust影像對位已經完成，然後將Adjust關閉\n");
+#endif
+					}
+					else
+					{
+#ifdef PRINTF
+						_cwprintf(L"SubroutineThread()::FiducialMarkAdjsust影像對位未完成，Adjust關閉\n");
+#endif
 					}
 				}
 			}
