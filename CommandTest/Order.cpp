@@ -3890,6 +3890,8 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					if (((COrder*)pParam)->FindMark.LoadModelNum >= 0 && ((COrder*)pParam)->FindMark.LoadModelNum < ((COrder*)pParam)->VisionFile.AllModelName.size())
 					{
 						/*每次要載入時必須先清除Model*/
+						//清除對位完成開關
+						((COrder*)pParam)->VisionSwitch.FindMarkFinish = FALSE;
 						//影像釋放記憶體
 						if (*(int*)((COrder*)pParam)->FindMark.MilModel != 0)
 						{
