@@ -337,7 +337,7 @@ UINT COrder::RunLoopThread(LPVOID pParam) {
 	while (((COrder*)pParam)->RunLoopData.RunSwitch)   
 	{
 #ifdef PRINTF
-		//_cprintf("RunLoopThread():%d\n", (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)));
+		//_cwprintf(L"RunLoopThread():%d\n", (((COrder*)pParam)->RunLoopData.MaxRunNumber - int(((COrder*)pParam)->RunStatusRead.FinishProgramCount)));
 #endif
 #ifdef MOVE
 		//if (!MO_ReadEMG())
@@ -587,7 +587,7 @@ UINT COrder::Thread(LPVOID pParam)
 			::ResetEvent(((COrder*)pParam)->ThreadEvent.Thread);//釋放事件
 			g_pSubroutineThread = AfxBeginThread(((COrder*)pParam)->SubroutineThread, pParam);
 			::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.Thread, INFINITE);//等待事件被設置
-			/*舊版2017/03/21*/
+			/*舊版2017/03/21以前*/
 			//while (g_pSubroutineThread) {
 			//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 			//}
@@ -598,7 +598,7 @@ UINT COrder::Thread(LPVOID pParam)
 				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
 				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置
-				/*舊版2017/04/05*/
+				/*舊版2017/04/05以前*/
 				//while (g_pCheckActionThread) {
 				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				//}
@@ -612,7 +612,7 @@ UINT COrder::Thread(LPVOID pParam)
 				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread);//釋放事件
 				g_pCheckCoordinateScanThread = AfxBeginThread(((COrder*)pParam)->CheckCoordinateScan, pParam);
 				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckCoordinateScanThread, INFINITE);//等待事件被設置			
-				/*舊版2017/04/05*/
+				/*舊版2017/04/05以前*/
 				//while (g_pCheckCoordinateScanThread) {
 				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				//}
@@ -1761,7 +1761,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
 			_cwprintf(L"SubroutineThread()::End模式轉換(0->3)\n\n下一個模式即將開始...\n");
 #endif
-			/*舊版2017/08/14修改*/
+			/*舊版2017/08/14以前*/
 			/*((COrder*)pParam)->LoadCommandData.FirstRun = FALSE;
 			if (!((COrder*)pParam)->ModelControl.VisionModeJump)
 			{
@@ -1797,7 +1797,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
             _cwprintf(L"SubroutineThread()::FindMark(0)模式轉換(1->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-			/*舊版2017/08/14修改*/
+			/*舊版2017/08/14以前*/
 //			((COrder*)pParam)->ModelControl.Mode = 3;
 //			//在模式轉換後必須將雷射狀態初始化
 //			((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
@@ -1826,11 +1826,11 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
             _cwprintf(L"SubroutineThread()::End模式轉換(2->3)地址跳至:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-			/*舊版2017/08/14修改*/
+			/*舊版2017/08/14以前*/
 //			if (((COrder*)pParam)->Program.SubroutineStack.empty())//沒有Subroutine時才能轉換模式
 //			{
 //				((COrder*)pParam)->ModelControl.Mode = 3;
-//				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
+//				((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.LaserModeChangeAddress - 1;
 //				//在模式轉換後必須將雷射狀態初始化
 //				((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
 //#ifdef PRINTF
@@ -1901,7 +1901,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 			((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-			
+
 			((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 
 			VisionModify(pParam);//影像修正
@@ -2041,7 +2041,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->FinalWorkCoordinateData.X = _ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X;
 				((COrder*)pParam)->FinalWorkCoordinateData.Y = _ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 				((COrder*)pParam)->FinalWorkCoordinateData.Z = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z;
-				
+
 				((COrder*)pParam)->NVMVirtualCoordinateData = ((COrder*)pParam)->FinalWorkCoordinateData;//紀錄CallSubroutine點(不加影像修正時的值)
 				
 				VisionModify(pParam);//影像修正
@@ -2154,7 +2154,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											}
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											((COrder*)pParam)->NewCutPathPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount),
 												((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount),
@@ -2233,7 +2233,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											((COrder*)pParam)->FinalWorkCoordinateData,
 											((COrder*)pParam)->IntervalAreaCheck.at(i), 1);
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)//成立的話代表為新的檢測區間
 											{
@@ -2266,9 +2266,10 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 							((COrder*)pParam)->m_Action.DecideLineMidMove(
 								//_ttol(CommandResolve(Command, 1)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).X,
 								//_ttol(CommandResolve(Command, 2)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y,
+								//_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
 								((COrder*)pParam)->FinalWorkCoordinateData.X,
 								((COrder*)pParam)->FinalWorkCoordinateData.Y,
-								_ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Z,
+								((COrder*)pParam)->FinalWorkCoordinateData.Z,
 								((COrder*)pParam)->DispenseLineSet.NodeTime, ((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 							//清除完成動作圓
@@ -2312,7 +2313,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											}
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)//成立的話代表為新的檢測區間
 											{
@@ -2367,7 +2368,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											/**/((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)
 											{
@@ -2394,7 +2395,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 					{
 #ifdef MOVE
 						((COrder*)pParam)->m_Action.LA_Line3DtoDo(abs(((COrder*)pParam)->FinalWorkCoordinateData.Z + 10000),
-							((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);			
+							((COrder*)pParam)->LineSpeedSet.EndSpeed, ((COrder*)pParam)->LineSpeedSet.AccSpeed, ((COrder*)pParam)->LineSpeedSet.InitSpeed);
 #endif
 						((COrder*)pParam)->LaserContinuousControl.ContinuousSwitch = FALSE;
 					}
@@ -2479,7 +2480,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											((COrder*)pParam)->FinalWorkCoordinateData,
 											((COrder*)pParam)->IntervalAreaCheck.at(i), 1);//加入圓弧切點路徑
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											((COrder*)pParam)->NewCutPathPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount),
 												((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount),
@@ -2550,7 +2551,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 												((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
 											}
 										}
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											((COrder*)pParam)->NewCutPathPoint(((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount),
 												((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount),
@@ -2601,7 +2602,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).X ,((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Y });//起始點
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ ((COrder*)pParam)->FinalWorkCoordinateData.X ,((COrder*)pParam)->FinalWorkCoordinateData.Y });//結束點
@@ -2643,7 +2644,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount),
 											((COrder*)pParam)->FinalWorkCoordinateData,
 											((COrder*)pParam)->IntervalAreaCheck.at(i), 1);//加入圓切點路徑
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)
 											{
@@ -2723,7 +2724,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											}
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)
 											{
@@ -2783,7 +2784,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 											((COrder*)pParam)->IntervalAreaCheck.at(i).LineTrain.PointData.push_back({ -1,-1 });
 										}
 
-										//2017/02/16前
+										//舊版2017/02/16以前
 										/*
 											if (((COrder*)pParam)->AreaCheckChangTemp.Status)
 											{
@@ -4533,7 +4534,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			{
 				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)//尚未有雷射模式跳轉地址
 				{
-					/*舊版2017/08/14修改*/
+					/*舊版2017/08/14以前*/
 					////判斷現在是否有StepRepeat
 					//if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
 					//{
@@ -4604,7 +4605,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
 				_cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-				/*舊版2017/08/14修改*/
+				/*舊版2017/08/14以前*/
 //				//判斷是否有Subroutine存在
 //				if (!((COrder*)pParam)->Program.SubroutineStack.size())//不存在
 //				{
@@ -4636,16 +4637,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->LaserData.LaserHeightPoint.Y = _ttol(CommandResolve(Command, 3)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			}
 			//判斷是否轉換掃描模式
-			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種模式都存在取消一種
+			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種掃描模式都存在取消一種
 			{
 				((COrder*)pParam)->LaserSwitch.LaserDetect = FALSE;
-				//判斷雷射掃描模式三是否有位掃描的線段
-				LineGotoActionJudge(pParam);//判斷動作狀態
-				//將運動狀態清除，為了雷射掃描模式三
-				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				if (((COrder*)pParam)->ModelControl.Mode == 2)
+				{
+					//判斷雷射掃描模式三是否有位掃描的線段
+					LineGotoActionJudge(pParam);//判斷動作狀態
+					//將運動狀態清除，為了雷射掃描模式三
+					((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				}
 			}
 		}
 	}
@@ -4673,7 +4677,6 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
 				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
 				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
-
 			}
 			//雷射掃描模式一、模式四
 			if (((COrder*)pParam)->LaserSwitch.LaserPointAdjust && ((COrder*)pParam)->LaserSwitch.LaserHeight)//雷射模式一掃描
@@ -4789,9 +4792,9 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 			//判斷是否轉換成雷射模式
 			if (!((COrder*)pParam)->LaserSwitch.LaserHeight && !((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->ModelControl.Mode == 3 && _ttol(CommandResolve(Command, 1)) && !((COrder*)pParam)->ModelControl.LaserAndCheckModeJump)
 			{
-				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)
+				if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == -1)//判斷是否有模式轉換地址
 				{
-					/*舊版2017/08/14修改*/
+					/*舊版2017/08/14以前*/
 					////判斷現在是否有StepRepeat
 					//if (((COrder*)pParam)->RepeatData.StepRepeatNum.size())
 					//{
@@ -4825,7 +4828,7 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				else//已經有雷射跳轉地址/*為了讓雷射開啟在執行一次設計的*/
 				{
 #ifdef PRINTF
-					_cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t雷射執行過紀錄陣列:%d", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.LaserModeChangeAddress);
+					_cwprintf(L"SubroutineThread()::目前執行指令地址:%d\t雷射執行過紀錄陣列:%d\n", CurrentRunCommandNum, ((COrder*)pParam)->ModelControl.LaserModeChangeAddress);
 #endif
 					if (((COrder*)pParam)->ModelControl.LaserModeChangeAddress == CurrentRunCommandNum)
 					{
@@ -4864,14 +4867,14 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 #ifdef PRINTF
 				_cwprintf(L"SubroutineThread()::LaserHeight(0)模式轉換(2->3)跳至地址:%d\n\n下一個模式即將開始...\n", ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 #endif
-				/*舊版2017/08/14修改*/
+				/*舊版2017/08/14以前*/
 //				if (!((COrder*)pParam)->Program.SubroutineStack.size())
 //				{
 //					//將模式轉換為運動模式
 //					((COrder*)pParam)->ModelControl.Mode = 3;
 //					//紀錄模式轉換地址
 //					((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)) = ((COrder*)pParam)->ModelControl.ModeChangeAddress - 1;
-//					//判斷StepRepeat是否有強行跳轉
+//					//判斷StepRepeat是否有強行跳轉/*沒作用*/
 //					StepRepeatJumpforciblyJudge(pParam, ((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount)));
 //					((COrder*)pParam)->RepeatData = ((COrder*)pParam)->RepeatDataRecord;//恢復StepRepeat參數
 //					((COrder*)pParam)->LaserSwitch = { 0,0,0,0,0 };
@@ -4897,16 +4900,19 @@ UINT COrder::SubroutineThread(LPVOID pParam) {
 				((COrder*)pParam)->LaserData.LaserDetectLE.Y = _ttol(CommandResolve(Command, 5)) + ((COrder*)pParam)->OffsetData.at(((COrder*)pParam)->Program.SubroutinCount).Y;
 			}
 			//判斷是否轉換掃描模式
-			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種模式都存在取消一種
+			if (((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserDetect)//兩種掃描模式都存在取消一種
 			{
 				((COrder*)pParam)->LaserSwitch.LaserHeight = FALSE;
-				//判斷雷射掃描模式三是否有位掃描的線段
-				LineGotoActionJudge(pParam);//判斷動作狀態
-				//將運動狀態清除，為了雷射掃描模式三
-				((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
-				((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				if (((COrder*)pParam)->ModelControl.Mode == 2)
+				{
+					//判斷雷射掃描模式三是否有位掃描的線段
+					LineGotoActionJudge(pParam);//判斷動作狀態
+					//將運動狀態清除，為了雷射掃描模式三
+					((COrder*)pParam)->StartData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->ArcData.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->CircleData1.at(((COrder*)pParam)->Program.SubroutinCount).Status = FALSE;
+					((COrder*)pParam)->RunData.ActionStatus.at(((COrder*)pParam)->Program.SubroutinCount) = 0;
+				}
 			}
 		}
 	}
@@ -5199,7 +5205,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
 				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置
-				/*舊版2017/04/05*/
+				/*舊版2017/04/05以前*/
 				//while (g_pCheckActionThread) {
 				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				//}
@@ -5222,7 +5228,7 @@ UINT COrder::CheckCoordinateScan(LPVOID pParam)
 				::ResetEvent(((COrder*)pParam)->ThreadEvent.CheckActionThread);//釋放事件
 				g_pCheckActionThread = AfxBeginThread(((COrder*)pParam)->CheckAction, pParam);
 				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.CheckActionThread, INFINITE);//等待事件被設置		
-				/*舊版2017/04/05*/
+				/*舊版2017/04/05以前*/
 				//while (g_pCheckActionThread) {
 				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				//}
@@ -5606,7 +5612,7 @@ UINT COrder::CheckAction(LPVOID pParam)
 				g_pMosaicDlgThread = AfxBeginThread(((COrder*)pParam)->MosaicDlg, pParam);//開啟重組中視窗執行緒
 				((COrder*)pParam)->RunStatusRead.MosaicStatus = VI_MosaicingImagesProcess(((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Path, ((COrder*)pParam)->AreaCheckRun.Image.ImageSave.Name, 0);//影像重組計算
 				::WaitForSingleObject(((COrder*)pParam)->ThreadEvent.MosaicDlgThread, INFINITE);//等待事件被設置
-				/*舊版2017/04/05*/
+				/*舊版2017/04/05以前*/
 				//while (g_pMosaicDlgThread) {
 				//	Sleep(1);//while 程式負載問題 無限迴圈，並讓 CPU 休息一下
 				//}
@@ -5873,9 +5879,9 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 		{
 		case 1://略過或Trigger
 #ifdef VI
-			//沒找到抬升
+		//沒找到抬升
 #ifdef MOVE
-			//對位完畢不出膠回升
+		//對位完畢不出膠回升
 			((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
 				((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
@@ -5971,9 +5977,9 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 			((COrder*)pParam)->Stop();
 			break;
 		case 3://暫停
-			//未找到抬升
+		//未找到抬升
 #ifdef MOVE
-			//對位完畢不出膠回升
+		//對位完畢不出膠回升
 			((COrder*)pParam)->m_Action.DecideLineEndMove(0, 0,
 				((COrder*)pParam)->ZSet.ZBackHeight, ((COrder*)pParam)->ZSet.ZBackType, 0, 0, 0, 0,
 				((COrder*)pParam)->DotSpeedSet.EndSpeed, ((COrder*)pParam)->DotSpeedSet.AccSpeed, ((COrder*)pParam)->DotSpeedSet.InitSpeed, 1);
@@ -6019,7 +6025,7 @@ void COrder::VisionFindMarkError(LPVOID pParam)
 			}
 			break;
 		case 5://手動模式
-			((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;
+			((COrder*)pParam)->RunData.RunCount.at(((COrder*)pParam)->RunData.MSChange.at(((COrder*)pParam)->RunData.StackingCount))--;//讓Adjust命令在執行一次
 			((COrder*)pParam)->Pause();
 			((COrder*)pParam)->VisionSerchError.Manuallymode = TRUE;
 			((COrder*)pParam)->VisionSerchError.SearchError = ((COrder*)pParam)->VisionDefault.VisionSerchError.SearchError;//參數回歸
@@ -6054,7 +6060,7 @@ void COrder::LaserModify(LPVOID pParam)
 void COrder::LaserDetectHandle(LPVOID pParam, CString Command)
 {
 	CString CommandBuff = _T("");
-	if (!((COrder*)pParam)->LaserSwitch.LaserSkip /*&& !((COrder*)pParam)->Program.SubroutineModelControlSwitch//舊版2017/08/17修改*/ && !((COrder*)pParam)->LaserPointDetect())//雷射跳過未開啟
+	if (!((COrder*)pParam)->LaserSwitch.LaserSkip /*&& !((COrder*)pParam)->Program.SubroutineModelControlSwitch//舊版2017/08/17以前*/ && !((COrder*)pParam)->LaserPointDetect())//雷射跳過未開啟
 	{
 		if ((((COrder*)pParam)->LaserSwitch.LaserDetect && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust) || 
 			(((COrder*)pParam)->LaserSwitch.LaserHeight && ((COrder*)pParam)->LaserSwitch.LaserPointAdjust))//掃描模式一、四
@@ -7341,7 +7347,7 @@ void COrder::DecideInit()
 	Program.SubroutinCount = 0;
 	Program.SubroutinePointStack.push_back(InitData);
 	Program.SubroutineVisioModifyJudge.clear();
-	//Program.SubroutineModelControlSwitch = FALSE;//舊版2017/08/14修改
+	//Program.SubroutineModelControlSwitch = FALSE;//舊版2017/08/14以前
 	//副程式和主程式控制結構
 	RunData.MSChange.push_back(0); //副程式改變控制程序的堆疊
 	for (UINT i = 0; i < RunData.MSChange.size(); i++)
@@ -7576,7 +7582,7 @@ void COrder::DecideBeginModel(BOOL ViewMode)
 	ModelControl.LaserModeChangeAddress = -1;
     ModelControl.VisionModeChangeAddress = -1;
 	ModelControl.LaserAndCheckModeJump = ViewMode;
-	/*舊版2017/08/14修改*/
+	/*舊版2017/08/14以前*/
 	//ModelControl.VisionModeJump = TRUE;
 	////模式初始化判斷
 	//for (UINT i = 1; i < Command.at(0).size(); i++) //不考慮副程式
